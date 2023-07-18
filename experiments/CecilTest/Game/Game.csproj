@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Exec Command="copy /Y &quot;$(TargetDir)$(ProjectName).dll&quot; &quot;$(SolutionDir)CecilTest\bin\Debug\net6.0\$(ProjectName).dll&quot;" />
+    </Target>
+
+    <ItemGroup>
+      <Reference Include="Framework">
+        <HintPath>..\Framework\bin\Debug\net6.0\Framework.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+</Project>
