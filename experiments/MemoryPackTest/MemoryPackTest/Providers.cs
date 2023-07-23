@@ -1,20 +1,31 @@
-﻿public interface IServerInputProvider<TServerInput, TServerOutput>
-{
-    public TServerInput GetInput(TServerOutput output);
+﻿namespace FrameworkTest;
 
+public interface IServerInputProvider<TServerInput>
+{
+    public TServerInput GetInput();
     public TServerInput GetInitialInput();
 }
 
-/*
+public interface IServerDisplayer<TPlayerInput, TServerInput, TGameState> 
+    where TGameState : IGameState<TPlayerInput, TServerInput>
+{
+    void AddFrame(TGameState state, long frame);
+}
+
+public interface IClientDisplayer<TPlayerInput, TServerInput, TGameState>
+    where TGameState : IGameState<TPlayerInput, TServerInput>
+{
+    void AddFrame(TGameState state, long frame);
+}
+
 public interface IPlayerInputProvider<TClientInput>
 {
     TClientInput GetInput();
 }
 
-public interface IGameDisplayer<TPlayerInput, TServerInput, TServerOutput, TGameState> 
-    where TGameState : IGameState<TPlayerInput, TServerInput, TServerOutput>, new()
-    where TServerOutput : IServerOutput
+public interface IInputPredictor<TClientInput, TServerInput, TGameState>
 {
-    void AddNextFrame(Input<TPlayerInput, TServerInput> input, TGameState state, TServerOutput output);
+    // TODO: give more context?
+
+    public Input<TClientInput, TServerInput> PredictInput(TGameState state);
 }
-*/

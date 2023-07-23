@@ -1,5 +1,8 @@
 ﻿using MemoryPack;
 using System.Collections.Generic;
+using System.Linq;
+
+namespace FrameworkTest;
 
 [MemoryPackable]
 public readonly partial record struct Input<TPlayerInput, TServerInput>
@@ -7,15 +10,16 @@ public readonly partial record struct Input<TPlayerInput, TServerInput>
 
 // TODO: this structure is kinda janky
 
-public readonly record struct UpdateOutput<TOutput>
-    (IEnumerable<long> ClientsToTerminate, bool ShallStop, TOutput CustomOutput);
+public readonly record struct UpdateOutput(IEnumerable<long> ClientsToTerminate, bool ShallStop)
+{
+    public UpdateOutput() : this(Enumerable.Empty<long>(), false) { }
+}
 
 // TODO: output can be used to leak the game state.
 
-public interface IGameState<TPlayerInput, TServerInput, TServerOutput>
+public interface IGameState<TPlayerInput, TServerInput>
 {
-    public UpdateOutput<TServerOutput> Update(in Input<TPlayerInput, TServerInput> inputs);
+    public UpdateOutput Update(in Input<TPlayerInput, TServerInput> inputs);
 
-    public static abstract int DesiredTickRate { get; } // TODO: configurable tick rate
+    public static abstract float DesiredTickRate { get; } // TODO: configurable tick rate
 }
-

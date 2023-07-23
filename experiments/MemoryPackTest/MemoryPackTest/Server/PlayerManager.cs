@@ -4,15 +4,13 @@ using System.Collections.Generic;
 
 namespace FrameworkTest;
 
-class PlayerManager<TPlayerInput>
+public sealed class PlayerManager<TPlayerInput>
     where TPlayerInput : notnull, new()
-{
-    const int BasePlayerCapacity = 100;
-    const int BaseFrameCapacity = 1000;
+{ 
     public int EarlyFrameOffset { get; init; } = 5;
 
-    readonly Dictionary<long, Dictionary<long, TPlayerInput>> idToInputs_ = new(BasePlayerCapacity);
-    readonly List<long> removedPlayers_ = new(BasePlayerCapacity);
+    readonly Dictionary<long, Dictionary<long, TPlayerInput>> idToInputs_ = new();
+    readonly List<long> removedPlayers_ = new();
 
     readonly object mutex_ = new();
 
@@ -23,12 +21,12 @@ class PlayerManager<TPlayerInput>
         session_ = session;
     }
 
-    public long Frame { get; private set; } = 0;
+    public long Frame { get; private set; } = -1;
 
     public void AddPlayer(long id)
     {
         lock (mutex_)
-            if (!idToInputs_.TryAdd(id, new(BaseFrameCapacity)))
+            if (!idToInputs_.TryAdd(id, new()))
                 throw new ArgumentException("Player with given id is already present.", nameof(id));
 
         // TODO: send initial state
@@ -110,6 +108,7 @@ class PlayerManager<TPlayerInput>
                 }
                 else
                 {
+                    Console.WriteLine($"Player missed input for frame {Frame + 1}.");
                     input = new();
                 }
                 

@@ -1,14 +1,25 @@
-﻿using MemoryPack;
+﻿using System;
+using MemoryPack;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
+using FrameworkTest;
 
 [MemoryPackable]
-public partial class GameState : IGameState<PlayerInput, ServerInput, UpdateOutput>
+public partial class GameState : IGameState<PlayerInput, ServerInput>
 {
+    public long Tick = -1;
+
     public Dictionary<long, Vector2> Positions = new();
 
-    public UpdateOutput<UpdateOutput> Update(in Input<PlayerInput, ServerInput> inputs)
+    public (long Id, PlayerInput Input, bool terminated)[] Inputs = Array.Empty<(long, PlayerInput, bool)>();
+
+    public UpdateOutput Update(in Input<PlayerInput, ServerInput> inputs)
     {
+        Tick++;
+
+        Inputs = inputs.PlayerInputs; // TODO: make sure this does not break anything
+
         foreach ((long id, PlayerInput input, bool terminated) in inputs.PlayerInputs)
         {
             if (terminated)
@@ -17,8 +28,8 @@ public partial class GameState : IGameState<PlayerInput, ServerInput, UpdateOutp
                 continue;
             }
 
-            int dx = (input.Right ? 1 : -1) + (input.Left ? -1 : 1);
-            int dy = (input.Down ? 1 : -1) + (input.Up ? -1 : 1);
+            int dx = (input.Right ? 1 : 0) + (input.Left ? -1 : 0);
+            int dy = (input.Down ? 1 : 0) + (input.Up ? -1 : 0);
 
             Vector2 d = new(dx, dy);
 
@@ -34,7 +45,5 @@ public partial class GameState : IGameState<PlayerInput, ServerInput, UpdateOutp
         return new();
     }
 
-    public static int DesiredTickRate => 20;
+    public static float DesiredTickRate => 0.1f;
 }
-
-public struct UpdateOutput { }

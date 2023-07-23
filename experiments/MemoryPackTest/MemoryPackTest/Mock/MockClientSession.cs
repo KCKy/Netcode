@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 
 namespace FrameworkTest;
 
-public class MockClientSession : IClientSession
+public sealed class MockClientSession : IClientSession
 {
-    public Task Start()
+    public Task<long> StartAsync()
     {
         if (serverApi_ is not null)
             throw new InvalidOperationException("The session is already started.");
@@ -21,11 +21,11 @@ public class MockClientSession : IClientSession
             GameInput = (frame, data) => OnGameInput?.Invoke(frame, data)
         };
 
-        serverApi_ = serverSession_.ConnectMock(api);
+        (serverApi_, long id) = serverSession_.ConnectMock(api);
 
         serverApi_?.Connect();
 
-        return Task.CompletedTask;
+        return Task.FromResult(id);
     }
 
     readonly MockServerSession serverSession_;

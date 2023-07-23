@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FrameworkTest.Extensions;
 using MemoryPack;
 
 namespace FrameworkTest;
 
-public class Server<TPlayerInput, TServerInput, TOutput, TGameState> : IDisposable
-    where TGameState : IGameState<TPlayerInput, TServerInput, TOutput>, new()
+public sealed class Server<TPlayerInput, TServerInput, TGameState> : IDisposable
+    where TGameState : IGameState<TPlayerInput, TServerInput>, new()
     where TPlayerInput : notnull, new()
 {
-    readonly IServerInputProvider<TServerInput, TOutput> inputProvider_;
+    readonly IServerInputProvider<TServerInput> inputProvider_;
     
     readonly TimeSpan frameInterval_ = TimeSpan.FromSeconds(1d / TGameState.DesiredTickRate);
 
@@ -18,7 +19,7 @@ public class Server<TPlayerInput, TServerInput, TOutput, TGameState> : IDisposab
 
     TGameState currentState_ = new();
 
-    public Server(IServerSession session, IServerInputProvider<TServerInput, TOutput> inputProvider)
+    public Server(IServerSession session, IServerInputProvider<TServerInput> inputProvider)
     {
         session_ = session;
         inputProvider_ = inputProvider;
@@ -28,6 +29,8 @@ public class Server<TPlayerInput, TServerInput, TOutput, TGameState> : IDisposab
         session_.OnClientDisconnect += manager_.TerminatePlayer;
         session_.OnClientInput += manager_.AddPlayerInput;
     }
+
+    public IServerDisplayer<TPlayerInput, TServerInput, TGameState>? Displayer { get; set; } = null;
 
     void ClientConnect(long id)
     {
@@ -62,9 +65,7 @@ public class Server<TPlayerInput, TServerInput, TOutput, TGameState> : IDisposab
         {
             Task delay = Task.Delay(frameInterval_);
 
-            long frame = manager_.Frame;
-
-            UpdateOutput<TOutput> updateOutput;
+            UpdateOutput updateOutput;
 
             lock (stateLock_)
             {
@@ -72,12 +73,18 @@ public class Server<TPlayerInput, TServerInput, TOutput, TGameState> : IDisposab
 
                 byte[] bin = MemoryPackSerializer.Serialize<Input<TPlayerInput, TServerInput>>(new(serverInput, playerInputs));
 
-                manager_.SendGameInput(bin, frame);
+                manager_.SendGameInput(bin, manager_.Frame);
 
                 updateOutput = currentState_.Update(new(serverInput, playerInputs));
             }
 
-            serverInput = inputProvider_.GetInput(updateOutput.CustomOutput);
+
+            if (Displayer is { } displayer)
+            {
+                displayer.AddFrame(currentState_.MemoryPackCopy(), manager_.Frame);
+            }
+            
+            serverInput = inputProvider_.GetInput();
 
             foreach (long client in updateOutput.ClientsToTerminate)
                 session_.TerminatePlayer(client);

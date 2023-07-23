@@ -5,7 +5,7 @@ namespace FrameworkTest;
 
 public interface IClientSession : IDisposable
 {
-    Task Start();
+    Task<long> StartAsync();
     void Terminate();
     void SendInput(long frame, ReadOnlyMemory<byte> input);
 
