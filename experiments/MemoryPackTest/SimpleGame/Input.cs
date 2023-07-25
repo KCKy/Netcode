@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Security.Cryptography;
 using FrameworkTest;
 using MemoryPack;
 
@@ -18,18 +17,26 @@ public sealed class ServerInputProvider : IServerInputProvider<ServerInput>
 
 public sealed class PlayerInputProvider : IPlayerInputProvider<PlayerInput>
 {
-    readonly Random random_ = new();
+    static int globalDir_ = 0;
 
-    public PlayerInput GetInput()
+    readonly int dir_ = globalDir_++ % 8;
+
+    public PlayerInput GetInput(long frame)
     {
-        return random_.Next(4) switch
+        PlayerInput ret = dir_ switch
         {
             0 => new(true, false, false, false),
             1 => new(false, true, false, false),
             2 => new(false, false, true, false),
             3 => new(false, false, false, true),
+            4 => new(true, false, true, false),
+            5 => new(true, false, false, true),
+            6 => new(false, true, true, false),
+            7 => new(false, true, false, true),
             _ => throw new Exception()
         };
+
+        return ret;
     }
 }
 

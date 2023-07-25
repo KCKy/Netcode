@@ -51,7 +51,7 @@ public sealed class PlayerManager<TPlayerInput>
     {
         lock (mutex_)
         {
-            if (frame < Frame)
+            if (frame <= Frame)
             {
                 Console.WriteLine($"Received late input from player {id} for frame {frame} at frame {Frame}.");
                 session_.SignalMissedInput(id, frame, Frame);
@@ -80,6 +80,7 @@ public sealed class PlayerManager<TPlayerInput>
             if (!frameToInput.TryAdd(frame, playerInput))
             {
                 Console.WriteLine($"Received repeated input from player {id} for frame {frame}.");
+                return;
             }
         }
     }
@@ -100,15 +101,18 @@ public sealed class PlayerManager<TPlayerInput>
 
             int i = 0;
 
+            long nextFrame = Frame + 1;
+
             foreach ((long id, var value) in idToInputs_)
             {
-                if (value.TryGetValue(Frame, out var input))
+                if (value.TryGetValue(nextFrame, out var input))
                 {
-                    value.Remove(Frame);
+                    //Console.WriteLine($"Player input of {id} for frame {nextFrame}: {input}.");
+                    value.Remove(nextFrame);
                 }
                 else
                 {
-                    Console.WriteLine($"Player missed input for frame {Frame + 1}.");
+                    Console.WriteLine($"Player missed input for frame {nextFrame}.");
                     input = new();
                 }
                 
@@ -122,7 +126,7 @@ public sealed class PlayerManager<TPlayerInput>
                 i++;
             }
 
-            Frame++;
+            Frame = nextFrame;
             removedPlayers_.Clear();
 
             return inputFrame;

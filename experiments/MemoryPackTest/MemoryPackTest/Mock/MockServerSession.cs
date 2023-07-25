@@ -79,19 +79,19 @@ public sealed class MockServerSession : IServerSession
     public void SignalMissedInput(long playerId, long frame, long currentFrame)
     {
         GetApi(playerId)?.MissedInput(frame, currentFrame);
-        //Console.WriteLine($"Player {playerId} has failed to send input for frame {frame}.");
+        Console.WriteLine($"Player {playerId} has failed to send input for frame {frame}.");
     }
 
     public void SignalEarlyInput(long playerId, long frame, long currentFrame)
     {
         GetApi(playerId)?.EarlyInput(frame, currentFrame);
-        //Console.WriteLine($"Player {playerId} has sent unusualy early input for frame {frame} at frame {currentFrame}.");
+        Console.WriteLine($"Player {playerId} has sent unusualy early input for frame {frame} at frame {currentFrame}.");
     }
 
     public void InitiatePlayer(long playerId, long currentFrame, ReadOnlyMemory<byte> currentGameState)
     {
         GetApi(playerId)?.Initiate(currentFrame, currentGameState);
-        //Console.WriteLine($"Initiating {playerId} with state at frame {currentFrame}.");
+        Console.WriteLine($"Initiating {playerId} with state at frame {currentFrame}.");
     }
 
     public void SendInputToPlayer(long playerId, long currentFrame, ReadOnlyMemory<byte> gameInput)

@@ -21,6 +21,10 @@ public sealed class PredictQueue<TPlayerInput, TServerInput>
             return false;
         /*
         var x = MemoryPackSerializer.Deserialize<Input<TPlayerInput, TServerInput>>(authoritativeInput.Span);
+        
+        
+        Console.WriteLine($"<->");
+
         foreach (var (a, b, c) in x.PlayerInputs)
             Console.WriteLine($"{a} {b} {c}");
 
@@ -30,6 +34,8 @@ public sealed class PredictQueue<TPlayerInput, TServerInput>
 
         foreach (var (a, b, c) in y.PlayerInputs)
             Console.WriteLine($"{a} {b} {c}");
+
+        Console.WriteLine($"<->");
         */
         return  authoritativeInput.Span.SequenceEqual(input.Span);
     }

@@ -1,9 +1,9 @@
 ﻿using FrameworkTest;
 using SFML.Graphics;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.ExceptionServices;
 using SFML.System;
 
 using Color = SFML.Graphics.Color;
@@ -12,9 +12,7 @@ public sealed class Displayer : IServerDisplayer<PlayerInput, ServerInput, GameS
 {
     readonly Text text_ = new();
 
-
-    static readonly Vector2f Offset = new Vector2f(16, 9) * Side;
-    const int Side = 15;
+    const int Side = 8;
 
     readonly RectangleShape playerShape_ = new()
     {
@@ -26,7 +24,17 @@ public sealed class Displayer : IServerDisplayer<PlayerInput, ServerInput, GameS
 
     public required string Name { get; init; }
 
-    Vector2[] positions_ = Array.Empty<Vector2>();
+    KeyValuePair<long, Vector2i>[] positions_ = Array.Empty<KeyValuePair<long, Vector2i>>();
+
+    long id_ = -1;
+
+    public void SetId(long id)
+    {
+        id_ = id;
+    }
+
+    static readonly Color[] Pallete = new[]
+        { Color.Red, Color.Green, Color.Blue, Color.Yellow, Color.Magenta, Color.Cyan };
 
     public Displayer()
     {
@@ -37,15 +45,9 @@ public sealed class Displayer : IServerDisplayer<PlayerInput, ServerInput, GameS
 
     public void AddFrame(GameState state, long frame)
     {
-        string text = $"{Name}\nTick: {state.Tick}\nFrame: {frame}\nPos: {positions_.FirstOrDefault()}";
-
-        var positions = state.Positions.Values;
-        int size = positions.Count;
-
-        if (size != positions_.Length)
-            positions_ = new Vector2[size];
-
-        positions.CopyTo(positions_, 0);
+        string text = $"{Name}\nTick: {state.Tick}\nFrame: {frame}";
+        
+        positions_ = state.Positions.ToArray();
 
         lock (mutex_)
             text_.DisplayedString = text;
@@ -55,17 +57,20 @@ public sealed class Displayer : IServerDisplayer<PlayerInput, ServerInput, GameS
     {
         window.Clear();
 
+        Vector2u origin = window.Size / 2;
+
         lock (mutex_)
         {
-            foreach (Vector2 position in positions_)
+            foreach ((long id, Vector2i position) in positions_)
             {
-                var pos = position * Side;
-                playerShape_.Position = new Vector2f(pos.X, pos.Y) + Offset;
+                playerShape_.Position = (Vector2f)(position * Side + (Vector2i)origin);
+                playerShape_.FillColor = id == id_ ? Color.White : Pallete[id % Pallete.Length];
+
                 window.Draw(playerShape_);
+
             }
 
             window.Draw(text_);
         }
     }
 }
-

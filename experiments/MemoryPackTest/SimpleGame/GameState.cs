@@ -4,13 +4,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using FrameworkTest;
+using SFML.System;
 
 [MemoryPackable]
 public partial class GameState : IGameState<PlayerInput, ServerInput>
 {
     public long Tick = -1;
 
-    public Dictionary<long, Vector2> Positions = new();
+    public Dictionary<long, Vector2i> Positions = new();
 
     public (long Id, PlayerInput Input, bool terminated)[] Inputs = Array.Empty<(long, PlayerInput, bool)>();
 
@@ -31,7 +32,7 @@ public partial class GameState : IGameState<PlayerInput, ServerInput>
             int dx = (input.Right ? 1 : 0) + (input.Left ? -1 : 0);
             int dy = (input.Down ? 1 : 0) + (input.Up ? -1 : 0);
 
-            Vector2 d = new(dx, dy);
+            Vector2i d = new(dx, dy);
 
             if (!Positions.TryGetValue(id, out var pos))
             {
@@ -45,5 +46,5 @@ public partial class GameState : IGameState<PlayerInput, ServerInput>
         return new();
     }
 
-    public static float DesiredTickRate => 0.1f;
+    public static float DesiredTickRate => 0.5f;
 }

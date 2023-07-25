@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FrameworkTest.Extensions;
 using MemoryPack;
@@ -21,12 +19,23 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
 
     readonly PredictQueue<TPlayerInput, TServerInput> predictQueue_ = new();
 
-    public long Id { get; private set; } = -1;
+    long id_ = -1;
+
+    public long Id
+    {
+        get => id_;
+
+        set
+        {
+            id_ = value;
+            Displayer?.SetId(value);
+        }
+    }
 
     TGameState authoritativeState_ = new();
     TGameState currentState_ = new();
 
-    public IClientDisplayer<TPlayerInput, TServerInput, TGameState>? Displayer { get; set; } = null;
+    public IClientDisplayer<TPlayerInput, TServerInput, TGameState>? Displayer { get; init; } = null;
 
     public Client(IClientSession session, IPlayerInputProvider<TPlayerInput> provider,
         IInputPredictor<TPlayerInput, TServerInput, TGameState> predictor)
@@ -56,6 +65,8 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
 
         currentState_ = state;
         authoritativeState_ = state.MemoryPackCopy();
+
+        Console.WriteLine($"Received init state for frame {frame}");
 
         initComplete_.SetResult();
     }
@@ -107,10 +118,10 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
             {
                 // Gather user input and prediction
                 var predict = predictor_.PredictInput(currentState_.MemoryPackCopy()); // TODO: copy!?
-                var clientInput = provider_.GetInput();
+                var clientInput = provider_.GetInput(predictFrame_ + 1);
 
                 ReplaceInputInPredict(ref predict, clientInput);
-                
+
                 ReadOnlyMemory<byte> predictData = MemoryPackSerializer.Serialize(predict);
 
                 predictFrame_++;
@@ -124,9 +135,9 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
                 currentState_.Update(predict); 
 
                 stateCopy = currentState_.MemoryPackCopy(); // TODO: some of this could be outside the critical section
-            }
 
-            Displayer?.AddFrame(stateCopy, predictFrame_);
+                Displayer?.AddFrame(stateCopy, predictFrame_);
+            }
 
             await nextFrame;
         }
@@ -203,7 +214,7 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
 
             clientInputs_.ClearFrame(authFrame_);
             bool predictionValid = predictQueue_.CheckDequeue(data, authFrame_);
-
+            
             if (!predictionValid)
             {
                 ReplacePredict(copy, authFrame_);

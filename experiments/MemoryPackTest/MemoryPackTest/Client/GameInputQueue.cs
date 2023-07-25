@@ -77,7 +77,6 @@ public sealed class GameInputQueue<TInput> : IAsyncEnumerable<TInput>
                     {
                         Current = queue_.inputQueue_.Dequeue();
                         queue_.heldFrames_.Remove(frame);
-                        Console.WriteLine(frame);
                         queue_.currentFrame_++;
                         return true;
                     }
@@ -92,7 +91,6 @@ public sealed class GameInputQueue<TInput> : IAsyncEnumerable<TInput>
             {
                 queue_.heldFrames_.Remove(queue_.currentFrame_);
                 Current = queue_.inputQueue_.Dequeue();
-                Console.WriteLine(queue_.currentFrame_);
                 queue_.currentFrame_++;
             }
 
