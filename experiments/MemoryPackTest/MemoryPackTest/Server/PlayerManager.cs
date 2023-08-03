@@ -28,8 +28,6 @@ public sealed class PlayerManager<TPlayerInput>
         lock (mutex_)
             if (!idToInputs_.TryAdd(id, new()))
                 throw new ArgumentException("Player with given id is already present.", nameof(id));
-
-        // TODO: send initial state
     }
 
     public void TerminatePlayer(long id)
@@ -58,12 +56,11 @@ public sealed class PlayerManager<TPlayerInput>
                 return;
             }
 
-            if (frame > Frame + EarlyFrameOffset)
+            /*if (frame > Frame + EarlyFrameOffset)
             {
                 Console.WriteLine($"Received early input from player {id} for frame {frame} at frame {Frame}.");
-                session_.SignalMissedInput(id, frame, Frame);
-                return;
-            }
+                session_.SignalEarlyInput(id, frame, Frame);
+            }*/
             
             if (!idToInputs_.TryGetValue(id, out var frameToInput))
             {
@@ -82,6 +79,8 @@ public sealed class PlayerManager<TPlayerInput>
                 Console.WriteLine($"Received repeated input from player {id} for frame {frame}.");
                 return;
             }
+
+            //Console.WriteLine($"Received input from player {id} for frame {frame}.");
         }
     }
 
@@ -112,7 +111,7 @@ public sealed class PlayerManager<TPlayerInput>
                 }
                 else
                 {
-                    Console.WriteLine($"Player missed input for frame {nextFrame}.");
+                    //Console.WriteLine($"Player missed input for frame {nextFrame}.");
                     input = new();
                 }
                 

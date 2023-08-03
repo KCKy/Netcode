@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FrameworkTest;
 using FrameworkTest.Extensions;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
+
+namespace SimpleGame;
 
 static class Program
 {
@@ -65,16 +68,25 @@ static class Program
 
     static Client<PlayerInput, ServerInput, GameState> NextClient(MockServerSession serverSession)
     {
-        MockClientSession clientSession = new(serverSession);
+        MockClientSession clientSession = new(serverSession, 0.1, 0.02);
 
 
-        return new(clientSession, new PlayerInputProvider(), new InputPredictor())
+        return new(clientSession, new PlayerInputProvider() { Dir = clientCounter_ % 8}, new InputPredictor())
         {
             Displayer = CreateWindow($"Client {++clientCounter_}")
         };
     }
 
-    static void Main(string[] args)
+    static async Task StartClients(IEnumerable<Client<PlayerInput, ServerInput, GameState>> clients)
+    {
+        foreach (var client in clients)
+        {
+            await Task.Delay(1000);
+            client.RunAsync().AssureSuccess();
+        }
+    }
+
+    static void Main()
     {
         MockServerSession serverSession = new();
 
@@ -85,10 +97,9 @@ static class Program
 
         server.RunAsync().AssureSuccess();
 
-        var clients = from i in Enumerable.Range(0, 11) select NextClient(serverSession);
+        var clients = (from i in Enumerable.Range(0, 8) select NextClient(serverSession)).ToArray();
 
-        foreach (var client in clients)
-            client.RunAsync().AssureSuccess();
+        StartClients(clients).AssureSuccess();
 
         bool active = true;
 
@@ -96,7 +107,9 @@ static class Program
         {
             active = false;
 
-            foreach (var (window, displayer) in Windows)
+            var win = Windows.ToArray();
+
+            foreach (var (window, displayer) in win)
             {
                 if (!window.IsOpen)
                     continue;

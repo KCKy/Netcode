@@ -28,5 +28,7 @@ public interface IInputPredictor<TClientInput, TServerInput, TGameState>
 {
     // TODO: give more context?
 
-    public Input<TClientInput, TServerInput> PredictInput(TGameState state);
+    public Input<TClientInput, TServerInput> PredictInput();
+
+    public Input<TClientInput, TServerInput> PredictInput(in Input<TClientInput, TServerInput> input);
 }

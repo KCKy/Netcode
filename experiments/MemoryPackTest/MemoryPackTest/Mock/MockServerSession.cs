@@ -10,16 +10,9 @@ public sealed class MockServerSession : IServerSession
     long sessionId_ = 1;
     readonly object sessionIdMutex_ = new();
 
-    readonly Dictionary<long, MockClientSession.Api> idToSession_ = new();
+    readonly Dictionary<long, Api> idToSession_ = new();
 
-    internal class Api
-    {
-        public required Action Connect { get; init; }
-        public required Action Disconnect { get; init; }
-        public required Action<long, ReadOnlyMemory<byte>> Input { get; init; }
-    }
-
-    internal (Api, long) ConnectMock(MockClientSession.Api session)
+    internal long ConnectMock(Api session)
     {
         Monitor.Enter(sessionIdMutex_);
         long id = sessionId_++;
@@ -29,12 +22,11 @@ public sealed class MockServerSession : IServerSession
         
         Monitor.Exit(sessionIdMutex_);
 
-        return (new Api()
-        {
-            Connect = () => OnClientConnect?.Invoke(id),
-            Disconnect = () => OnClientDisconnect?.Invoke(id),
-            Input = (frame, data) => OnClientInput?.Invoke(id, frame, data)
-        }, id);
+        session.OnConnect += () => OnClientConnect?.Invoke(id);
+        session.OnDisconnect += () => OnClientConnect?.Invoke(id);
+        session.OnInput += (frame, data) => OnClientInput?.Invoke(id, frame, data);
+
+        return id;
     }
 
     public MockServerSession()
@@ -52,7 +44,7 @@ public sealed class MockServerSession : IServerSession
         return Task.CompletedTask;
     }
 
-    MockClientSession.Api? GetApi(long id)
+    Api? GetApi(long id)
     {
         lock (idToSession_)
         {
@@ -63,7 +55,7 @@ public sealed class MockServerSession : IServerSession
 
     public void TerminatePlayer(long playerId)
     {
-        MockClientSession.Api? api;
+        Api? api;
 
         lock (idToSession_)
         {
@@ -79,19 +71,19 @@ public sealed class MockServerSession : IServerSession
     public void SignalMissedInput(long playerId, long frame, long currentFrame)
     {
         GetApi(playerId)?.MissedInput(frame, currentFrame);
-        Console.WriteLine($"Player {playerId} has failed to send input for frame {frame}.");
+        //Console.WriteLine($"Player {playerId} has failed to send input for frame {frame}.");
     }
 
     public void SignalEarlyInput(long playerId, long frame, long currentFrame)
     {
         GetApi(playerId)?.EarlyInput(frame, currentFrame);
-        Console.WriteLine($"Player {playerId} has sent unusualy early input for frame {frame} at frame {currentFrame}.");
+        //Console.WriteLine($"Player {playerId} has sent unusualy early input for frame {frame} at frame {currentFrame}.");
     }
 
     public void InitiatePlayer(long playerId, long currentFrame, ReadOnlyMemory<byte> currentGameState)
     {
         GetApi(playerId)?.Initiate(currentFrame, currentGameState);
-        Console.WriteLine($"Initiating {playerId} with state at frame {currentFrame}.");
+        //Console.WriteLine($"Initiating {playerId} with state at frame {currentFrame}.");
     }
 
     public void SendInputToPlayer(long playerId, long currentFrame, ReadOnlyMemory<byte> gameInput)

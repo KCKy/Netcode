@@ -103,50 +103,62 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
     long authFrame_ = -1;
     long predictFrame_ = -1;
 
+    TPlayerInput GainInputUnsafe(long frame)
+    {
+        if (!clientInputs_.TryGet(frame, out var clientInput))
+        {
+            clientInput = provider_.GetInput(frame);
+            session_.SendInput(frame, MemoryPackSerializer.Serialize(clientInput));
+            clientInputs_.AddNext(clientInput, frame);
+        }
+
+        return clientInput;
+    }
+
+    Input<TPlayerInput, TServerInput> currentPredictInput_ = new();
+
     async Task RunPredictAsync()
     {
         await Task.Yield();
 
         while (true)
         {
-            TGameState stateCopy;
-
             // Frame rate
             Task nextFrame = frameTime_.Ticks == 0 ? Task.CompletedTask : Task.Delay(frameTime_);
 
             lock (predictMutex_)
             {
                 // Gather user input and prediction
-                var predict = predictor_.PredictInput(currentState_.MemoryPackCopy()); // TODO: copy!?
-                var clientInput = provider_.GetInput(predictFrame_ + 1);
-
-                ReplaceInputInPredict(ref predict, clientInput);
-
-                ReadOnlyMemory<byte> predictData = MemoryPackSerializer.Serialize(predict);
 
                 predictFrame_++;
 
-                clientInputs_.AddNext(clientInput, predictFrame_);
+                currentPredictInput_ = predictor_.PredictInput(currentPredictInput_);
+
+                var clientInput = GainInputUnsafe(predictFrame_);
+
+                ReplaceInputInPredict(ref currentPredictInput_, clientInput);
+
+                ReadOnlyMemory<byte> predictData = MemoryPackSerializer.Serialize(currentPredictInput_);
+
                 predictQueue_.AddPredict(predictData, predictFrame_);
-                
-                session_.SendInput(predictFrame_, MemoryPackSerializer.Serialize(clientInput));
 
                 // Take another step of predict simulation
-                currentState_.Update(predict); 
+                currentState_.Update(currentPredictInput_); 
 
-                stateCopy = currentState_.MemoryPackCopy(); // TODO: some of this could be outside the critical section
-
-                Displayer?.AddFrame(stateCopy, predictFrame_);
+                Displayer?.AddFrame(currentState_.MemoryPackCopy(), predictFrame_);
             }
 
             await nextFrame;
         }
     }
 
-    void ReplacePredict(TGameState state, long frame)
+    void ReplacePredict(TGameState state, Input<TPlayerInput, TServerInput> currentInput, long frame, long goalFrame)
     {
+        Stopwatch watch = new();
+        watch.Start();
+
         PredictQueue<TPlayerInput, TServerInput> replacementQueue = new();
-        
+
         while (true) // TODO: fail after finite steps
         {
             TPlayerInput clientInput;
@@ -155,39 +167,39 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
 
             lock (predictMutex_)
             {
-                Debug.Assert(predictFrame_ <= frame);
-
-                // Try to replace
-
-                if (predictFrame_ == frame)
+                if (frame >= goalFrame /*&& frame >= predictFrame*/)
                 {
+                    currentPredictInput_ = currentInput;
                     currentState_ = state;
+                    predictFrame_ = frame;
                     predictQueue_.ReplaceTimeline(replacementQueue);
 
-                    Console.WriteLine($"Successfuly replaced timeline at {frame}");
+                    watch.Stop();
+
+                    Console.WriteLine($"Successfuly replaced timeline at {frame} in {watch.ElapsedMilliseconds} ms.");
                     Displayer?.AddFrame(state, frame);
 
                     return;
                 }
 
-                if (!clientInputs_.TryGet(frame + 1, out clientInput))
-                    throw new Exception();
+                frame++;
+                
+                clientInput = GainInputUnsafe(frame);
             }
 
-            var stateCopy = state.MemoryPackCopy();
+            currentInput = predictor_.PredictInput(currentInput);
 
-            var predict = predictor_.PredictInput(stateCopy); // TODO: consider what information to provide the predictor
-
-            state.Update(predict);
-            frame++;
-
-            ReplaceInputInPredict(ref predict, clientInput);
-
-            var predictData = MemoryPackSerializer.Serialize(predict);
+            ReplaceInputInPredict(ref currentInput, clientInput);
+            
+            state.Update(currentInput);
+            
+            var predictData = MemoryPackSerializer.Serialize(currentInput);
 
             replacementQueue.AddPredict(predictData, frame);
         }
     }
+
+    const long FixedPredictLength = 8;
 
     public async Task RunAsync()
     {
@@ -199,6 +211,10 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
         await initComplete_.Task;
 
         frameTime_ = TimeSpan.FromSeconds(1f / TGameState.DesiredTickRate);
+        
+        var copy = authoritativeState_.MemoryPackCopy();
+
+        ReplacePredict(copy, predictor_.PredictInput(), authFrame_, authFrame_ + FixedPredictLength);
 
         RunPredictAsync().AssureSuccess();
 
@@ -210,15 +226,14 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
             authoritativeState_.Update(input);
             authFrame_++;
 
-            TGameState copy = authoritativeState_.MemoryPackCopy(); // TODO: checksum
+            // TODO: checksum
 
-            clientInputs_.ClearFrame(authFrame_);
             bool predictionValid = predictQueue_.CheckDequeue(data, authFrame_);
+
+            // Console.WriteLine($"Authorize frame {authFrame_}: {predictionValid}");
             
             if (!predictionValid)
-            {
-                ReplacePredict(copy, authFrame_);
-            }
+                ReplacePredict(authoritativeState_.MemoryPackCopy(), input, authFrame_, authFrame_ + FixedPredictLength);
         }
     }
 }

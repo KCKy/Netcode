@@ -5,7 +5,9 @@ VisualStudioVersion = 17.6.33815.320
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FrameworkTest", "MemoryPackTest\FrameworkTest.csproj", "{53D957D3-BD31-41CB-A109-94BFCD914ED6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleGame", "SimpleGame\SimpleGame.csproj", "{7C5A85DC-62E2-48D3-81ED-297C9069B3CA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleGame", "SimpleGame\SimpleGame.csproj", "{7C5A85DC-62E2-48D3-81ED-297C9069B3CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{EC82EC6E-7BDB-42A9-95A8-C9D2D54E065A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{7C5A85DC-62E2-48D3-81ED-297C9069B3CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C5A85DC-62E2-48D3-81ED-297C9069B3CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C5A85DC-62E2-48D3-81ED-297C9069B3CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC82EC6E-7BDB-42A9-95A8-C9D2D54E065A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC82EC6E-7BDB-42A9-95A8-C9D2D54E065A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC82EC6E-7BDB-42A9-95A8-C9D2D54E065A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC82EC6E-7BDB-42A9-95A8-C9D2D54E065A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -3,6 +3,8 @@ using System.Linq;
 using FrameworkTest;
 using MemoryPack;
 
+namespace SimpleGame;
+
 [MemoryPackable]
 public partial record struct PlayerInput (bool Up, bool Down, bool Left, bool Right);
 
@@ -17,13 +19,11 @@ public sealed class ServerInputProvider : IServerInputProvider<ServerInput>
 
 public sealed class PlayerInputProvider : IPlayerInputProvider<PlayerInput>
 {
-    static int globalDir_ = 0;
-
-    readonly int dir_ = globalDir_++ % 8;
+    public int Dir { get; init; } = 0;
 
     public PlayerInput GetInput(long frame)
     {
-        PlayerInput ret = dir_ switch
+        PlayerInput ret = Dir switch
         {
             0 => new(true, false, false, false),
             1 => new(false, true, false, false),
@@ -42,10 +42,14 @@ public sealed class PlayerInputProvider : IPlayerInputProvider<PlayerInput>
 
 public sealed class InputPredictor : IInputPredictor<PlayerInput, ServerInput, GameState>
 {
-    public Input<PlayerInput, ServerInput> PredictInput(GameState state)
+    public Input<PlayerInput, ServerInput> PredictInput()
     {
-        // Just copy the player inputs
-        var inputEnum = from input in state.Inputs where !input.terminated select input;
-        return new(new(), inputEnum.ToArray());
+        return new Input<PlayerInput, ServerInput>(new(), Array.Empty<(long, PlayerInput, bool)>());
+    }
+
+    public Input<PlayerInput, ServerInput> PredictInput(in Input<PlayerInput, ServerInput> input)
+    {
+        var inputEnum = from i in input.PlayerInputs where !i.Terminated select i;
+        return new Input<PlayerInput, ServerInput>(new(), inputEnum.ToArray());
     }
 }
