@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,6 +38,9 @@ public sealed class GameInputQueue<TInput> : IAsyncEnumerable<TInput>
 
                 if (frame == value)
                     gotCurrentFrame_?.TrySetResult();
+
+                Debug.Assert(inputQueue_.Count < 256);
+                Debug.Assert(heldFrames_.Count < 256);
             }
         }
     }
@@ -53,6 +57,9 @@ public sealed class GameInputQueue<TInput> : IAsyncEnumerable<TInput>
 
             if (frame == currentFrame_)
                 gotCurrentFrame_?.TrySetResult();
+
+            Debug.Assert(inputQueue_.Count < 256);
+            Debug.Assert(heldFrames_.Count < 256);
         }
     }
     
@@ -92,6 +99,9 @@ public sealed class GameInputQueue<TInput> : IAsyncEnumerable<TInput>
                 queue_.heldFrames_.Remove(queue_.currentFrame_);
                 Current = queue_.inputQueue_.Dequeue();
                 queue_.currentFrame_++;
+
+                Debug.Assert(queue_.inputQueue_.Count < 256);
+                Debug.Assert(queue_.heldFrames_.Count < 256);
             }
 
             return true;

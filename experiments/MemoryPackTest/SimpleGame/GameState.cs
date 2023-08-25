@@ -166,8 +166,6 @@ public partial class GameState : IGameState<PlayerInput, ServerInput>
 
     public Layer Objects = new();
 
-    public (long Id, PlayerInput Input, bool terminated)[] Inputs = Array.Empty<(long, PlayerInput, bool)>();
-
     const int StoneArea = 50;
 
     static readonly Vector2i Spawn = new(0, 0);
@@ -196,8 +194,6 @@ public partial class GameState : IGameState<PlayerInput, ServerInput>
         Tick++;
 
         // TODO: it depents on the order of inputs, which is fine?
-
-        Inputs = inputs.PlayerInputs; // TODO: make sure this does not break anything
 
         foreach ((long id, PlayerInput input, bool terminated) in inputs.PlayerInputs)
         {
@@ -229,14 +225,19 @@ public partial class GameState : IGameState<PlayerInput, ServerInput>
 
             // MOVE
 
-            switch (Objects[pos + d])
+            Vector2i nextPos = pos + d;
+
+            if (Math.Abs(nextPos.X) + Math.Abs(nextPos.Y) > 50)
+                continue;
+
+            switch (Objects[nextPos])
             {
                 case Player:
                     continue;
             }
 
-            Players[id] = pos + d;
-            (Objects[pos], Objects[pos + d]) = (null, Objects[pos]);
+            Players[id] = nextPos;
+            (Objects[pos], Objects[nextPos]) = (null, Objects[pos]);
         }
 
         /*

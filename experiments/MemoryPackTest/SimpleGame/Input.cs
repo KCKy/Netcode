@@ -19,11 +19,18 @@ public sealed class ServerInputProvider : IServerInputProvider<ServerInput>
 
 public sealed class PlayerInputProvider : IPlayerInputProvider<PlayerInput>
 {
+    readonly Random random_ = new(DateTime.UtcNow.Nanosecond);
+
     public int Dir { get; init; } = 0;
 
     public PlayerInput GetInput(long frame)
     {
-        PlayerInput ret = Dir switch
+        int dir = Dir;
+
+        if (random_.NextSingle() < 0.001)
+            dir = random_.Next(0, 8);
+
+        PlayerInput ret = dir switch
         {
             0 => new(true, false, false, false),
             1 => new(false, true, false, false),

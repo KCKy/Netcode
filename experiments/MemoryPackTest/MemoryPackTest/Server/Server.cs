@@ -78,7 +78,7 @@ public sealed class Server<TPlayerInput, TServerInput, TGameState> : IDisposable
                 updateOutput = currentState_.Update(new(serverInput, playerInputs));
             }
 
-            Displayer?.AddFrame(currentState_.MemoryPackCopy(), manager_.Frame);
+            Displayer?.AddFrame(currentState_, manager_.Frame);
 
             serverInput = inputProvider_.GetInput();
 

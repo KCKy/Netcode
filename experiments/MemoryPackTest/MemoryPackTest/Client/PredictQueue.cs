@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using MemoryPack;
 
 namespace FrameworkTest;
@@ -12,15 +13,21 @@ public sealed class PredictQueue<TPlayerInput, TServerInput>
     {
         if (!mapping_.TryAdd(frame, input))
             mapping_[frame] = input;
+        
+        Debug.Assert(mapping_.Count < 256);
     }
 
     public ReadOnlyMemory<byte> GetInput(long frame)
     {
+        Debug.Assert(mapping_.Count < 256);
+        
         return mapping_[frame];
     }
 
     public bool CheckDequeue(ReadOnlyMemory<byte> authoritativeInput, long frame)
     {
+        Debug.Assert(mapping_.Count < 256);
+
         bool equal = mapping_.TryGetValue(frame, out var input) && authoritativeInput.Span.SequenceEqual(input.Span);
 
         mapping_.Remove(frame - 1);

@@ -45,7 +45,7 @@ static class Program
 
     static Displayer CreateWindow(string name)
     {
-        Displayer displayer = new()
+        Displayer displayer = new(new(WindowWidth, WindowHeight))
         {
             Name = name
         };

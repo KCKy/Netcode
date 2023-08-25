@@ -3,6 +3,7 @@ using SFML.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FrameworkTest.Extensions;
 using SFML.System;
 using Color = SFML.Graphics.Color;
 
@@ -14,14 +15,9 @@ public sealed class Displayer : IServerDisplayer<PlayerInput, ServerInput, GameS
 
     readonly RectangleShape playerShape_ = new();
 
-    readonly object mutex_ = new();
-
     const float MaxSide = 12;
 
     public required string Name { get; init; }
-
-    Dictionary<long, Vector2i> positions_ = new();
-    Layer layer_ = new();
 
     long id_ = -1;
 
@@ -35,83 +31,88 @@ public sealed class Displayer : IServerDisplayer<PlayerInput, ServerInput, GameS
 
     static readonly Color MyColor = Color.Yellow;
 
-    static readonly Color WallColor = new Color(50, 50, 50);
+    static readonly Color WallColor = new (50, 50, 50);
 
-    static readonly Color StoneColor = new Color(150, 150, 150);
+    static readonly Color StoneColor = new (150, 150, 150);
 
-    public Displayer()
+    readonly Vector2u windowSize_;
+
+    KeyValuePair<long, Vector2i>[] players_ = Array.Empty<KeyValuePair<long, Vector2i>>();
+    //Layer layer_ = new();
+    
+    public Displayer(Vector2u windowSize)
     {
         text_.Font = new(@"C:\Windows\Fonts\arial.ttf");;
         text_.CharacterSize = 24;
         text_.FillColor = Color.White;
+        windowSize_ = windowSize;
     }
+
+    long frame_ = -1;
+    long count_ = 0;
 
     public void AddFrame(GameState state, long frame)
     {
-        string text = $"{Name}\nTick: {state.Tick}\nFrame: {frame}\nPlayers: {state.Players.Count}\nObjects: {state.Objects.Count}";
-
-        positions_ = state.Players;
-        layer_ = state.Objects;
+        frame_ = frame;
         
-        lock (mutex_)
-            text_.DisplayedString = text;
+        if (frame != state.Tick)
+            throw new Exception("Frame and tick mismatch.");
+
+        count_ = state.Objects.Count;
+
+        players_ = state.Players.ToArray();
+        //layer_ = state.Objects.MemoryPackCopy();
     }
 
-    public void DrawShape(RenderWindow window, Vector2i position, Color color, float side)
+    public void DrawShape(RenderWindow target, Vector2i position, Color color, float side)
     {
-        Vector2u origin = window.Size / 2;
+        Vector2u origin = target.Size / 2;
         playerShape_.Position = (Vector2f)position * side + (Vector2f)origin;
         playerShape_.FillColor = color;
         playerShape_.Size = new(side, side);
-        window.Draw(playerShape_);
+        target.Draw(playerShape_);
     }
-
 
     float side_ = MaxSide;
 
     public void Draw(RenderWindow window)
     {
-        window.Clear();
-        
-        lock (mutex_)
+        text_.DisplayedString = $"{Name}\nFrame: {frame_}\nPlayers: {players_.Length}\nObjects: {count_}";
+
+        if (side_ > 1)
         {
-            if (side_ > 1)
+            foreach ((long id, (int x, int y)) in players_)
             {
-                foreach ((long id, (int x, int y)) in positions_)
-                {
-                    if (id_ != -1 && id != id_)
-                        continue;
+                if (id_ != -1 && id != id_)
+                    continue;
 
-                    while (Math.Abs((x + 1) * side_) >= window.Size.X / 2)
-                    {
-                        side_--;
-                    }
-                    while (Math.Abs((y + 1) * side_) >= window.Size.Y / 2)
-                    {
-                        side_--;
-                    }
-                }
+                while (Math.Abs((x + 1) * side_) >= windowSize_.X / 2)
+                    side_--;
+                
+                while (Math.Abs((y + 1) * side_) >= windowSize_.Y / 2)
+                    side_--;
             }
-            
-            foreach (var (pos, obj) in layer_)
-            {
-                switch (obj)
-                {
-                    case Wall:
-                        DrawShape(window, pos, WallColor, side_);
-                        break;
-                    case Stone:
-                        DrawShape(window, pos, StoneColor, side_);
-                        break;
-                }
-            }
-
-            foreach ((long id, Vector2i pos) in positions_)
-            {
-                DrawShape(window, pos, id == id_ ? MyColor : Pallete[id % Pallete.Length], side_);
-            }
-
-            window.Draw(text_);
         }
+
+        window.Clear();
+        /*
+        foreach (var (pos, obj) in layer_)
+        {
+            switch (obj)
+            {
+                case Wall:
+                    DrawShape(window, pos, WallColor, side_);
+                    break;
+                case Stone:
+                    DrawShape(window, pos, StoneColor, side_);
+                    break;
+            }
+        }
+        */
+
+        window.Draw(text_);
+
+        foreach ((long id, Vector2i pos) in players_)
+            DrawShape(window, pos, id == id_ ? MyColor : Pallete[id % Pallete.Length], side_);
     }
 }

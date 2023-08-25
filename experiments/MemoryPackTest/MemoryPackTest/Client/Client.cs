@@ -73,7 +73,7 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
 
     readonly object predictMutex_ = new();
 
-    TimeSpan frameTime_ = TimeSpan.FromSeconds(2f);
+    TimeSpan frameTime_ = TimeSpan.FromSeconds(1f / TGameState.DesiredTickRate);
 
     readonly ClientInputs<TPlayerInput> clientInputs_ = new();
 
@@ -145,7 +145,8 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
                 // Take another step of predict simulation
                 currentState_.Update(currentPredictInput_); 
 
-                Displayer?.AddFrame(currentState_.MemoryPackCopy(), predictFrame_);
+                // Give chance to read the state
+                Displayer?.AddFrame(currentState_, predictFrame_);
             }
 
             await nextFrame;
@@ -212,9 +213,7 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
 
         frameTime_ = TimeSpan.FromSeconds(1f / TGameState.DesiredTickRate);
         
-        var copy = authoritativeState_.MemoryPackCopy();
-
-        ReplacePredict(copy, predictor_.PredictInput(), authFrame_, authFrame_ + FixedPredictLength);
+        ReplacePredict(authoritativeState_.MemoryPackCopy(), predictor_.PredictInput(), authFrame_, authFrame_ + FixedPredictLength);
 
         RunPredictAsync().AssureSuccess();
 
@@ -228,6 +227,8 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
 
             // TODO: checksum
 
+            clientInputs_.ClearFrame(authFrame_ - 1);
+
             bool predictionValid = predictQueue_.CheckDequeue(data, authFrame_);
 
             // Console.WriteLine($"Authorize frame {authFrame_}: {predictionValid}");
@@ -235,5 +236,7 @@ public sealed class Client<TPlayerInput, TServerInput, TGameState>
             if (!predictionValid)
                 ReplacePredict(authoritativeState_.MemoryPackCopy(), input, authFrame_, authFrame_ + FixedPredictLength);
         }
+
+        // TODO: end
     }
 }
