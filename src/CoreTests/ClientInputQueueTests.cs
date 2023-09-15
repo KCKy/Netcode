@@ -27,7 +27,7 @@ public class ClientInputQueueTests
         Assert.True(frame.IsEmpty);
 
         // 1
-        queue.AddPlayer(id);
+        queue.AddClient(id);
         frame = queue.ConstructAuthoritativeFrame();
         queue.AddInput(id, 0, new());
         queue.AddInput(id, 2, thirdInput);
@@ -44,7 +44,7 @@ public class ClientInputQueueTests
         frame.Span[0].Assert(id, thirdInput, false);
 
         // 3
-        queue.RemovePlayer(id);
+        queue.RemoveClient(id);
         frame = queue.ConstructAuthoritativeFrame();
         
         Assert.Equal(3, queue.Frame);

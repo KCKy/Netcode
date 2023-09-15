@@ -1,4 +1,6 @@
-﻿namespace Core.DataStructures;
+﻿using Serilog;
+
+namespace Core.DataStructures;
 
 /// <summary>
 /// Stores all inputs of the local client between authoritative and predict state.
@@ -32,6 +34,8 @@ public sealed class LocalInputQueue<TInput>
         LastFrame += offset;
     }
 
+    readonly ILogger logger_ = Log.ForContext<LocalInputQueue<TInput>>();
+
     /// <summary>
     /// Accessor.
     /// </summary>
@@ -43,7 +47,10 @@ public sealed class LocalInputQueue<TInput>
         get
         {
             if (frame < FirstFrame || frame > LastFrame)
-                throw new IndexOutOfRangeException( "Given frame is not in the queue.");
+            {
+                logger_.Fatal("To access non-contained ([{First}, {Last}]) {index}.", FirstFrame, LastFrame, frame);
+                throw new IndexOutOfRangeException("Given frame is not in the queue.");
+            }
 
             return frameToInput_[frame - offset_];
         }
@@ -66,7 +73,10 @@ public sealed class LocalInputQueue<TInput>
     public void Pop()
     {
         if (FirstFrame > LastFrame)
+        {
+            logger_.Fatal("To remove from empty collection ([{First}, {Last}]).", FirstFrame, LastFrame);
             throw new InvalidOperationException("There is no element to remove.");
+        }
 
         frameToInput_.Remove(FirstFrame - offset_);
         FirstFrame++;

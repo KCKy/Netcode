@@ -30,7 +30,7 @@ public partial struct UpdateClientInfo<TPlayerInput>
     /// <param name="id">Id of the client.</param>
     /// <param name="input">The input the client.</param>
     /// <param name="terminated">Whether client disconnected at the end of the frame update.</param>
-    public UpdateClientInfo(long id, in TPlayerInput input, bool terminated)
+    public UpdateClientInfo(long id, TPlayerInput input, bool terminated)
     {
         Id = id;
         Input = input;

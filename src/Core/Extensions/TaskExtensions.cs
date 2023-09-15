@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Serilog;
+using System.Diagnostics;
 
 namespace Core.Extensions;
 
@@ -14,10 +15,10 @@ public static class TaskExtensions
             case TaskStatus.RanToCompletion:
                 return;
             case TaskStatus.Faulted:
-                Debug.WriteLine($"Task {task} assure failed: the task faulted with exception: {task.Exception}");
+                Log.Information("Task {Task} assure failed: the task faulted with exception: {Exception}", task, task.Exception);
                 return;
             case TaskStatus.Canceled:
-                Debug.WriteLine($"Task {task} assure failed: the task was canceled.");
+                Log.Information("Task {Task} assure failed: the task was canceled.", task);
                 return;
             case TaskStatus.Created:
             case TaskStatus.WaitingForActivation:
@@ -38,7 +39,7 @@ public static class TaskExtensions
             case TaskStatus.Canceled:
                 return;
             case TaskStatus.Faulted:
-                Debug.WriteLine($"Task {task} assure failed: the task faulted with exception: {task.Exception}");
+                Log.Information("Task {Task} assure failed: the task faulted with exception: {Exception}", task, task.Exception);
                 return;
             case TaskStatus.Created:
             case TaskStatus.WaitingForActivation:

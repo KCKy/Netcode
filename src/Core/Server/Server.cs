@@ -1,77 +1,78 @@
 ﻿using Core.DataStructures;
 using Core.Providers;
+using Core.Transport;
 using Core.Utility;
 using MemoryPack;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using Serilog;
 
 namespace Core.Server;
+
+internal class ServerSession<TPlayerInput> : IServerSession
+    where TPlayerInput : class, new()
+{
+    readonly ILogger logger_ = Log.ForContext<ServerSession<TPlayerInput>>();
+
+
+    public required IClientInputQueue<TPlayerInput> InputQueue { get; init; }
+
+    public void AddClient(long id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void AddInput(long id, long frame, Memory<byte> serializedInput)
+    {
+        var originalInput = ObjectPool<TPlayerInput>.Create();
+        var input = originalInput;
+
+        var inputSpan = serializedInput.Span;
+
+        MemoryPackSerializer.Deserialize(inputSpan, ref input);
+
+        if (!ReferenceEquals(originalInput, input))
+            ObjectPool<TPlayerInput>.Destroy(originalInput);
+
+        if (input is null)
+        {
+            logger_.Debug("Got invalid {Input}.", serializedInput);
+            return;
+        }
+
+        InputQueue.AddInput(id, frame, input);
+    }
+
+    public void FinishClient(long id)
+    {
+        InputQueue.RemoveClient(id);
+    }
+}
 
 public sealed class Server<TPlayerInput, TServerInput, TGameState, TUpdateInfo>
     where TGameState : class, IGameState<TPlayerInput, TServerInput>, new()
     where TPlayerInput : class, new()
     where TServerInput : class, new()
 {
-    public IServerInputProvider<TServerInput, TUpdateInfo> inputProvider_ { get; set; } = new DefaultServerInputProvider<TServerInput, TUpdateInfo>();
-    public IDisplayer<TGameState> displayer_ { get; set; } = new DefaultDisplayer<TGameState>();
+    public IServerInputProvider<TServerInput, TUpdateInfo> InputProvider { get; set; } = new DefaultServerInputProvider<TServerInput, TUpdateInfo>();
+    public IDisplayer<TGameState> Displayer { get; set; } = new DefaultDisplayer<TGameState>();    
+    public required IServerDispatcher Dispatcher { get; set; }
 
-    readonly ClientInputQueue<TPlayerInput> inputQueue_ = new();
+    readonly IClientInputQueue<TPlayerInput> inputQueue_ = new ClientInputQueue<TPlayerInput>();
 
-    static readonly TimeSpan FrameInterval = TimeSpan.FromSeconds(1d / TGameState.DesiredTickRate);
+    public IServerSession Session { get; }
 
-    TGameState state_ = ObjectPool<TGameState>.Create();
-
-    readonly object stateMutex_ = new();
-
-    void ClientConnect(long id)
+    public Server()
     {
-        long frameIndex;
-        byte[] frameBinary;
-
-        lock (stateMutex_)
+        Session = new ServerSession<TPlayerInput>()
         {
-            frameIndex = inputQueue_.Frame;
-            inputQueue_.AddPlayer(id);
-            frameBinary = MemoryPackSerializer.Serialize(inputQueue_.Frame);
-        }
-
-        // TODO: send init packet
+            InputQueue = inputQueue_
+        };
     }
 
-    void ClientDisconnect(long id)
-    {
-        lock (stateMutex_)
-        {
-            inputQueue_.RemovePlayer(id);
-        }
-
-        // TODO: more
-    }
+    public static readonly TimeSpan FrameInterval = TimeSpan.FromSeconds(1d / TGameState.DesiredTickRate);
 
     public async Task RunAsync()
     {
-        // TODO: move off thread pool
-
-        while (true)
-        {
-            Task delay = Task.Delay(FrameInterval);
-
-            UpdateOutput updateOutput;
-            TServerInput serverInput = new(); // TODO: do
-
-            lock (stateMutex_)
-            {
-                var clientInput = inputQueue_.ConstructAuthoritativeFrame();
-
-                UpdateInput<TPlayerInput, TServerInput> input = new(clientInput, serverInput);
-
-                //MemoryPackSerializer.Serialize(input, );
-            }
-        }
+        throw new NotImplementedException();
     }
-
-
 }

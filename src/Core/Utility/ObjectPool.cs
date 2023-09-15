@@ -19,11 +19,9 @@ public static class ObjectPool<TObject> where TObject : class, new()
     /// <remarks>
     /// All references are hereby invalidated. The argument is set to null.
     /// </remarks>
-    public static void Destroy(ref TObject? obj)
+    public static void Destroy(TObject obj)
     {
-        ArgumentNullException.ThrowIfNull(obj);
         Pooled.Add(obj);
-        obj = null;
     }
 
     /// <summary>
@@ -35,6 +33,7 @@ public static class ObjectPool<TObject> where TObject : class, new()
         return Pooled.TryTake(out TObject? obj) ? obj : new TObject();
     }
 }
+
 
 public static class DefaultProvider<TObject> where TObject : class, new()
 {

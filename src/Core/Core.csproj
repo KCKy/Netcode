@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="MemoryPack" Version="1.9.16" />
+    <PackageReference Include="MemoryPack.Streaming" Version="1.9.16" />
+    <PackageReference Include="Serilog" Version="3.0.1" />
   </ItemGroup>
 
 </Project>

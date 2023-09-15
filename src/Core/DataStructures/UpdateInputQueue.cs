@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Serilog;
 
 namespace Core.DataStructures;
 
@@ -24,6 +25,8 @@ public sealed class UpdateInputQueue<TInput>
     bool stopped_ = false;
 
     bool waiting_ = false;
+
+    readonly ILogger logger_ = Log.ForContext<UpdateInputQueue<TInput>>();
 
     /// <summary>
     /// The index of the frame next <see cref="GetNextInputAsync"/> is going to return.
@@ -65,7 +68,7 @@ public sealed class UpdateInputQueue<TInput>
     /// </remarks>
     /// <param name="frame">Id if the frame update.</param>
     /// <param name="input">The input for the frame update.</param>
-    public void AddInput(long frame, in TInput input)
+    public void AddInput(long frame, TInput input)
     {
         lock (mutex_)
         {
@@ -74,8 +77,8 @@ public sealed class UpdateInputQueue<TInput>
 
             if (frame < currentFrame_)
             {
-                Debug.WriteLine($"Duplicate input received for frame {frame}");
-                return; 
+                logger_.Debug("Duplicate input received for ${Frame}", frame);
+                return;
             }
 
             if (heldFrames_.Add(frame))
@@ -112,7 +115,10 @@ public sealed class UpdateInputQueue<TInput>
                 throw new OperationCanceledException();
 
             if (waiting_)
+            {
+                logger_.Fatal("To wait for more than one time.");
                 throw new InvalidOperationException("Cannot wait more than one time.");
+            }
 
             waiting_ = true;
 
