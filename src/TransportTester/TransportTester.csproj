@@ -1,14 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MemoryPack" Version="1.9.16" />
-    <PackageReference Include="Serilog" Version="3.0.1" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="4.2.0-dev-00918" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
   </ItemGroup>
 
 </Project>

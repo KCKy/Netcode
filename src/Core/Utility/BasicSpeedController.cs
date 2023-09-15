@@ -29,8 +29,8 @@ public class BasicSpeedController : ISpeedController
 
     readonly float targetTps_;
 
-    volatile float targetDelta_;
-    volatile float currentDelta_;
+    float targetDelta_;
+    float currentDelta_;
 
     ILogger logger_ = Log.ForContext<BasicSpeedController>();
 

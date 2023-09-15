@@ -3,7 +3,6 @@ using Core.Providers;
 using Core.Transport;
 using Core.Utility;
 using MemoryPack;
-using System.Diagnostics;
 using Serilog;
 
 namespace Core.Server;
@@ -12,7 +11,6 @@ internal class ServerSession<TPlayerInput> : IServerSession
     where TPlayerInput : class, new()
 {
     readonly ILogger logger_ = Log.ForContext<ServerSession<TPlayerInput>>();
-
 
     public required IClientInputQueue<TPlayerInput> InputQueue { get; init; }
 
@@ -27,7 +25,7 @@ internal class ServerSession<TPlayerInput> : IServerSession
         var input = originalInput;
 
         var inputSpan = serializedInput.Span;
-
+        
         MemoryPackSerializer.Deserialize(inputSpan, ref input);
 
         if (!ReferenceEquals(originalInput, input))

@@ -1,134 +1,101 @@
-﻿using System.Collections.Concurrent;
-using System.Net;
-using Core.Transport;
+﻿using System.Net;
 using Core.Transport.Client;
 using System.Net.Sockets;
-using MemoryPack;
-using Serilog;
+using Core.Extensions;
 
 namespace DefaultTransport.TcpTransport;
 
 // TODO: add more logging
 
-public sealed class TcpClientTransport<TIn, TOut> : IClientTransport<TIn, TOut>
+public enum ClientFinishReason
 {
-    readonly TcpClient client_ = new();
-    NetworkStream? stream_;
+    Unknown = 0,
+    Disconnect,
+    Faulted,
+    Corrupted,
+    Kicked
+}
 
-    readonly TaskCompletionSource finished_ = new();
+public sealed class TcpClientTransport<TIn, TOut> : IClientTransport<TIn, TOut>
+    where TIn : class
+    where TOut : class
+{
+    public required IPEndPoint Target { get; init; }
+
+    public event Action? OnFinish;
+    public event Action<TIn>? OnMessage;
+
     int running_ = 0;
-    volatile ClientFinishReason finishReason_ = ClientFinishReason.Unknown;
+    Connection<TIn, TOut>? connection_;
 
-    readonly SemaphoreSlim outboxSize_ = new(0);
-    readonly ConcurrentBag<TOut> outbox_ = new();
+    Task? run_;
 
-    readonly ILogger logger_ = Log.ForContext<TcpClientTransport<TIn, TOut>>();
-    
-    async Task ReadAsync(Task finished)
-    {
-        while (true)
-        {
-            var read = MemoryPackSerializer.DeserializeAsync<TIn>(stream_!).AsTask();
-
-            await Task.WhenAny(read, finished);
-
-            if (finished.IsCompleted)
-                return;
-
-            if (read.Result is not { } message)
-            {
-                logger_.Fatal("The input stream has been corrupted by the server.");
-                TryFinish(ClientFinishReason.Corruption);
-                return;
-            }
-
-            OnMessage?.Invoke(message);
-        }
-    }
-
-    async Task WriteAsync(Task finished)
-    {
-        while (true)
-        {
-            Task wait = outboxSize_.WaitAsync();
-
-            await Task.WhenAny(wait, finished);
-
-            if (finished.IsCompleted)
-                return;
-
-            if (outbox_.TryTake(out TOut? message))
-                await MemoryPackSerializer.SerializeAsync(stream_!, message);
-        }
-    }
-
-    public ClientFinishReason FinishReason => finishReason_;
-
-    void TryFinish(ClientFinishReason reason)
-    {
-        if (finished_.TrySetResult())
-            finishReason_ = reason;
-    }
-
-    public async Task Run()
+    public async Task Start()
     {
         if (Interlocked.CompareExchange(ref running_, 1, 0) != 0)
             throw new InvalidOperationException("The transport is already running.");
 
+        TcpClient client = new();
+        NetworkStream stream;
+
+        await client.ConnectAsync(Target);
+
         try
         {
-            await client_.ConnectAsync(Target);
-            stream_ = client_.GetStream();
+            stream = client.GetStream();
         }
         catch (InvalidOperationException)
         {
-            TryFinish(ClientFinishReason.NetworkError);
-        }
-        catch (SocketException)
-        {
-            TryFinish(ClientFinishReason.OsError);
+            client.Dispose();
+            throw;
         }
 
-        Task finishedTask = finished_.Task;
+        connection_ = new (client, stream, m => OnMessage?.Invoke(m));
 
-        if (finishedTask.IsCompleted)
-        {
-            Task read = ReadAsync(finishedTask);
-            Task write = WriteAsync(finishedTask);
+        run_ = connection_.Run();
+        run_.ContinueWith(_ => OnFinish?.Invoke()).AssureSuccess();
+    }
 
-            await Task.WhenAny(read, write);
-
-            if (read.Exception is { InnerException: { } ex1 } )
-                logger_.Error(ex1, "Read faulted.");
-
-            if (read.Exception is { InnerException: { } ex2 } )
-                logger_.Error(ex2, "Write faulted.");
-
-            TryFinish(ClientFinishReason.NetworkError);
-
-            await Task.WhenAll(read, write);
-        }
-
-        if (stream_ is not null)
-            await stream_.DisposeAsync();
-
-        client_.Dispose();
+    void Send(TOut message)
+    {
+        var connection = connection_ ?? throw new InvalidOperationException("The client is not started yet.");
+        connection.Send(message);
     }
     
-    public event Action<TIn>? OnMessage;
-    public required IPEndPoint Target { get; init; }
+    public void SendReliable(TOut message) => Send(message);
 
-    public void SendReliable(TOut message)
+    public void SendUnreliable(TOut message) => Send(message);
+
+    public ClientFinishReason FinishReason
     {
-        outbox_.Add(message);
-        outboxSize_.Release();
+        get
+        {
+            var connection = connection_;
+
+            if (connection == null || run_ is null || !run_.IsCompleted)
+                throw new InvalidOperationException("The client did not finish yet.");
+
+            return TranslateReason(connection.Finish.Result);
+        }
     }
 
-    public void SendUnreliable(TOut message)
+    static ClientFinishReason TranslateReason(ConnectionFinishReason reason)
     {
-        outbox_.Add(message);
-        outboxSize_.Release();
+        return reason switch
+        {
+            ConnectionFinishReason.Terminated => ClientFinishReason.Disconnect,
+            ConnectionFinishReason.OtherSideEnded => ClientFinishReason.Kicked,
+            ConnectionFinishReason.Faulted => ClientFinishReason.Faulted,
+            ConnectionFinishReason.Corrupted => ClientFinishReason.Corrupted,
+            _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, "Invalid finish reason")
+        };
     }
 
-    public void Terminate() => TryFinish(ClientFinishReason.Disconnect);
+    public void Terminate()
+    {
+        var connection = connection_ ?? throw new InvalidOperationException("The client did not start yet.");
+        connection.TryFinish();
+    }
 }
+
+// TODO: what about kicking

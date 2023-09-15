@@ -1,15 +1,5 @@
 ﻿namespace Core.Transport;
 
-public enum ClientFinishReason
-{
-    Unknown = 0,
-    Disconnect,
-    Kicked,
-    NetworkError,
-    OsError,
-    Corruption
-}
-
 public interface IServerSession
 {
     void AddClient(long id);

@@ -3,6 +3,8 @@
 // TODO: finish docs (thread safety)
 
 public interface IClientTransport<TIn, TOut> : IClientInTransport<TIn>, IClientOutTransport<TOut>
+where TIn : class
+where TOut : class
 {
     /// <summary>
     /// Starts the client, attempts to connect to the server.
@@ -11,11 +13,16 @@ public interface IClientTransport<TIn, TOut> : IClientInTransport<TIn>, IClientO
     /// May be called only once. All events this client produces will be called only after the client has been started.
     /// </remarks>
     /// <returns>Task which completes when the connection attempt is finished.</returns>
-    Task Run();
+    Task Start();
 }
 
 public interface IClientInTransport<TIn>
 {
+    /// <summary>
+    /// Event which is invoked when the client completes..
+    /// </summary>
+    event Action OnFinish;
+
     /// <summary>
     /// Event which is invoked when a message from a client is invoked.
     /// </summary>
