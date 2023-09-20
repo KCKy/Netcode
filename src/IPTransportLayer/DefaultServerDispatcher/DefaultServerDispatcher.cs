@@ -15,16 +15,14 @@ public class DefaultServerDispatcher : IServerDispatcher
 
     public void Initialize(long id, long frame, Memory<byte> state)
     {
-        var message = ObjectPool<InitializationMessage>.Create();
-        
-        message.Id = id;
-        message.Frame = frame;
-        message.State = state;
-        
-        outTransport_.SendReliable(message, id);
+        InitializationMessage message = new()
+        {
+            Id = id,
+            Frame = frame,
+            State = state
+        };
 
-        message.State.ReturnToArrayPool();
-        ObjectPool<InitializationMessage>.Destroy(message);
+        outTransport_.SendReliable(message, id);
     }
 
     public void Kick(long id)
@@ -34,17 +32,14 @@ public class DefaultServerDispatcher : IServerDispatcher
 
     public void SendAuthoritativeInput(long frame, Memory<byte> input, long? checksum)
     {
-        var message = ObjectPool<AuthoritativeInputMessage>.Create();
-
-        message.Frame = frame;
-        message.Input = input;
-        message.Checksum = checksum;
-
+        AuthoritativeInputMessage message = new()
+        {
+            Frame = frame,
+            Input = input,
+            Checksum = checksum
+        };
         // TODO: send aggregate inputs
 
         outTransport_.SendReliable(message);
-        
-        message.Input.ReturnToArrayPool();
-        message.Destroy();
     }
 }

@@ -13,23 +13,17 @@ internal class ServerSession<TPlayerInput> : IServerSession
     readonly ILogger logger_ = Log.ForContext<ServerSession<TPlayerInput>>();
 
     public required IClientInputQueue<TPlayerInput> InputQueue { get; init; }
+    public required IClientManager ClientManager { get; init; } 
 
     public void AddClient(long id)
     {
-        throw new NotImplementedException();
+        lock (InputQueue)
+            InputQueue.AddClient(id);
     }
 
     public void AddInput(long id, long frame, Memory<byte> serializedInput)
     {
-        var originalInput = ObjectPool<TPlayerInput>.Create();
-        var input = originalInput;
-
-        var inputSpan = serializedInput.Span;
-        
-        MemoryPackSerializer.Deserialize(inputSpan, ref input);
-
-        if (!ReferenceEquals(originalInput, input))
-            ObjectPool<TPlayerInput>.Destroy(originalInput);
+        var input = MemoryPackSerializer.Deserialize<TPlayerInput>(serializedInput.Span);
 
         if (input is null)
         {
@@ -37,13 +31,30 @@ internal class ServerSession<TPlayerInput> : IServerSession
             return;
         }
 
-        InputQueue.AddInput(id, frame, input);
+        lock (InputQueue)
+            InputQueue.AddInput(id, frame, input);
     }
 
     public void FinishClient(long id)
     {
         InputQueue.RemoveClient(id);
     }
+}
+
+internal interface IClientManager
+{
+    void AddClient(long id);
+    void RemoveClient(long id);
+}
+
+internal sealed class StateUpdate<TPlayerInput, TServerInput, TGameState, TUpdateInfo> : IClientManager
+    where TGameState : class, IGameState<TPlayerInput, TServerInput>, new()
+    where TPlayerInput : class, new()
+    where TServerInput : class, new()
+{
+    public void AddClient(long id) => throw new NotImplementedException();
+    public void Update() => throw new NotImplementedException();
+    public void RemoveClient(long id) => throw new NotImplementedException();
 }
 
 public sealed class Server<TPlayerInput, TServerInput, TGameState, TUpdateInfo>
@@ -53,18 +64,38 @@ public sealed class Server<TPlayerInput, TServerInput, TGameState, TUpdateInfo>
 {
     public IServerInputProvider<TServerInput, TUpdateInfo> InputProvider { get; set; } = new DefaultServerInputProvider<TServerInput, TUpdateInfo>();
     public IDisplayer<TGameState> Displayer { get; set; } = new DefaultDisplayer<TGameState>();    
+    
     public required IServerDispatcher Dispatcher { get; set; }
-
-    readonly IClientInputQueue<TPlayerInput> inputQueue_ = new ClientInputQueue<TPlayerInput>();
-
     public IServerSession Session { get; }
+    
+    readonly IClientInputQueue<TPlayerInput> inputQueue_;
+    readonly IClientManager manager_;
+    readonly IClock clock_;
 
     public Server()
     {
+        inputQueue_ = new ClientInputQueue<TPlayerInput>();
+
+        manager_ = new StateUpdate<TPlayerInput, TServerInput, TGameState, TUpdateInfo>();
+
         Session = new ServerSession<TPlayerInput>()
         {
-            InputQueue = inputQueue_
+            InputQueue = inputQueue_,
+            ClientManager = manager_
         };
+
+        clock_ = new BasicClock()
+        {
+            Period = FrameInterval
+        };
+    }
+
+    internal Server(IClientInputQueue<TPlayerInput> queue, IClientManager manager, IServerSession session, IClock clock)
+    {
+        inputQueue_ = queue;
+        manager_ = manager;
+        Session = session;
+        clock_ = clock;
     }
 
     public static readonly TimeSpan FrameInterval = TimeSpan.FromSeconds(1d / TGameState.DesiredTickRate);

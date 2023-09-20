@@ -23,14 +23,12 @@ public class DefaultClientDispatcher : IClientDispatcher
 
     public void SendInput(long frame, Memory<byte> input)
     {
-        ClientInputMessage message = ObjectPool<ClientInputMessage>.Create();
-
-        message.Input = input;
-        message.Frame = frame;
+        ClientInputMessage message = new()
+        {
+            Input = input,
+            Frame = frame
+        };
 
         outTransport_.SendReliable(message);
-
-        message.Input.ReturnToArrayPool();
-        message.Destroy();
     }
 }

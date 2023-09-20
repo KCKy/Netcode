@@ -1,8 +1,7 @@
 using Core;
+using Core.DataStructures;
 
 namespace CoreTests;
-
-using Core.DataStructures;
 
 public class ClientInputQueueTests
 {

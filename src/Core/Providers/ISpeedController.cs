@@ -11,37 +11,40 @@ namespace Core.Utility;
 /// (to have time to send inputs) while keeping minimum latency.
 /// This structure shall be thread safe.
 /// </summary>
-public interface ISpeedController
+public interface ISpeedController : IClock
 {
     /// <summary>
     /// The ticks per second of the server. Constant.
     /// </summary>
-    public float TargetTPS { get; init; }
+    float TargetTPS { get; init; }
 
     /// <summary>
     /// Number of seconds which tell how much the loop should be ahead.
     /// </summary>
-    public float TargetDelta { get; set; }
+    float TargetDelta { get; set; }
     
     /// <summary>
     /// Returns the predict loop TPS, could be sligtly off from the server loop to catch up.
     /// </summary>
-    public float CurrentTPS { get; }
+    float CurrentTPS { get; }
 
     /// <summary>
     /// Current delay from the server, the controller will modify current tps to approach this value.
     /// </summary>
-    public float CurrentDelta { get; set; }
+    float CurrentDelta { get; set; }
+}
+
+public interface IClock
+{
+    /// <summary>
+    /// Is evenly called on a clock tick.
+    /// </summary>
+    event Action OnTick;
 
     /// <summary>
-    /// Is evenly called <see cref="CurrentTPS"/> times per second.
+    /// Starts the clock.
     /// </summary>
-    public event Action OnTick;
-
-    /// <summary>
-    /// Starts the controller.
-    /// </summary>
-    /// <param name="cancelToken">Token to stop the controller from running.</param>
-    /// <returns>Infinite task which may be cancelled which represents the controller lifetime.</returns>
-    public Task RunAsync(CancellationToken cancelToken = new());
+    /// <param name="cancelToken">Token to stop the clock from running.</param>
+    /// <returns>Infinite task which may be cancelled which represents the clock lifetime.</returns>
+    Task RunAsync(CancellationToken cancelToken = new());
 }
