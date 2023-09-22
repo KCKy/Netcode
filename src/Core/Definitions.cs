@@ -87,6 +87,8 @@ public struct UpdateOutput
         ClientsToTerminate = null;
         ShallStop = false;
     }
+
+    public static UpdateOutput Empty = new();
 }
 
 /// <summary>
@@ -95,14 +97,9 @@ public struct UpdateOutput
 /// </summary>
 /// <typeparam name="TPlayerInput">Type of the client input.</typeparam>
 /// <typeparam name="TServerInput">Type of the server input.</typeparam>
-public interface IGameState<TPlayerInput, TServerInput>
+public interface IGameState<TPlayerInput, TServerInput, TUpdateInfo>
 {
-    /// <summary>
-    /// Deterministic update method.
-    /// </summary>
-    /// <param name="updateInputs"></param>
-    /// <returns></returns>
-    public UpdateOutput Update(UpdateInput<TPlayerInput, TServerInput> updateInputs);
+    public UpdateOutput Update(UpdateInput<TPlayerInput, TServerInput> updateInputs, ref TUpdateInfo updateInfo);
 
     public static abstract double DesiredTickRate { get; }
 }

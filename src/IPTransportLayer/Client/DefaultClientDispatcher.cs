@@ -5,7 +5,7 @@ using Core.Transport.Client;
 using Core.Utility;
 using System.Diagnostics;
 
-namespace DefaultTransport.DefaultClientDispatcher;
+namespace DefaultTransport.Client;
 
 public class DefaultClientDispatcher : IClientDispatcher
 {

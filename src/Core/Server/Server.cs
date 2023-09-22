@@ -1,4 +1,5 @@
-﻿using Core.DataStructures;
+﻿using System.Diagnostics;
+using Core.DataStructures;
 using Core.Providers;
 using Core.Transport;
 using Core.Utility;
@@ -7,21 +8,47 @@ using Serilog;
 
 namespace Core.Server;
 
-internal class ServerSession<TPlayerInput> : IServerSession
+public sealed class Server<TPlayerInput, TServerInput, TGameState, TUpdateInfo> : IServerSession
+    where TGameState : class, IGameState<TPlayerInput, TServerInput, TUpdateInfo>, new()
     where TPlayerInput : class, new()
+    where TServerInput : class, new()
+    where TUpdateInfo : new()
 {
-    readonly ILogger logger_ = Log.ForContext<ServerSession<TPlayerInput>>();
+    public IServerInputProvider<TServerInput, TUpdateInfo> InputProvider { get; set; } = new DefaultServerInputProvider<TServerInput, TUpdateInfo>();
+    public IDisplayer<TGameState> Displayer { get; set; } = new DefaultDisplayer<TGameState>();    
+    
+    public required IServerDispatcher Dispatcher { get; init; }
+    public IServerSession Session => this;
 
-    public required IClientInputQueue<TPlayerInput> InputQueue { get; init; }
-    public required IClientManager ClientManager { get; init; } 
+    public bool TraceState { get; set; }
+    public bool SendChecksums { get; set; }
+    
+    readonly IClientInputQueue<TPlayerInput> inputQueue_;
+    readonly IStateManager<TPlayerInput, TServerInput, TGameState, TUpdateInfo> manager_;
+    readonly IClock clock_;
+    readonly CancellationTokenSource clockCancellation_ = new();
 
-    public void AddClient(long id)
+    static readonly TimeSpan FrameInterval = TimeSpan.FromSeconds(1d / TGameState.DesiredTickRate);
+
+    void IServerSession.AddClient(long id)
     {
-        lock (InputQueue)
-            InputQueue.AddClient(id);
+        inputQueue_.AddClient(id);
+        
+        Memory<byte> serializedState;
+        long frame;
+
+        lock (manager_)
+        {
+            serializedState = manager_.Serialize();
+            frame = manager_.Frame;
+        }
+
+        logger_.Debug("Initialized {Id} for {Frame} with {State}", id, frame, TraceState ? serializedState : Array.Empty<byte>());
+
+        Dispatcher.Initialize(id, frame, serializedState);
     }
 
-    public void AddInput(long id, long frame, Memory<byte> serializedInput)
+    void IServerSession.AddInput(long id, long frame, Memory<byte> serializedInput)
     {
         var input = MemoryPackSerializer.Deserialize<TPlayerInput>(serializedInput.Span);
 
@@ -31,58 +58,19 @@ internal class ServerSession<TPlayerInput> : IServerSession
             return;
         }
 
-        lock (InputQueue)
-            InputQueue.AddInput(id, frame, input);
+        inputQueue_.AddInput(id, frame, input);
     }
 
-    public void FinishClient(long id)
+    void IServerSession.FinishClient(long id)
     {
-        InputQueue.RemoveClient(id);
+        inputQueue_.RemoveClient(id);
     }
-}
-
-internal interface IClientManager
-{
-    void AddClient(long id);
-    void RemoveClient(long id);
-}
-
-internal sealed class StateUpdate<TPlayerInput, TServerInput, TGameState, TUpdateInfo> : IClientManager
-    where TGameState : class, IGameState<TPlayerInput, TServerInput>, new()
-    where TPlayerInput : class, new()
-    where TServerInput : class, new()
-{
-    public void AddClient(long id) => throw new NotImplementedException();
-    public void Update() => throw new NotImplementedException();
-    public void RemoveClient(long id) => throw new NotImplementedException();
-}
-
-public sealed class Server<TPlayerInput, TServerInput, TGameState, TUpdateInfo>
-    where TGameState : class, IGameState<TPlayerInput, TServerInput>, new()
-    where TPlayerInput : class, new()
-    where TServerInput : class, new()
-{
-    public IServerInputProvider<TServerInput, TUpdateInfo> InputProvider { get; set; } = new DefaultServerInputProvider<TServerInput, TUpdateInfo>();
-    public IDisplayer<TGameState> Displayer { get; set; } = new DefaultDisplayer<TGameState>();    
     
-    public required IServerDispatcher Dispatcher { get; set; }
-    public IServerSession Session { get; }
-    
-    readonly IClientInputQueue<TPlayerInput> inputQueue_;
-    readonly IClientManager manager_;
-    readonly IClock clock_;
-
     public Server()
     {
         inputQueue_ = new ClientInputQueue<TPlayerInput>();
 
         manager_ = new StateUpdate<TPlayerInput, TServerInput, TGameState, TUpdateInfo>();
-
-        Session = new ServerSession<TPlayerInput>()
-        {
-            InputQueue = inputQueue_,
-            ClientManager = manager_
-        };
 
         clock_ = new BasicClock()
         {
@@ -90,18 +78,100 @@ public sealed class Server<TPlayerInput, TServerInput, TGameState, TUpdateInfo>
         };
     }
 
-    internal Server(IClientInputQueue<TPlayerInput> queue, IClientManager manager, IServerSession session, IClock clock)
+    internal Server(IClientInputQueue<TPlayerInput> queue, IStateManager<TPlayerInput, TServerInput, TGameState, TUpdateInfo> manager, IClock clock)
     {
         inputQueue_ = queue;
         manager_ = manager;
-        Session = session;
         clock_ = clock;
     }
 
-    public static readonly TimeSpan FrameInterval = TimeSpan.FromSeconds(1d / TGameState.DesiredTickRate);
+    readonly object tickMutex_ = new();
+    bool updatingEnded_ = false;
 
-    public async Task RunAsync()
+    readonly ILogger logger_ = Log.ForContext<Server<TPlayerInput, TServerInput, TGameState, TUpdateInfo>>();
+
+    TUpdateInfo updateInfo_ = new();
+
+    (UpdateOutput output, byte[]? trace, long? checksum, long frame) AtomicUpdate(UpdateInput<TPlayerInput, TServerInput> input)
     {
-        throw new NotImplementedException();
+        lock (manager_)
+        {
+            UpdateOutput output = manager_.Update(input, ref updateInfo_);
+            long frame = manager_.Frame;
+
+            Displayer.AddAuthoritative(manager_.Frame, manager_.State);
+
+            byte[]? trace = TraceState ? MemoryPackSerializer.Serialize(manager_.State) : null;
+            long? checksum = SendChecksums ? manager_.GetChecksum() : null;
+
+            return (output, trace, checksum, frame);
+        }
+    }
+
+    void Tick()
+    {
+        lock (tickMutex_)
+        {
+            if (updatingEnded_)
+                return;
+
+            var clientInput = inputQueue_.ConstructAuthoritativeFrame();
+            TServerInput serverInput = InputProvider.GetInput(ref updateInfo_);
+
+            UpdateInput<TPlayerInput, TServerInput> input = new(clientInput, serverInput);
+            byte[] serializedInput = MemoryPackSerializer.Serialize(input);
+
+            (UpdateOutput output, byte[]? trace, long? checksum, long frame) = AtomicUpdate(input);
+
+            if (trace is not null)
+                logger_.Verbose("Finished state update for {Frame} with {Input} resulting with {State}", frame, serializedInput, trace);
+
+            if (output.ClientsToTerminate is { Length: > 0 } toTerminate)
+                foreach (long client in toTerminate)
+                    Dispatcher.Kick(client);
+
+            Dispatcher.SendAuthoritativeInput(frame,serializedInput, checksum);
+
+            if (output.ShallStop)
+            {
+                updatingEnded_ = true;
+                Terminate();
+            }
+        }
+    }
+
+    readonly object terminationMutex_ = new();
+    bool started_ = false;
+    bool terminated_ = false;
+
+    public async Task Start()
+    {
+        lock (terminationMutex_)
+        {
+            if (started_ || terminated_)
+                return;
+
+            started_ = true;
+            clock_.OnTick += Tick;
+        }
+
+        try
+        {
+            await clock_.RunAsync(clockCancellation_.Token);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public void Terminate()
+    {
+        lock (terminationMutex_)
+        {
+            if (terminated_)
+                return;
+
+            terminated_ = true;
+            clock_.OnTick -= Tick;
+            clockCancellation_.Cancel();
+        }
     }
 }

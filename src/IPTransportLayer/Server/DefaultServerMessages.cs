@@ -2,7 +2,7 @@
 using Core.Transport;
 using MemoryPack;
 
-namespace DefaultTransport.DefaultServerDispatcher;
+namespace DefaultTransport.Server;
 
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(AuthoritativeInputMessage))]

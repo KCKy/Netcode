@@ -12,7 +12,5 @@ namespace Core.Providers;
 /// <typeparam name="TServerInput">Type of the server input.</typeparam>
 public interface IServerInputProvider<TServerInput, TUpdateInfo>
 {
-    public TServerInput GetInput(TUpdateInfo info);
-
-    public TServerInput GetInitialInput();
+    public TServerInput GetInput(ref TUpdateInfo info);
 }

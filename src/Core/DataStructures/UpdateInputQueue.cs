@@ -77,7 +77,7 @@ public sealed class UpdateInputQueue<TInput>
 
             if (frame < currentFrame_)
             {
-                logger_.Debug("Duplicate input received for ${Frame}", frame);
+                logger_.Debug("Duplicate input received for ${frame}", frame);
                 return;
             }
 

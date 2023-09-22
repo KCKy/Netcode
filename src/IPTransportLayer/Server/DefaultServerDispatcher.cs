@@ -2,7 +2,7 @@
 using Core.Transport;
 using Core.Utility;
 
-namespace DefaultTransport.DefaultServerDispatcher;
+namespace DefaultTransport.Server;
 
 public class DefaultServerDispatcher : IServerDispatcher
 {

@@ -4,7 +4,7 @@ using MemoryPack;
 using Core.Extensions;
 using Core.Transport;
 
-namespace DefaultTransport.DefaultClientDispatcher;
+namespace DefaultTransport.Client;
 
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(ClientInputMessage))]

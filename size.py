@@ -1,6 +1,6 @@
 import os, re
 
-ROOT = 'Repo/src'
+ROOT = 'src'
 
 def is_source(filename: str) -> bool:
     return filename.endswith('.cs') and not filename.endswith('GlobalUsings.cs')
