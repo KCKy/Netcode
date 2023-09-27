@@ -1,0 +1,39 @@
+﻿using MemoryPack;
+
+namespace Core;
+
+/// <summary>
+/// Holds information about input from given client.
+/// </summary>
+/// <typeparam name="TClientInput"></typeparam>
+[MemoryPackable]
+public partial struct UpdateClientInfo<TClientInput>
+{
+    /// <summary>
+    /// Id of the client.
+    /// </summary>
+    public long Id;
+
+    /// <summary>
+    /// The input the client.
+    /// </summary>
+    public TClientInput Input;
+
+    /// <summary>
+    /// Whether client disconnected at the end of the frame update.
+    /// </summary>
+    public bool Terminated;
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="id">Id of the client.</param>
+    /// <param name="input">The input the client.</param>
+    /// <param name="terminated">Whether client disconnected at the end of the frame update.</param>
+    public UpdateClientInfo(long id, TClientInput input, bool terminated)
+    {
+        Id = id;
+        Input = input;
+        Terminated = terminated;
+    }
+}

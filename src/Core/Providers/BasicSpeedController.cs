@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Serilog;
+﻿using Serilog;
 
-namespace Core.Utility;
+namespace Core.Providers;
 
 public class BasicSpeedController : ISpeedController
 {
@@ -25,21 +19,19 @@ public class BasicSpeedController : ISpeedController
         OnTick?.Invoke();
     }
 
-    float currentPeriod_;
+    double currentPeriod_;
+    double targetTps_;
+    double targetDelta_;
+    double currentDelta_;
 
-    readonly float targetTps_;
+    readonly ILogger logger_ = Log.ForContext<BasicSpeedController>();
 
-    float targetDelta_;
-    float currentDelta_;
-
-    ILogger logger_ = Log.ForContext<BasicSpeedController>();
-
-    public float TargetTPS
+    public double TargetTPS
     {
         get => targetTps_;
-        init
+        set
         {
-            if (!float.IsPositive(value))
+            if (!double.IsPositive(value))
             {
                 logger_.Fatal("Got non-positive {TPS}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, "TPS must be a positive number.");
@@ -52,12 +44,12 @@ public class BasicSpeedController : ISpeedController
 
     const string DeltaMustBeReal = "Delta must be a real number.";
 
-    public float TargetDelta
+    public double TargetDelta
     {
         get => targetDelta_;
         set
         {
-            if (!float.IsRealNumber(value))
+            if (!double.IsRealNumber(value))
             {
                 logger_.Fatal("Got non-real {TargetDelta}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
@@ -67,12 +59,12 @@ public class BasicSpeedController : ISpeedController
         }
     }
 
-    public float CurrentDelta
+    public double CurrentDelta
     {
         get => currentDelta_;
         set
         {
-            if (!float.IsRealNumber(value))
+            if (!double.IsRealNumber(value))
             {
                 logger_.Fatal("Got non-real {CurrentDelta}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
@@ -82,7 +74,7 @@ public class BasicSpeedController : ISpeedController
         }
     }
 
-    public float CurrentTPS => 1f / currentPeriod_;
+    public double CurrentTPS => 1f / currentPeriod_;
     
     public event Action? OnTick;
 }

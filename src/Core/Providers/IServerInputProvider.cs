@@ -1,16 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Core.Providers;
 
-namespace Core.Providers;
-
-/// <summary>
-/// Provides non-deterministic server input.
-/// </summary>
-/// <typeparam name="TServerInput">Type of the server input.</typeparam>
-public interface IServerInputProvider<TServerInput, TUpdateInfo>
+public interface IServerInputProvider<TServerInput, TGameState>
+    where TServerInput : class, new()
+    where TGameState : class, new()
 {
-    public TServerInput GetInput(ref TUpdateInfo info);
+    TServerInput GetInput(TGameState info);
 }

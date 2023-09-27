@@ -1,10 +1,8 @@
-﻿using Core.Extensions;
-using Core.Transport;
-using Core.Utility;
+﻿using Core.Transport;
 
 namespace DefaultTransport.Server;
 
-public class DefaultServerDispatcher : IServerDispatcher
+public sealed class DefaultServerDispatcher : IServerDispatcher
 {
     readonly IServerOutTransport<IMessageToClient> outTransport_;
 

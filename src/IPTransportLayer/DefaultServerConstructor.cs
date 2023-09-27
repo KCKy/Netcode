@@ -1,31 +1,28 @@
-﻿using System.Net;
-using Core;
+﻿using Core;
+using Core.Providers;
 using Core.Server;
 using Core.Transport;
 using DefaultTransport.Client;
 using DefaultTransport.Server;
-using DefaultTransport.TcpTransport;
 
 namespace DefaultTransport;
 
 public static class DefaultServerConstructor
 {
-    public static Server<TClientInput, TServerInput, TGameState, TUpdateInfo> Construct<TClientInput, TServerInput, TGameState, TUpdateInfo>(IServerTransport<IMessageToServer, IMessageToClient> transport)
-        where TClientInput : class, new()
-        where TServerInput : class, new()
-        where TGameState : class, IGameState<TClientInput, TServerInput, TUpdateInfo>, new()
-        where TUpdateInfo : new()
+    public static Server<TC, TS, TG> Construct<TC, TS, TG>(IServerTransport<IMessageToServer, IMessageToClient> transport, IServerInputProvider<TS, TG>? inputProvider = null,IDisplayer<TG>? displayer = null)
+        where TC : class, new()
+        where TS : class, new()
+        where TG : class, IGameState<TC, TS>, new()
     {
-        Server<TClientInput, TServerInput, TGameState, TUpdateInfo> server = new()
-        {
-            Dispatcher = new DefaultServerDispatcher(transport)
-        };
+        Server<TC, TS, TG> server = new(new DefaultServerDispatcher(transport), displayer, inputProvider);
 
-        IServerSession sessionCapture = server.Session;
+        IServerSession session = server;
 
-        transport.OnMessage += (id, message) => message.Inform(sessionCapture, id);
-        transport.OnClientJoin += server.Session.AddClient;
-        transport.OnClientFinish += server.Session.FinishClient;
+        transport.OnMessage += (id, message) => message.Inform(session, id);
+        transport.OnClientJoin += session.AddClient;
+        transport.OnClientFinish += session.FinishClient;
+
+        // TODO: how to deregister
 
         return server;
     }

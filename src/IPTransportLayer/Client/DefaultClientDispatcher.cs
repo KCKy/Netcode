@@ -1,13 +1,8 @@
-﻿using Core;
-using Core.Extensions;
-using Core.Transport;
-using Core.Transport.Client;
-using Core.Utility;
-using System.Diagnostics;
+﻿using Core.Transport;
 
 namespace DefaultTransport.Client;
 
-public class DefaultClientDispatcher : IClientDispatcher
+public sealed class DefaultClientDispatcher : IClientDispatcher
 {
     readonly IClientOutTransport<IMessageToServer> outTransport_;
 

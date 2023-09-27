@@ -1,15 +1,14 @@
 ﻿using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
-using DefaultTransport.TcpTransport;
 using MemoryPack;
 using Serilog;
 
-namespace DefaultTransport;
+namespace DefaultTransport.TcpTransport;
 
 // TODO: resolve memory model issues
 
-internal enum ConnectionFinishReason
+enum ConnectionFinishReason
 {
     Unknown = 0,
     Terminated,

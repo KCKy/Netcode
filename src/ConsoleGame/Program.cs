@@ -25,7 +25,7 @@ static class Program
     static async Task RunServer()
     {
         TcpServerTransport<IMessageToServer, IMessageToClient> transport = new(ServerPoint);
-        var server = DefaultServerConstructor.Construct<ClientInput, ServerInput, GameState, UpdateInfo>(transport);
+        var server = DefaultServerConstructor.Construct<ClientInput, ServerInput, GameState>(transport);
 
         Task serverTask = server.Start();
         
@@ -35,24 +35,24 @@ static class Program
     }
 }
 
+[MemoryPackable]
 partial class ClientInput
 {
 
 }
 
+[MemoryPackable]
 partial class ServerInput
 {
 
 }
 
-struct UpdateInfo { }
-
 [MemoryPackable]
-partial class GameState : IGameState<ClientInput, ServerInput, UpdateInfo>
+partial class GameState : IGameState<ClientInput, ServerInput>
 {
     public static double DesiredTickRate => 20;
 
-    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ref UpdateInfo info)
+    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs)
     {
         return UpdateOutput.Empty;
     }

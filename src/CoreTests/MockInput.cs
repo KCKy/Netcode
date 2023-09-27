@@ -1,6 +1,5 @@
 ﻿using Core;
 using MemoryPack;
-using Core.Extensions;
 
 namespace CoreTests;
 

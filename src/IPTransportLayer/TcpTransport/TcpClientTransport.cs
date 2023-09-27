@@ -1,7 +1,7 @@
 ﻿using System.Net;
-using Core.Transport.Client;
 using System.Net.Sockets;
 using Core.Extensions;
+using Core.Transport;
 
 namespace DefaultTransport.TcpTransport;
 
@@ -97,5 +97,3 @@ public sealed class TcpClientTransport<TIn, TOut> : IClientTransport<TIn, TOut>
         connection.TryFinish();
     }
 }
-
-// TODO: what about kicking

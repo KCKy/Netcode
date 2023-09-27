@@ -10,7 +10,7 @@ namespace Core.Utility;
 /// <typeparam name="TObject"></typeparam>
 public static class ObjectPool<TObject> where TObject : class, new()
 {
-    static readonly ConcurrentBag<TObject> Pooled = new();
+    // static readonly ConcurrentBag<TObject> Pooled = new();
 
     /// <summary>
     /// Return the object to the pool.
@@ -21,7 +21,7 @@ public static class ObjectPool<TObject> where TObject : class, new()
     /// </remarks>
     public static void Destroy(TObject obj)
     {
-        Pooled.Add(obj);
+        //Pooled.Add(obj);
     }
 
     /// <summary>
@@ -30,7 +30,8 @@ public static class ObjectPool<TObject> where TObject : class, new()
     /// <returns>Object to be used.</returns>
     public static TObject Create()
     {
-        return Pooled.TryTake(out TObject? obj) ? obj : new TObject();
+        // return Pooled.TryTake(out TObject? obj) ? obj : new TObject();
+        return new();
     }
 }
 

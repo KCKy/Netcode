@@ -1,5 +1,4 @@
-﻿using Core.Extensions;
-using Core.Transport;
+﻿using Core.Transport;
 using MemoryPack;
 
 namespace DefaultTransport.Server;
@@ -28,6 +27,7 @@ public sealed partial class AuthoritativeInputMessage : IMessageToClient
     }
 }
 
+[MemoryPackable]
 public sealed partial class InitializationMessage : IMessageToClient
 {
     public long Id;

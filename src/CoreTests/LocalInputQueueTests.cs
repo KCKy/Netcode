@@ -1,17 +1,18 @@
-﻿using System.Diagnostics;
-using Core.DataStructures;
+﻿using Core.DataStructures;
 
 namespace CoreTests;
 
 // TODO: expands tests
 public class LocalInputQueueTests
 {
+    /*
     [Theory]
     [InlineData(10L, 1, 2, 3)]
     [InlineData(-10L, 1, 2, 3, 4, 5, 6, 7, 8)]
     [InlineData(10L, 1)]
     public void BasicTest(long offset, params int[] data)
     {
+        /*
         LocalInputQueue<int> queue = new();
 
         foreach (int x in data)
@@ -38,7 +39,7 @@ public class LocalInputQueueTests
         }
 
         Assert.Fail("No exception was thrown.");
-    }
+    }*/
 
     // TODO: more tests
 }

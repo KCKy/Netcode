@@ -7,34 +7,17 @@ namespace Core.DataStructures;
 /// Provides access to these inputs to reevaluate predict state in case of a misprediction.
 /// </summary>
 /// <typeparam name="TInput"></typeparam>
-public sealed class LocalInputQueue<TInput>
+public interface ILocalInputQueue<TInput>
 {
-    readonly Dictionary<long, TInput> frameToInput_ = new();
-
     /// <summary>
     /// Index of the first frame in the queue (inclusive)
     /// </summary>
-    public long FirstFrame { get; private set; } = 0;
+    long FirstFrame { get; }
 
     /// <summary>
     /// Index of the last frame in the queue (inclusive)
     /// </summary>
-    public long LastFrame { get; private set; } = -1;
-
-    long offset_ = 0;
-
-    /// <summary>
-    /// Moves the queue interval by an offset.
-    /// </summary>
-    /// <param name="offset">Offset to move the interval. Each element will have its index incremented by this value.</param>
-    public void SetOffset(long offset)
-    {
-        offset_ += offset;
-        FirstFrame += offset;
-        LastFrame += offset;
-    }
-
-    readonly ILogger logger_ = Log.ForContext<LocalInputQueue<TInput>>();
+    long LastFrame { get; }
 
     /// <summary>
     /// Accessor.
@@ -42,6 +25,36 @@ public sealed class LocalInputQueue<TInput>
     /// <param name="frame">Index of the frame.</param>
     /// <returns>Element at given frame index.</returns>
     /// <exception cref="IndexOutOfRangeException">If given index is out the queue range.</exception>
+    TInput this[long frame] { get; }
+
+    /// <summary>
+    /// Enqueues an element to the queue.
+    /// </summary>
+    /// <param name="input">Element to add.</param>
+    void Add(TInput input);
+
+    /// <summary>
+    /// Removes all elements lesser than or equal to given index.
+    /// </summary>
+    /// <exception cref="InvalidOperationException"></exception>
+    void Pop(long frame);
+}
+
+/// <inheritdoc/>
+public sealed class LocalInputQueue<TInput> : ILocalInputQueue<TInput>
+{
+    readonly Dictionary<long, TInput> frameToInput_ = new();
+
+    /// <inheritdoc/>
+    public long FirstFrame { get; private set; } = 0;
+
+    /// <inheritdoc/>
+    public long LastFrame { get; private set; } = -1;
+
+
+    readonly ILogger logger_ = Log.ForContext<LocalInputQueue<TInput>>();
+
+    /// <inheritdoc/>
     public TInput this[long frame]
     {
         get
@@ -52,33 +65,24 @@ public sealed class LocalInputQueue<TInput>
                 throw new IndexOutOfRangeException("Given frame is not in the queue.");
             }
 
-            return frameToInput_[frame - offset_];
+            return frameToInput_[frame];
         }
     }
 
-    /// <summary>
-    /// Enqueues an element to the queue.
-    /// </summary>
-    /// <param name="input">Element to add.</param>
+    /// <inheritdoc/>
     public void Add(TInput input)
     {
         LastFrame++;
-        frameToInput_.Add(LastFrame - offset_, input);
+        frameToInput_.Add(LastFrame, input);
     }
 
-    /// <summary>
-    /// Removes the first element from the queue.
-    /// </summary>
-    /// <exception cref="InvalidOperationException"></exception>
-    public void Pop()
+    /// <inheritdoc/>
+    public void Pop(long frame)
     {
-        if (FirstFrame > LastFrame)
+        while (FirstFrame < frame)
         {
-            logger_.Fatal("To remove from empty collection ([{First}, {Last}]).", FirstFrame, LastFrame);
-            throw new InvalidOperationException("There is no element to remove.");
+            frameToInput_.Remove(FirstFrame);
+            FirstFrame++;
         }
-
-        frameToInput_.Remove(FirstFrame - offset_);
-        FirstFrame++;
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Core.Transport.Client;
+﻿namespace Core.Transport;
 
 // TODO: finish docs (thread safety)
 

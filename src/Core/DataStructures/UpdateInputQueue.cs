@@ -1,17 +1,52 @@
-﻿using System.Diagnostics;
-using Serilog;
+﻿using Serilog;
 
 namespace Core.DataStructures;
 
 /// <summary>
 /// Reorders complete authoritative inputs from the server for the client's authoritative update loop.
-/// This structure assures no index is skipped (unless it is done manualy by changing <see cref="CurrentFrame"/>).
+/// This structure assures no index is skipped (unless it is done manually by changing <see cref="CurrentFrame"/>).
 /// </summary>
 /// <remarks>
 /// This structure is thread safe.
 /// </remarks>>
 /// <typeparam name="TInput">The type of the input.</typeparam>
-public sealed class UpdateInputQueue<TInput>
+public interface IUpdateInputQueue<TInput>
+{
+    /// <summary>
+    /// The index of the frame next <see cref="GetNextInputAsync"/> is going to return.
+    /// </summary>
+    /// <remarks>
+    /// Increasing this value will result in throwing away all inputs of frames with lower index.
+    /// </remarks>
+    long CurrentFrame { get; set; }
+
+    /// <summary>
+    /// Adds input for given index.
+    /// </summary>
+    /// <remarks>
+    /// If input for given index has already been provided or input collection has been stopped, the duplicate is ignored.
+    /// </remarks>
+    /// <param name="frame">Id if the frame update.</param>
+    /// <param name="input">The input for the frame update.</param>
+    void AddInput(long frame, TInput input);
+
+    /// <summary>
+    /// Stops collection of inputs, another <see cref="GetNextInputAsync"/> shall not complete. All future inputs will be ignored.
+    /// </summary>
+    void Stop();
+
+    /// <summary>
+    /// Collects the input for frame index <see cref="CurrentFrame"/>.
+    /// </summary>
+    /// <returns>Input for current frame index.</returns>
+    /// <exception cref="OperationCanceledException">If data collection has been stopped.</exception>
+    /// <exception cref="InvalidOperationException">If prior <see cref="GetNextInputAsync"/> has not been awaited.</exception>
+    ValueTask<TInput> GetNextInputAsync();
+}
+
+
+/// <inheritdoc/>
+public sealed class UpdateInputQueue<TInput> : IUpdateInputQueue<TInput>
 {
     long currentFrame_ = 0;
 
@@ -28,12 +63,7 @@ public sealed class UpdateInputQueue<TInput>
 
     readonly ILogger logger_ = Log.ForContext<UpdateInputQueue<TInput>>();
 
-    /// <summary>
-    /// The index of the frame next <see cref="GetNextInputAsync"/> is going to return.
-    /// </summary>
-    /// <remarks>
-    /// Incresing this value will result in throwing away all inputs of frames with lower index.
-    /// </remarks>
+    /// <inheritdoc/>
     public long CurrentFrame
     {
         get
@@ -60,14 +90,7 @@ public sealed class UpdateInputQueue<TInput>
         }
     }
 
-    /// <summary>
-    /// Adds input for given index.
-    /// </summary>
-    /// <remarks>
-    /// If input for given index has already been provided or input collection has been stopped, the duplicate is ignored.
-    /// </remarks>
-    /// <param name="frame">Id if the frame update.</param>
-    /// <param name="input">The input for the frame update.</param>
+    /// <inheritdoc/>
     public void AddInput(long frame, TInput input)
     {
         lock (mutex_)
@@ -89,9 +112,7 @@ public sealed class UpdateInputQueue<TInput>
         }
     }
 
-    /// <summary>
-    /// Stops collection of inputs, another <see cref="GetNextInputAsync"/> shall not complete. All future inputs will be ignored.
-    /// </summary>
+    /// <inheritdoc/>
     public void Stop()
     {
         lock (mutex_)
@@ -101,12 +122,7 @@ public sealed class UpdateInputQueue<TInput>
         }
     }
 
-    /// <summary>
-    /// Collects the input for frame index <see cref="CurrentFrame"/>.
-    /// </summary>
-    /// <returns>Input for current frame index.</returns>
-    /// <exception cref="OperationCanceledException">If data collection has been stopped.</exception>
-    /// <exception cref="InvalidOperationException">If prior <see cref="GetNextInputAsync"/> has not been awaited.</exception>
+    /// <inheritdoc/>
     public async ValueTask<TInput> GetNextInputAsync()
     {
         lock (mutex_)

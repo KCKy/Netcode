@@ -4,7 +4,7 @@ using Serilog;
 
 namespace TransportTester;
 
-class Program
+static class Program
 {
     static char? TryGetCommand()
     {
@@ -94,7 +94,7 @@ class Program
 
         while (true)
         {
-            Console.WriteLine($"Enter client command ([b]egin, [s]end, [t]est, [e]nd).");
+            Console.WriteLine($"Enter client command ([b]egin, [s]end, [e]nd, [q]uit).");
             char command = GetCommand(() => Console.Write("> "));
 
             switch (command)
@@ -105,13 +105,12 @@ class Program
                 case 's':
                     client.SendReliable(GetMessage());
                     continue;
-                case 't':
-                    Console.WriteLine("To be implemented.");
-                    continue;
                 case 'e':
                     Console.WriteLine("Stopping the client.");
                     client.Terminate();
                     continue;
+                case 'q':
+                    return;
                 default:
                     Console.WriteLine("Unknown command.");
                     continue;
@@ -142,7 +141,7 @@ class Program
         
         while (true)
         {
-            Console.WriteLine($"Enter client command ([b]egin, [s]end, send-[a]ll [t]est, [e]nd, [k]ick).");
+            Console.WriteLine($"Enter client command ([b]egin, [s]end, send-[a]ll, [e]nd, [k]ick, [q]uit).");
             char command = GetCommand(() => Console.Write("> "));
             long id;
 
@@ -158,9 +157,6 @@ class Program
                 case 'a':
                     server.SendReliable(GetMessage());
                     continue;
-                case 't':
-                    Console.WriteLine("To be implemented.");
-                    continue;
                 case 'e':
                     Console.WriteLine("Stopping the client.");
                     server.Terminate();
@@ -169,6 +165,8 @@ class Program
                     id = GetLong(() => Console.WriteLine("Enter id to kick: "));
                     server.Terminate(id);
                     continue;
+                case 'q':
+                    return;
                 default:
                     Console.WriteLine("Unknown command.");
                     continue;
