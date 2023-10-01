@@ -22,13 +22,13 @@ public partial struct UpdateInput<TClientInput, TServerInput>
     /// </summary>
     public Memory<UpdateClientInfo<TClientInput>> ClientInput;
 
+    [MemoryPackConstructor]
     public UpdateInput(Memory<UpdateClientInfo<TClientInput>> clientInput, TServerInput serverInput)
     {
         ServerInput = serverInput;
         ClientInput = clientInput;
     }
 
-    [MemoryPackConstructor]
     public UpdateInput()
     {
         ServerInput = new();

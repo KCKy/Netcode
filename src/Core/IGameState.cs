@@ -12,7 +12,7 @@ public interface IGameState<TC, TS>
     where TC : class, new()
     where TS : class, new()
 {
-    public UpdateOutput Update(UpdateInput<TC, TS> updateInputs);
+    UpdateOutput Update(UpdateInput<TC, TS> updateInputs);
 
-    public static abstract double DesiredTickRate { get; }
+    static abstract double DesiredTickRate { get; }
 }

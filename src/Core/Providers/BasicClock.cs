@@ -17,7 +17,7 @@ public sealed class BasicClock : IClock
         set
         {
             targetTps_ = value;
-            period_ = TimeSpan.FromMilliseconds(1d / value);
+            period_ = TimeSpan.FromSeconds(1d / value);
         }
     }
 

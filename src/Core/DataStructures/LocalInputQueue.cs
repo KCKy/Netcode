@@ -10,16 +10,6 @@ namespace Core.DataStructures;
 public interface ILocalInputQueue<TInput>
 {
     /// <summary>
-    /// Index of the first frame in the queue (inclusive)
-    /// </summary>
-    long FirstFrame { get; }
-
-    /// <summary>
-    /// Index of the last frame in the queue (inclusive)
-    /// </summary>
-    long LastFrame { get; }
-
-    /// <summary>
     /// Accessor.
     /// </summary>
     /// <param name="frame">Index of the frame.</param>
@@ -31,10 +21,12 @@ public interface ILocalInputQueue<TInput>
     /// Enqueues an element to the queue.
     /// </summary>
     /// <param name="input">Element to add.</param>
-    void Add(TInput input);
+    void Add(TInput input, long frame);
+
+    void Set(long frame);
 
     /// <summary>
-    /// Removes all elements lesser than or equal to given index.
+    /// Marks all elements lesser than or equal to given index (even those yet to be added) to be deleted.
     /// </summary>
     /// <exception cref="InvalidOperationException"></exception>
     void Pop(long frame);
@@ -42,47 +34,69 @@ public interface ILocalInputQueue<TInput>
 
 /// <inheritdoc/>
 public sealed class LocalInputQueue<TInput> : ILocalInputQueue<TInput>
+where TInput : class
 {
+    readonly object mutex_ = new();
     readonly Dictionary<long, TInput> frameToInput_ = new();
-
-    /// <inheritdoc/>
-    public long FirstFrame { get; private set; } = 0;
-
-    /// <inheritdoc/>
-    public long LastFrame { get; private set; } = -1;
-
-
     readonly ILogger logger_ = Log.ForContext<LocalInputQueue<TInput>>();
 
+    long firstFrame_ = 0;
+    long lastFrame_ = -1;
+
     /// <inheritdoc/>
-    public TInput this[long frame]
+    public TInput? this[long frame]
     {
         get
         {
-            if (frame < FirstFrame || frame > LastFrame)
+            lock (mutex_)
             {
-                logger_.Fatal("To access non-contained ([{First}, {Last}]) {index}.", FirstFrame, LastFrame, frame);
-                throw new IndexOutOfRangeException("Given frame is not in the queue.");
+                if (frame >= firstFrame_ && frame <= lastFrame_)
+                    return frameToInput_[frame];
+                
+                logger_.Debug("To access non-contained ([{First}, {Last}]) {index}.", firstFrame_, lastFrame_, frame);
+                return null;
             }
-
-            return frameToInput_[frame];
         }
     }
 
     /// <inheritdoc/>
-    public void Add(TInput input)
+    public void Add(TInput input, long frame)
     {
-        LastFrame++;
-        frameToInput_.Add(LastFrame, input);
+        lock (mutex_)
+        {
+            if (frame <= lastFrame_)
+                return;
+
+            if (frame != lastFrame_ + 1)
+                throw new ArgumentOutOfRangeException(nameof(frame), frame, "Frame must be consecutive.");
+
+            lastFrame_++;
+            logger_.Verbose("Adding local client input for frame {Frame}.", lastFrame_);
+            frameToInput_.Add(lastFrame_, input);
+        }
+    }
+
+    public void Set(long frame)
+    {
+        lock (mutex_)
+        {
+            Pop(frame);
+
+            if (lastFrame_ < firstFrame_)
+                lastFrame_ = firstFrame_ - 1;
+        }
     }
 
     /// <inheritdoc/>
     public void Pop(long frame)
     {
-        while (FirstFrame < frame)
+        lock (mutex_)
         {
-            frameToInput_.Remove(FirstFrame);
-            FirstFrame++;
+            while (firstFrame_ <= frame)
+            {
+                frameToInput_.Remove(firstFrame_);
+                firstFrame_++;
+            }
         }
     }
 }

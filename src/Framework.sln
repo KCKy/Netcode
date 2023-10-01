@@ -13,7 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DefaultTransportTests", "De
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TransportTester", "TransportTester\TransportTester.csproj", "{4EBFF46C-B08A-4C99-859E-8F2C6EF627BE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleGame", "ConsoleGame\ConsoleGame.csproj", "{7F88E835-D011-4F25-8EA0-2FE668A87A55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestGame", "ConsoleGame\TestGame.csproj", "{7F88E835-D011-4F25-8EA0-2FE668A87A55}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleCommandLine", "SimpleCommandLine\SimpleCommandLine.csproj", "{49830078-B59B-44C4-9585-5218B95EB808}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{7F88E835-D011-4F25-8EA0-2FE668A87A55}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F88E835-D011-4F25-8EA0-2FE668A87A55}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F88E835-D011-4F25-8EA0-2FE668A87A55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49830078-B59B-44C4-9585-5218B95EB808}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49830078-B59B-44C4-9585-5218B95EB808}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49830078-B59B-44C4-9585-5218B95EB808}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49830078-B59B-44C4-9585-5218B95EB808}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

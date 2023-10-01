@@ -6,5 +6,7 @@ public interface IServerDispatcher
 
     void Initialize(long id, long frame, Memory<byte> state);
 
+    void InputAuthored(long id, long frame, TimeSpan difference);
+
     void SendAuthoritativeInput(long frame, Memory<byte> input, long? checksum);
 }

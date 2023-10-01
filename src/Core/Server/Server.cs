@@ -13,7 +13,6 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
     where TClientInput : class, new()
     where TServerInput : class, new()
 {
-    readonly ReaderWriterLockSlim  holderMutex_ = new();
     readonly IStateHolder<TClientInput, TServerInput, TGameState> holder_;
     readonly IClientInputQueue<TClientInput> inputQueue_;
     readonly ILogger logger_ = Log.ForContext<Server<TClientInput, TServerInput, TGameState>>();
@@ -45,6 +44,8 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
         {
             Logger = logger_
         };
+
+        inputQueue_.OnInputAuthored += dispatcher.InputAuthored;
     }
 
     internal Server(IServerDispatcher dispatcher,
@@ -65,13 +66,15 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
         {
             Logger = logger_
         };
+
+        inputQueue_.OnInputAuthored += dispatcher.InputAuthored;
     }
     
     public bool TraceState { get; set; }
     public bool SendChecksum { get; set; }
     public bool TraceFrameTime { get; set; }
 
-    public async Task Start()
+    public async Task RunAsync()
     {
         lock (terminationMutex_)
         {
@@ -103,37 +106,30 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
         }
     }
 
-    (UpdateOutput output, byte[]? trace, long? checksum, long frame) StateUpdate(UpdateInput<TClientInput, TServerInput> input)
-    {
-        UpdateOutput output;
-
-        lock (holder_)
-            output = holder_.Update(input);
-        
-        long frame = holder_.Frame;
-        displayer_.AddAuthoritative(holder_.Frame, holder_.State);
-        byte[]? trace = TraceState ? MemoryPackSerializer.Serialize(holder_.State) : null;
-        long? checksum = SendChecksum ? holder_.GetChecksum() : null;
-
-        return (output, trace, checksum, frame);
-    }
-
     readonly UpdateTimer timer_;
 
     long Update()
     {
         // Gather input
         var clientInput = inputQueue_.ConstructAuthoritativeFrame();
+        long frame = holder_.Frame + 1;
+
         TServerInput serverInput = inputProvider_.GetInput(holder_.State);
         UpdateInput<TClientInput, TServerInput> input = new(clientInput, serverInput);
         byte[] serializedInput = MemoryPackSerializer.Serialize(input);
 
         // Update
-        (UpdateOutput output, byte[]? trace, long? checksum, long frame) = StateUpdate(input);
+        UpdateOutput output;
+        lock (holder_)
+            output = holder_.Update(input);
+        
+        displayer_.AddAuthoritative(holder_.Frame, holder_.State);
+        byte[]? trace = TraceState ? MemoryPackSerializer.Serialize(holder_.State) : null;
+        long? checksum = SendChecksum ? holder_.GetChecksum() : null;
 
         // Trace
         if (trace is not null)
-            logger_.Verbose("Finished state update for {Frame} with {Input} resulting with {State}", frame, serializedInput, trace);
+            logger_.Verbose("Finished state update for {Frame} resulting with {State}", frame, trace);
 
         // Kick?
         if (output.ClientsToTerminate is { Length: > 0 } toTerminate)
@@ -162,6 +158,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
             
             if (TraceFrameTime)
                 timer_.Start();
+
             long frame = Update();
 
             if (TraceFrameTime)

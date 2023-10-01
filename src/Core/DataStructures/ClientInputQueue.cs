@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using Core.Extensions;
 using Core.Utility;
 using Serilog;
@@ -13,7 +14,7 @@ public interface IClientInputQueue<TClientInput>
 where TClientInput : class, new()
 {
     /// <summary>
-    /// The latest contructed input frame number.
+    /// The latest constructed input frame number.
     /// </summary>
     long Frame { get; }
 
@@ -44,7 +45,11 @@ where TClientInput : class, new()
     /// </summary>
     /// <returns>Input frame for current frame.</returns>
     Memory<UpdateClientInfo<TClientInput>> ConstructAuthoritativeFrame();
+    
+    event InputAuthoredDelegate OnInputAuthored;
 }
+
+public delegate void InputAuthoredDelegate(long id, long frame, TimeSpan difference);
 
 /// <inheritdoc/>
 public sealed class ClientInputQueue<TClientInput> : IClientInputQueue<TClientInput>
@@ -52,16 +57,24 @@ where TClientInput : class, new()
 {
     readonly struct SingleClientQueue
     {
-        readonly Dictionary<long, TClientInput> frameToInput_ = new();
+        readonly Dictionary<long, (TClientInput input, long timestamp)> frameToInput_ = new();
 
         public SingleClientQueue() { }
 
-        public bool TryAdd(long frame, TClientInput input) => frameToInput_.TryAdd(frame, input);
+        public bool TryAdd(long frame, TClientInput input, long timestamp) => frameToInput_.TryAdd(frame, (input, timestamp));
 
-        public void WriteUpdateInfo(long frame, ref UpdateClientInfo<TClientInput> info)
+        public long? WriteUpdateInfo(long frame, ref UpdateClientInfo<TClientInput> info)
         {
-            if (!frameToInput_.Remove(frame, out info.Input!))
-                info.Input = DefaultProvider<TClientInput>.Create();
+            if (!frameToInput_.Remove(frame, out var rec))
+            {
+                info.Input = new();
+
+                return null;
+            }
+
+            info.Input = rec.input;
+
+            return rec.timestamp;
         }
     }
 
@@ -122,25 +135,27 @@ where TClientInput : class, new()
     {
         lock (mutex_)
         {
+            long timestamp = Stopwatch.GetTimestamp();
+
             if (frame <= frame_)
             {
-                logger_.Debug("Got late {Input} from client {Id} for {frame_} at {frame_} at {Current}.", input, id, frame, frame_);
+                logger_.Debug("Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
                 return;
             }
 
             if (!idToInputs_.TryGetValue(id, out var frameToInput))
             {
-                logger_.Debug("Got {Input} from terminated client {Id} for {frame_} at {Current}..", input, id, frame, frame_);
+                logger_.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
-            if (!frameToInput.TryAdd(frame, input))
+            if (!frameToInput.TryAdd(frame, input, timestamp))
             {
-                logger_.Debug("Got repeated {Input} from client {Id} for {frame_} at {Current}..", input, id, frame, frame_);
+                logger_.Debug("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
-            logger_.Verbose("Got {Input} from client {Id} for {frame_} at {Current}.", input, id, frame, frame_);
+            logger_.Verbose("Got input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
         }
     }
 
@@ -149,9 +164,11 @@ where TClientInput : class, new()
     {
         lock (mutex_)
         {
+            long now = Stopwatch.GetTimestamp();
+
             int length = idToInputs_.Count + removedClients_.Count;
 
-            var frame = ArrayPool<UpdateClientInfo<TClientInput>>.Shared.RentMemory(length);
+            Memory<UpdateClientInfo<TClientInput>> frame = new UpdateClientInfo<TClientInput>[length];
 
             long nextFrame = frame_ + 1;
 
@@ -160,20 +177,28 @@ where TClientInput : class, new()
             int i = 0;
             foreach ((long id, SingleClientQueue queue) in idToInputs_)
             {
-                queue.WriteUpdateInfo(nextFrame, ref span[i]);
+                long? timestamp = queue.WriteUpdateInfo(nextFrame, ref span[i]);
                 span[i].Id = id;
+
+                TimeSpan difference = timestamp.HasValue
+                    ? Stopwatch.GetElapsedTime(timestamp.Value, now)
+                    : TimeSpan.MinValue;
+                
+                OnInputAuthored?.Invoke(id, nextFrame, difference);
                 i++;
             }
 
             foreach (long id in removedClients_)
-                span[i] = new(id, DefaultProvider<TClientInput>.Create(), true);
+                span[i] = new(id, new(), true);
 
             frame_ = nextFrame;
             removedClients_.Clear();
 
-            logger_.Verbose("Constructed authoritative {frame_} for {FrameIndex}.", frame, nextFrame);
+            logger_.Verbose("Constructed authoritative frame for {FrameIndex}.", nextFrame);
 
             return frame;
         }
     }
+
+    public event InputAuthoredDelegate? OnInputAuthored;
 }

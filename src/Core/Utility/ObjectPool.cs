@@ -4,6 +4,7 @@ using MemoryPack;
 
 namespace Core.Utility;
 
+/*
 /// <summary>
 /// Thread-safe, lock free object pool.
 /// </summary>
@@ -48,3 +49,4 @@ public static class DefaultProvider<TObject> where TObject : class, new()
         return instance;
     }
 }
+*/

@@ -30,7 +30,11 @@ public sealed class Client<TC, TS, TG> : IClientSession
     bool initiated_ = false;
     bool identified_ = false;
 
-    double PredictDelayMargin { get; set; } = 0.1;
+    double PredictDelayMargin
+    {
+        get => clock_.TargetDelta;
+        set => clock_.TargetDelta = value;
+    }
     
     public Client(IClientDispatcher dispatcher,
         IDisplayer<TG>? displayer,
@@ -40,7 +44,11 @@ public sealed class Client<TC, TS, TG> : IClientSession
     {
         dispatcher_ = dispatcher;
         displayer_ = displayer ?? new DefaultDisplayer<TG>();
-        clock_ = new BasicSpeedController();
+        clock_ = new BasicSpeedController()
+        {
+            TargetTPS = TG.DesiredTickRate
+        };
+
         authStateHolder_ = new StateHolder<TC, TS, TG>();
         authInputs_ = new UpdateInputQueue<UpdateInputInfo>();
 
@@ -55,6 +63,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
             Displayer = displayer_
         };
 
+        PredictDelayMargin = 200f;
         timer_ = new()
         {
             Logger = logger_
@@ -71,6 +80,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
         predictManager_ = predictManager;
         authInputs_ = updateInputs;
 
+        PredictDelayMargin = 200f;
         timer_ = new()
         {
             Logger = logger_
@@ -81,7 +91,9 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
     public bool TraceState { get; set; }
     public bool UseChecksum { get; set; }
-    public bool TraceFrameTime { get; init; }
+
+    // TODO: this could break the stopwatch, even for server
+    public bool TraceFrameTime { get; set; }
 
     public async Task RunAsync()
     {
@@ -92,6 +104,8 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
             started_ = true;
         }
+
+        logger_.Information("The client is starting.");
 
         try
         {
@@ -106,6 +120,8 @@ public sealed class Client<TC, TS, TG> : IClientSession
         {
             if (terminated_)
                 return;
+
+            logger_.Information("The client is being terminated.");
 
             terminated_ = true;
 
@@ -149,16 +165,19 @@ public sealed class Client<TC, TS, TG> : IClientSession
             frame = authStateHolder_.Frame;
             AssertChecksum(checksum);
             displayer_.AddAuthoritative(frame, authStateHolder_.State);
+
+            logger_.Verbose("Authorized frame {Frame}", frame);
+
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
-        
-        serializedInput.ReturnToArrayPool();
 
         return frame;
     }
 
     async Task AuthorizeAsync()
     {
+        logger_.Debug("Began authorizing thread.");
+
         while (true)
         {
              UpdateInputInfo inputInfo = await authInputs_.GetNextInputAsync();
@@ -179,6 +198,8 @@ public sealed class Client<TC, TS, TG> : IClientSession
         {
             if (identified_ || terminated_ || !started_)
                 return;
+
+            logger_.Debug("Client received id {Id}", id);
 
             identified_ = true;
             Id = id;
@@ -203,9 +224,9 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
             // Deserialize state
             var span = serializedState.Span;
-            var authState = MemoryPackUtils.DeserializePooled<TG>(span);
-            var predictState = MemoryPackUtils.DeserializePooled<TG>(span);
-
+            var authState = MemoryPackSerializer.Deserialize<TG>(span);
+            var predictState = MemoryPackSerializer.Deserialize<TG>(span);
+            
             if (authState is null || predictState is null)
             {
                 logger_.Fatal("Received invalid init state {Serialized}.", serializedState);
@@ -214,12 +235,12 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
             logger_.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
 
-            serializedState.ReturnToArrayPool();
-
             // Init auth, no need to lock
             authStateHolder_.Frame = frame;
-            authStateHolder_.State = predictState;
+            authStateHolder_.State = authState;
             displayer_.AddAuthoritative(frame, authState);
+
+            authInputs_.CurrentFrame = frame + 1;
 
             // Init predict
             predictManager_.Init(frame, predictState);
@@ -238,9 +259,14 @@ public sealed class Client<TC, TS, TG> : IClientSession
         logger_.Information("The client has finished.");
         Terminate();
     }
-    void IClientSession.AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum) => authInputs_.AddInput(frame, new (input, checksum));
+
+    void IClientSession.AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum)
+    {
+        logger_.Verbose("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
+        authInputs_.AddInput(frame, new (input, checksum));
+    }
+
     void IClientSession.SetDelay(double delay) => clock_.CurrentDelta = delay;
-    void IClientSession.SetRoundTrip(double roundtrip) => clock_.TargetDelta = roundtrip / 2 + PredictDelayMargin;
 }
 
 record struct UpdateInputInfo(Memory<byte> Input, long? Checksum);

@@ -1,62 +1,12 @@
 ﻿using System.Net;
 using DefaultTransport.TcpTransport;
 using Serilog;
+using SimpleCommandLine;
 
 namespace TransportTester;
 
 static class Program
 {
-    static char? TryGetCommand()
-    {
-        string? input = Console.ReadLine();
-        if (input is { Length: 1 })
-            return input.ToLowerInvariant()[0];
-        return null;
-    }
-
-    static char GetCommand(Action info)
-    {
-        while (true)
-        {
-            info();
-
-            if (TryGetCommand() is {} command)
-                return command;
-        }
-    }
-
-    static IPEndPoint GetEndPoint(Action info)
-    {
-        while (true)
-        {
-            info();
-
-            string? input = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(input))
-                return IPEndPoint.Parse("127.0.0.1:12345");
-
-            if (IPEndPoint.TryParse(input, out IPEndPoint? point))
-                return point;
-        }
-    }
-
-    static long GetLong(Action info)
-    {
-        while (true)
-        {
-            info();
-
-            string? input = Console.ReadLine();
-
-            if (input is null)
-                continue;
-
-            if (long.TryParse(input, out long value))
-                return value;
-        }
-    }
-
     static void Main()
     {
         Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
@@ -65,7 +15,7 @@ static class Program
 
         while (true)
         {
-            switch (GetCommand(() => Console.Write("Set mode ([c]lient, [s]erver): ")))
+            switch (Command.GetCommand(() => Console.Write("Set mode ([c]lient, [s]erver): ")))
             {
                 case 'c':
                     RunClient();
@@ -82,7 +32,7 @@ static class Program
 
     static void RunClient()
     {
-        IPEndPoint server = GetEndPoint(() => Console.Write("Enter server IP address and port: "));
+        IPEndPoint server = Command.GetEndPoint(() => Console.Write("Enter server IP address and port: "));
 
         TcpClientTransport<string, string> client = new()
         {
@@ -95,7 +45,7 @@ static class Program
         while (true)
         {
             Console.WriteLine($"Enter client command ([b]egin, [s]end, [e]nd, [q]uit).");
-            char command = GetCommand(() => Console.Write("> "));
+            char command = Command.GetCommand(() => Console.Write("> "));
 
             switch (command)
             {
@@ -129,7 +79,7 @@ static class Program
 
     static void RunServer()
     {
-        IPEndPoint local = GetEndPoint(() => Console.Write("Enter local IP address and port: "));
+        IPEndPoint local = Command.GetEndPoint(() => Console.Write("Enter local IP address and port: "));
 
         TcpServerTransport<string, string> server = new(local);
 
@@ -142,7 +92,7 @@ static class Program
         while (true)
         {
             Console.WriteLine($"Enter client command ([b]egin, [s]end, send-[a]ll, [e]nd, [k]ick, [q]uit).");
-            char command = GetCommand(() => Console.Write("> "));
+            char command = Command.GetCommand(() => Console.Write("> "));
             long id;
 
             switch (command)
@@ -151,7 +101,7 @@ static class Program
                     server.Start().Wait();
                     continue;
                 case 's':
-                    id = GetLong(() => Console.WriteLine("Enter addressee id: "));
+                    id = Command.GetLong(() => Console.WriteLine("Enter addressee id: "));
                     server.SendReliable(GetMessage(), id);
                     continue;
                 case 'a':
@@ -162,7 +112,7 @@ static class Program
                     server.Terminate();
                     continue;
                 case 'k':
-                    id = GetLong(() => Console.WriteLine("Enter id to kick: "));
+                    id = Command.GetLong(() => Console.WriteLine("Enter id to kick: "));
                     server.Terminate(id);
                     continue;
                 case 'q':

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Core.Extensions;
 
+/*
 public static class MemoryExtensions
 {
     public static void ReturnToArrayPool<T>(ref this Memory<T> memory)
@@ -18,3 +19,4 @@ public static class MemoryExtensions
         ArrayPool<T>.Shared.Return(array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
     }
 }
+*/

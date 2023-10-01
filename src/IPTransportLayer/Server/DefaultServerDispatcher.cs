@@ -23,6 +23,17 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
         outTransport_.SendReliable(message, id);
     }
 
+    public void InputAuthored(long id, long frame, TimeSpan difference)
+    {
+        DelayInfoMessage message = new()
+        {
+            Frame = frame,
+            DelayMs = difference.TotalMilliseconds,
+        };
+
+        outTransport_.SendUnreliable(message, id);
+    }
+
     public void Kick(long id)
     {
         outTransport_.Terminate(id);

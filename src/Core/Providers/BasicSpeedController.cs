@@ -1,34 +1,74 @@
 ﻿using Serilog;
+using Serilog.Core;
 
 namespace Core.Providers;
 
 public class BasicSpeedController : ISpeedController
 {
-    readonly object mutex_ = new();
-
     public async Task RunAsync(CancellationToken cancelToken = new())
     {
-        var delay = Task.Delay(TimeSpan.FromSeconds(currentPeriod_));
-        
-        // TODO: implement speed change
+        double period;
 
-        await delay;
+        lock (mutex_)
+            period = currentPeriod_;
 
-        // TODO: rewrite as a regular thread
+        while (true)
+        {
+            Task delay = Task.Delay(TimeSpan.FromSeconds(period), cancelToken);
+            
+            lock (mutex_)
+                period = currentPeriod_;
 
-        OnTick?.Invoke();
+            await delay;
+
+            OnTick?.Invoke();
+        }
     }
 
-    double currentPeriod_;
-    double targetTps_;
-    double targetDelta_;
-    double currentDelta_;
+    void UpdateSpeed()
+    {
+        if (Math.Abs(targetDelta_ - currentDelta_) < SafeMargin)
+        {
+            logger_.Verbose("Keeping normal speed.");
+            currentPeriod_ = targetPeriod_;
+        }
+        else
+        {
+            if (targetDelta_ > currentDelta_)
+            {
+                logger_.Verbose("Running faster.");
+                currentPeriod_ = targetPeriod_ / SpeedUp;
+            }
+            else
+            {
+                logger_.Verbose("Running slower.");
+                currentPeriod_ = targetPeriod_ / SpeedDown;
+            }
+        }
+    }
+
+    public double SafeMargin { get; init; } = 0.05;
+    public double SpeedUp { get; init; } = 1.1;
+    public double SpeedDown { get; init; } = 0.95;
+
+    double currentPeriod_ = 0;
+    double targetPeriod_ = 1;
+    double targetDelta_ = 0;
+    double currentDelta_ = 0;
 
     readonly ILogger logger_ = Log.ForContext<BasicSpeedController>();
 
+    readonly object mutex_ = new();
+
+    double targetTps_ = 1;
+
     public double TargetTPS
     {
-        get => targetTps_;
+        get
+        {
+            lock (mutex_)
+                return targetTps_;
+        }
         set
         {
             if (!double.IsPositive(value))
@@ -36,9 +76,13 @@ public class BasicSpeedController : ISpeedController
                 logger_.Fatal("Got non-positive {TPS}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, "TPS must be a positive number.");
             }
-                
-            currentPeriod_ = 1 / targetTps_;
-            targetTps_ = value;
+
+            lock (mutex_)
+            {
+                targetTps_ = value;
+                targetPeriod_ = 1 / value;
+                UpdateSpeed();
+            }
         }
     }
 
@@ -55,7 +99,11 @@ public class BasicSpeedController : ISpeedController
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
             }
 
-            targetDelta_ = value;
+            lock (mutex_)
+            {
+                targetDelta_ = value;
+                UpdateSpeed();
+            }
         }
     }
 
@@ -70,11 +118,25 @@ public class BasicSpeedController : ISpeedController
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
             }
 
-            currentDelta_ = value;
+            logger_.Verbose("Updated delta to {Delta}", value);
+
+            lock (mutex_)
+            {
+                
+                currentDelta_ = value;
+                UpdateSpeed();
+            }
         }
     }
 
-    public double CurrentTPS => 1f / currentPeriod_;
+    public double CurrentTPS
+    {
+        get
+        {
+            lock (mutex_)
+                return 1f / currentPeriod_;
+        }
+    }
     
     public event Action? OnTick;
 }

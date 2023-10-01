@@ -70,8 +70,12 @@ where TIn : class
             TryFinish(ConnectionFinishReason.OtherSideEnded);
             return null;
         }
+
+        var ret = MemoryPackSerializer.Deserialize<TIn>(buffer);
         
-        return MemoryPackSerializer.Deserialize<TIn>(buffer);
+        ArrayPool<byte>.Shared.Return(buffer);
+
+        return ret;
     }
 
     async Task ReadAsync()

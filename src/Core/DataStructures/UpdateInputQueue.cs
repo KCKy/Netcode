@@ -55,10 +55,9 @@ public sealed class UpdateInputQueue<TInput> : IUpdateInputQueue<TInput>
 
     readonly object mutex_ = new();
 
-    TaskCompletionSource? waitForNext_ = new();
+    TaskCompletionSource? waitForNext_ = null;
 
     bool stopped_ = false;
-
     bool waiting_ = false;
 
     readonly ILogger logger_ = Log.ForContext<UpdateInputQueue<TInput>>();
@@ -118,7 +117,7 @@ public sealed class UpdateInputQueue<TInput> : IUpdateInputQueue<TInput>
         lock (mutex_)
         {
             stopped_ = true;
-            waitForNext_?.TrySetResult();
+            waitForNext_?.TrySetCanceled();
         }
     }
 
@@ -136,20 +135,14 @@ public sealed class UpdateInputQueue<TInput> : IUpdateInputQueue<TInput>
                 throw new InvalidOperationException("Cannot wait more than one time.");
             }
 
-            waiting_ = true;
-
-            if (inputs_.TryPeek(out var input, out long frame))
+            if (inputs_.TryPeek(out _, out long frame) && frame == currentFrame_)
             {
-                if (frame == currentFrame_)
-                {
-                    inputs_.Dequeue();
-                    heldFrames_.Remove(frame);
-                    currentFrame_++;
-                    waiting_ = false;
-                    return input;
-                }
+                heldFrames_.Remove(frame);
+                currentFrame_++;
+                return inputs_.Dequeue();
             }
 
+            waiting_ = true;
             waitForNext_ = new TaskCompletionSource(); // TODO: rewrite without allocation
         }
 
@@ -160,9 +153,10 @@ public sealed class UpdateInputQueue<TInput> : IUpdateInputQueue<TInput>
             if (stopped_)
                 throw new OperationCanceledException();
 
+            waiting_ = false;
+
             heldFrames_.Remove(currentFrame_);
             currentFrame_++;
-            waiting_ = false;
             return inputs_.Dequeue();
         }
     }

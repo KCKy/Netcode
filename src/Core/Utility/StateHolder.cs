@@ -8,11 +8,21 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
     where TC : class, new()
     where TS : class, new()
 {
-    public TG State { get; set; } = new();
+    public TG State
+    {
+        get => state_;
+        set
+        {
+            state_ = value;
+            checksum_ = null;
+            serialized_ = null;
+        }
+    }
 
     public long Frame { get; set; } = -1;
-
+    Memory<byte>? serialized_ = null;
     long? checksum_ = null;
+    TG state_ = new();
 
     public Memory<byte> Serialize()
     {
@@ -31,9 +41,9 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
         if (checksum_ is not null)
             return checksum_.Value;
 
-        Span<byte> serialized = MemoryPackSerializer.Serialize(State);
-        SetHash(serialized);
-
+        serialized_ = MemoryPackSerializer.Serialize(State);
+        SetHash(serialized_.Value.Span);
+        
         return checksum_!.Value;
     }
 
@@ -41,6 +51,7 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
     {
         Frame++;
         checksum_ = null;
+        serialized_ = null;
         return State.Update(input);
     }
 }

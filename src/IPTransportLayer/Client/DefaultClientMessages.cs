@@ -15,7 +15,7 @@ public sealed partial class ClientInputMessage : IMessageToServer
 {
     public long Frame;
 
-    [MemoryPoolFormatter<byte>]
+    //[MemoryPoolFormatter<byte>]
     public Memory<byte> Input;
 
     public void Inform(IServerSession session, long id)

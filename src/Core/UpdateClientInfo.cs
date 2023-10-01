@@ -3,11 +3,12 @@
 namespace Core;
 
 /// <summary>
-/// Holds information about input from given client.
+/// Holds information about input from a given client.
 /// </summary>
-/// <typeparam name="TClientInput"></typeparam>
+/// <typeparam name="TClientInput">The type of client input.</typeparam>
 [MemoryPackable]
 public partial struct UpdateClientInfo<TClientInput>
+    where TClientInput : class, new()
 {
     /// <summary>
     /// Id of the client.

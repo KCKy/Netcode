@@ -6,5 +6,5 @@ public class DefaultServerInputProvider<TServerInput, TGameState> : IServerInput
     where TServerInput : class, new()
     where TGameState : class, new()
 {
-    public TServerInput GetInput(TGameState info) => DefaultProvider<TServerInput>.Create();
+    public TServerInput GetInput(TGameState info) => new();
 }

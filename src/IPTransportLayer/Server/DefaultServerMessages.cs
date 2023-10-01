@@ -5,6 +5,8 @@ namespace DefaultTransport.Server;
 
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(AuthoritativeInputMessage))]
+[MemoryPackUnion(1, typeof(InitializationMessage))]
+[MemoryPackUnion(2, typeof(DelayInfoMessage))]
 public partial interface IMessageToClient
 {
     void Inform(IClientSession session);
@@ -15,7 +17,7 @@ public sealed partial class AuthoritativeInputMessage : IMessageToClient
 {
     public long Frame;
 
-    [MemoryPoolFormatter<byte>]
+    //[MemoryPoolFormatter<byte>]
     public Memory<byte> Input;
 
     public long? Checksum;
@@ -28,12 +30,28 @@ public sealed partial class AuthoritativeInputMessage : IMessageToClient
 }
 
 [MemoryPackable]
+public sealed partial class DelayInfoMessage : IMessageToClient
+{
+    public long Frame;
+    public double DelayMs;
+
+    public void Inform(IClientSession session)
+    {
+        double delay = DelayMs > 0 ? DelayMs : 0;
+
+        // TODO: give an average
+
+        session.SetDelay(delay);
+    }
+}
+
+[MemoryPackable]
 public sealed partial class InitializationMessage : IMessageToClient
 {
     public long Id;
     public long Frame;
 
-    [MemoryPoolFormatter<byte>]
+    //[MemoryPoolFormatter<byte>]
     public Memory<byte> State;
 
     public void Inform(IClientSession session)

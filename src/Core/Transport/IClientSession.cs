@@ -7,5 +7,4 @@ public interface IClientSession
     void AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum);
     void Finish();
     void SetDelay(double delay);
-    void SetRoundTrip(double roundtrip);
 }
