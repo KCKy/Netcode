@@ -15,7 +15,7 @@ public interface ILocalInputQueue<TInput>
     /// <param name="frame">Index of the frame.</param>
     /// <returns>Element at given frame index.</returns>
     /// <exception cref="IndexOutOfRangeException">If given index is out the queue range.</exception>
-    TInput this[long frame] { get; }
+    TInput? this[long frame] { get; }
 
     /// <summary>
     /// Enqueues an element to the queue.

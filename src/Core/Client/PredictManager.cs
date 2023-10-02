@@ -195,7 +195,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
                     difference--;
 
                     // This is assured to exist
-                    TC localInput = ClientInputs[frame];
+                    TC localInput = ClientInputs[frame] ?? new();
 
                     // Predict
                     PredictClientInput(input.ClientInput.Span, localInput);

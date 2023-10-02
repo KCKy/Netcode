@@ -63,7 +63,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
             Displayer = displayer_
         };
 
-        PredictDelayMargin = 200f;
+        PredictDelayMargin = 100f;
         timer_ = new()
         {
             Logger = logger_
@@ -80,7 +80,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
         predictManager_ = predictManager;
         authInputs_ = updateInputs;
 
-        PredictDelayMargin = 200f;
+        PredictDelayMargin = 100f;
         timer_ = new()
         {
             Logger = logger_
@@ -204,6 +204,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
             identified_ = true;
             Id = id;
             predictManager_.LocalId = id;
+            displayer_.Init(id);
 
             if (initiated_ && identified_)
             {

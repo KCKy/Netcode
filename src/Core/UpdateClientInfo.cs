@@ -25,6 +25,13 @@ public partial struct UpdateClientInfo<TClientInput>
     /// </summary>
     public bool Terminated;
 
+    public void Deconstruct(out long id, out TClientInput input, out bool terminated)
+    {
+        id = Id;
+        input = Input;
+        terminated = Terminated;
+    }
+
     /// <summary>
     /// Constructor.
     /// </summary>

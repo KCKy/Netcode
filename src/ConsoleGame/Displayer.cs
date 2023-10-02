@@ -1,10 +1,7 @@
-﻿using ConsoleGame;
-using Core.Providers;
+﻿using Core.Providers;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
-using System.Diagnostics.Metrics;
-using System.Xml.Linq;
 
 namespace TestGame
 {
@@ -14,6 +11,14 @@ namespace TestGame
         static readonly VideoMode Mode = new(WindowSize.X, WindowSize.Y);
 
         long frame_ = long.MinValue;
+        Direction? direction_ = null;
+
+        long id_ = long.MaxValue;
+        
+        public void Init(long id)
+        {
+            id_ = id;
+        }
 
         public void AddAuthoritative(long frame, GameState gameState) { }
 
@@ -23,33 +28,41 @@ namespace TestGame
         
             if (frame != gameState.Frame)
                 throw new ArgumentException($"Frame and tick mismatch {frame} {gameState.Frame}.");
+
+            foreach ((long id, Player player) in gameState.IdToPlayer)
+            {
+                if (id != id_)
+                    continue;
+
+                direction_ = player.Direction;
+            }
         }
 
         public void Display()
         {
-            text_.DisplayedString = $"Frame: {frame_}";
+            text_.DisplayedString = $"Frame: {frame_}\nDirection: {direction_}";
 
-            if (!window_.IsOpen)
+            if (!Window.IsOpen)
                 return;
 
-            window_.DispatchEvents();
-            window_.Clear();
-            window_.Draw(text_);
-            window_.Display();
+            Window.DispatchEvents();
+            Window.Clear();
+            Window.Draw(text_);
+            Window.Display();
         }
-
+        
         readonly Text text_ = new();
         
-        readonly RenderWindow window_;
+        public RenderWindow Window { get; }
 
         public Displayer(string name)
         {
             text_.Font = new(@"C:\Windows\Fonts\arial.ttf");;
             text_.CharacterSize = 24;
             text_.FillColor = Color.White;
-            window_ = new(Mode, name);
-            window_.SetVerticalSyncEnabled(true);
-            window_.Closed += (sender, args) => window_.Close();
+            Window = new(Mode, name);
+            Window.SetVerticalSyncEnabled(true);
+            Window.Closed += (sender, args) => Window.Close();
         }
     }
 }
