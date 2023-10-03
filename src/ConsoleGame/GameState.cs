@@ -1,6 +1,5 @@
 ﻿using Core;
 using MemoryPack;
-using System.Numerics;
 using SFML.System;
 
 namespace TestGame;
@@ -32,8 +31,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
     [MemoryPackInclude]
     public Dictionary<long, Player> IdToPlayer = new();
 
-    [MemoryPackInclude]
-    Level level_ = new(LevelWidth, LevelHeight);
+    public Level level_ = new(LevelWidth, LevelHeight);
 
     void HandleFoodEvent(in FoodSpawnEvent foodEvent)
     {

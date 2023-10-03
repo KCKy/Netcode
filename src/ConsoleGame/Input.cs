@@ -11,7 +11,7 @@ static class DirectionExtensions
         return direction switch
         {
             Direction.Left => new(-1, 0),
-            Direction.Right => new(1, 1),
+            Direction.Right => new(1, 0),
             Direction.Up => new(0, -1),
             Direction.Down => new(0, 1),
             _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, "Invalid direction value.")

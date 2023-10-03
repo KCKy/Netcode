@@ -17,6 +17,9 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
     <ProjectReference Include="..\SimpleCommandLine\SimpleCommandLine.csproj" />
+    <Content Include="LiberationMono-Regular.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

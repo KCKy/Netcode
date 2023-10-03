@@ -47,7 +47,7 @@ public class BasicSpeedController : ISpeedController
         }
     }
 
-    public double SafeMargin { get; init; } = 0.05;
+    public double SafeMargin { get; init; } = 0.01;
     public double SpeedUp { get; init; } = 1.1;
     public double SpeedDown { get; init; } = 0.95;
 
