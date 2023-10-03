@@ -54,6 +54,9 @@ namespace TestGame
         static readonly Color Background = Color.Black;
 
         Level level_ = new(GameState.LevelWidth, GameState.LevelHeight);
+
+        Level authLevel_ = new(GameState.LevelWidth, GameState.LevelHeight);
+
         long frame_ = long.MinValue;
         
         Direction? direction_ = null;
@@ -63,7 +66,11 @@ namespace TestGame
     
         public void Init(long id) => id_ = id;
 
-        public void AddAuthoritative(long frame, GameState gameState) { }
+        public void AddAuthoritative(long frame, GameState gameState)
+        {
+            byte[] serializedLevel = MemoryPackSerializer.Serialize(gameState.level_);
+            MemoryPackSerializer.Deserialize(serializedLevel, ref authLevel_);
+        }
 
         public void AddPredict(long frame, GameState gameState)
         {
@@ -99,6 +106,16 @@ namespace TestGame
 
         Vector2f ToGrid(int x, int y) => origin_ + new Vector2f(x, y) * unitLength_;
 
+
+        void DrawPlayerAuth(int x, int y, PlayerAvatar avatar)
+        {
+            Color color = PlayerPallete[avatar.Id * PlayerPalleteSpacing].ToColor();
+            color.A = 100;
+            player_.FillColor = color;
+            player_.Position = ToGrid(x, y);
+            Window.Draw(player_);
+        }
+
         void DrawPlayer(int x, int y, PlayerAvatar avatar)
         {
             Color color = PlayerPallete[avatar.Id * PlayerPalleteSpacing].ToColor();
@@ -133,6 +150,16 @@ namespace TestGame
                         DrawFood(x, y, food);
                         continue;
                 }
+
+                ILevelObject? authObj = authLevel_[x, y];
+                
+                switch (authObj)
+                {
+                    case PlayerAvatar player:
+                        DrawPlayerAuth(x, y, player);
+                        continue;
+                }
+
             }
         }
 
