@@ -46,11 +46,8 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
     }
 
     void KeyReleasedHandler(object? sender, KeyEventArgs args) { }
-
     void MousePressedHandler(object? sender, MouseButtonEventArgs args) { }
-
     void MouseReleasedHandler(object? sender, MouseButtonEventArgs args) { }
-
     void MouseMovedHandler(object? sender, MouseMoveEventArgs args) { }
 
     public ClientInput GetInput()

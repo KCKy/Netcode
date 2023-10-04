@@ -91,7 +91,7 @@ static class Program
         
         while (true)
         {
-            Console.WriteLine($"Enter client command ([b]egin, [s]end, send-[a]ll, [e]nd, [k]ick, [q]uit).");
+            Console.WriteLine("Enter client command ([b]egin, [s]end, send-[a]ll, [e]nd, [k]ick, [q]uit).");
             char command = Command.GetCommand(() => Console.Write("> "));
             long id;
 

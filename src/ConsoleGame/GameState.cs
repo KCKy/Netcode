@@ -12,12 +12,6 @@ sealed partial class Player
 }
 
 [MemoryPackable]
-sealed partial class PlayerAvatar : ILevelObject
-{
-    public long Id;
-}
-
-[MemoryPackable]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
     public long Frame = -1;

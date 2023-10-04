@@ -4,13 +4,13 @@ namespace TestGame;
 
 sealed class ServerInputProvider : IServerInputProvider<ServerInput, GameState>
 {
-    readonly Random random_ = new();
+    // readonly Random random_ = new();
 
     public ServerInput GetInput(GameState info)
     {
         ServerInput input = new();
-        return input;
 
+        /*
         if (random_.NextDouble() >= 0.05)
             return input;
 
@@ -23,6 +23,7 @@ sealed class ServerInputProvider : IServerInputProvider<ServerInput, GameState>
             X = x,
             Y = y
         };
+        */
 
         return input;
     }

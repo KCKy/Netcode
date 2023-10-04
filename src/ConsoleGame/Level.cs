@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using HashDepot;
 using MemoryPack;
+using SFML.Graphics;
 using SFML.System;
 
 namespace TestGame;
@@ -50,4 +51,24 @@ partial struct Level
     }
 
     public ref ILevelObject? this [Vector2i pos] => ref this[pos.X, pos.Y];
+
+    public void Draw(RenderTarget target, float unit, Vector2f origin)
+    {
+        for (int x = 0; x < Width; x++)
+        for (int y = 0; y < Height; y++)
+        {
+            Vector2f position = origin + new Vector2f(x, y) * unit;
+            this[x, y]?.Draw(target, position, unit);
+        }
+    }
+
+    public void DrawAuth(RenderTarget target, float unit, Vector2f origin)
+    {
+        for (int x = 0; x < Width; x++)
+        for (int y = 0; y < Height; y++)
+        {
+            Vector2f position = origin + new Vector2f(x, y) * unit;
+            this[x, y]?.DrawAuth(target, position, unit);
+        }
+    }
 }

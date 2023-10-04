@@ -4,228 +4,114 @@ using MemoryPack;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
+using Core.Extensions;
 
-namespace TestGame
+namespace TestGame;
+
+class Displayer : IDisplayer<GameState>
 {
-    readonly struct Pallete
+    static readonly VideoMode Mode = new(960, 540);
+    static readonly Color Background = Color.Black;
+    static readonly Font Font = new("LiberationMono-Regular.ttf");
+
+    public RenderWindow Window { get; }
+
+    readonly float unit_;
+    readonly Vector2f origin_;
+
+    readonly Text debugText_ = new()
     {
-        public required Vector3f A { get; init; }
-        public required Vector3f B { get; init; }
-        public required Vector3f C { get; init; }
-        public required Vector3f D { get; init; }
+        Font = Font,
+        CharacterSize = 24,
+        FillColor = Color.White
+    };
 
-        public Pallete() { }
+    Grid grid_ = new()
+    {
+        Height = GameState.LevelHeight,
+        Width = GameState.LevelWidth
+    };
+    
+    // Displayed data
 
-        readonly float Formula(float a, float b, float c, float d, float t) => a + b * MathF.Cos(MathF.Tau * c * t + d);
+    Level level_ = new();
+    Level authLevel_ = new();
+    
+    long predictFrame_ = long.MinValue;
+    long authFrame_ = long.MinValue;
+    Direction? direction_ = null;
+    long id_ = long.MaxValue;
 
-        public readonly Vector3f this[float t]
-        {
-            get
-            {
-                if (t != 1f)
-                    t = MathF.Truncate(MathF.Abs(t));
+    //
 
-                float r = Formula(A.X, B.X, C.X, D.X, t);
-                float g = Formula(A.Y, B.Y, C.Y, D.Y, t);
-                float b = Formula(A.Z, B.Z, C.Z, D.Z, t);
-                return new(r, g, b);
-            }
-        }
+    public Displayer(string name)
+    {
+        Window = new(Mode, name);
+        
+        var size = (Vector2f)Window.Size;
+        unit_ = MathF.Min(size.X / GameState.LevelWidth, size.Y / GameState.LevelHeight);
+        Vector2f offset = new Vector2f(GameState.LevelWidth, GameState.LevelHeight) / 2 * unit_;
+        Vector2f center = size / 2;
+        origin_ = center - offset;
+
+        grid_.Unit = unit_;
+        
+        Window.SetVerticalSyncEnabled(true);
+        Window.Closed += (_, _) => Window.Close();
+    }
+    
+    public void Update()
+    {
+        if (!Window.IsOpen)
+            return;
+
+        Window.DispatchEvents();
+        Draw();
+        Window.Display();
     }
 
-    static class Vector3fExtensions
+    void Draw()
     {
-        static byte ToByte(float value)
-        {
-            if (value >= 1f)
-                return byte.MaxValue;
-            if (value <= 0f)
-                return byte.MinValue;
-            return (byte)(value * byte.MaxValue);
-        }
-
-        public static Color ToColor(this Vector3f v) => new (ToByte(v.X), ToByte(v.Y), ToByte(v.Z));
+        debugText_.DisplayedString = $"Pred: {predictFrame_}\nAuth: {authFrame_}\nDir: {direction_}";
+        
+        Window.Clear(Background);
+        grid_.Draw(Window, origin_);
+        authLevel_.DrawAuth(Window, unit_, origin_);
+        level_.Draw(Window, unit_, origin_);
+        Window.Draw(debugText_);
     }
 
-    class Displayer : IDisplayer<GameState>
+    public void Init(long id) => id_ = id;
+
+    void CheckState(long frame, GameState state)
     {
-    
-        static readonly VideoMode Mode = new(640, 360);
-        static readonly Color Background = Color.Black;
+        if (frame != state.Frame)
+            throw new ArgumentException($"Frame and tick mismatch {frame} {state.Frame}.");
+    }
 
-        Level level_ = new(GameState.LevelWidth, GameState.LevelHeight);
-
-        Level authLevel_ = new(GameState.LevelWidth, GameState.LevelHeight);
-
-        long frame_ = long.MinValue;
+    public void AddAuthoritative(long frame, GameState gameState)
+    {
+        authFrame_ = frame;
         
-        Direction? direction_ = null;
-        long id_ = long.MaxValue;
+        CheckState(frame, gameState);
+        gameState.level_.CopyS(ref authLevel_);
+    }
 
-        Vector2i GridSize = new(GameState.LevelWidth, GameState.LevelHeight);
-    
-        public void Init(long id) => id_ = id;
+    public void AddPredict(long frame, GameState gameState)
+    {
+        CheckState(frame, gameState);
 
-        public void AddAuthoritative(long frame, GameState gameState)
+        predictFrame_ = gameState.Frame;
+
+        foreach ((long id, Player player) in gameState.IdToPlayer)
         {
-            byte[] serializedLevel = MemoryPackSerializer.Serialize(gameState.level_);
-            MemoryPackSerializer.Deserialize(serializedLevel, ref authLevel_);
+            if (id != id_)
+                continue;
+
+            direction_ = player.Direction;
+            break;
         }
 
-        public void AddPredict(long frame, GameState gameState)
-        {
-            frame_ = gameState.Frame;
-        
-            if (frame != gameState.Frame)
-                throw new ArgumentException($"Frame and tick mismatch {frame} {gameState.Frame}.");
-
-            foreach ((long id, Player player) in gameState.IdToPlayer)
-            {
-                if (id != id_)
-                    continue;
-
-                direction_ = player.Direction;
-            }
-
-            byte[] serializedLevel = MemoryPackSerializer.Serialize(gameState.level_);
-            MemoryPackSerializer.Deserialize(serializedLevel, ref level_);
-        }
-
-        void DrawGrid()
-        {
-            int w = GridSize.X;
-            int h = GridSize.Y;
-
-            for (int x = 0; x < w; x++)
-            for (int y = 0; y < h; y++)
-            {
-                gridShape_.Position = ToGrid(x, y);
-                Window.Draw(gridShape_);
-            }
-        }
-
-        Vector2f ToGrid(int x, int y) => origin_ + new Vector2f(x, y) * unitLength_;
-
-
-        void DrawPlayerAuth(int x, int y, PlayerAvatar avatar)
-        {
-            Color color = PlayerPallete[avatar.Id * PlayerPalleteSpacing].ToColor();
-            color.A = 100;
-            player_.FillColor = color;
-            player_.Position = ToGrid(x, y);
-            Window.Draw(player_);
-        }
-
-        void DrawPlayer(int x, int y, PlayerAvatar avatar)
-        {
-            Color color = PlayerPallete[avatar.Id * PlayerPalleteSpacing].ToColor();
-            player_.FillColor = color;
-            player_.Position = ToGrid(x, y);
-            Window.Draw(player_);
-        }
-
-        void DrawFood(int x, int y, Food food)
-        {
-            player_.FillColor = Color.Red;
-            player_.Position = ToGrid(x, y);
-            Window.Draw(player_);
-        }
-
-        void DrawLevel()
-        {
-            int w = GridSize.X;
-            int h = GridSize.Y;
-
-            for (int x = 0; x < w; x++)
-            for (int y = 0; y < h; y++)
-            {
-                ILevelObject? obj = level_[x, y];
-
-                switch (obj)
-                {
-                    case PlayerAvatar player:
-                        DrawPlayer(x, y, player);
-                        continue;
-                    case Food food:
-                        DrawFood(x, y, food);
-                        continue;
-                }
-
-                ILevelObject? authObj = authLevel_[x, y];
-                
-                switch (authObj)
-                {
-                    case PlayerAvatar player:
-                        DrawPlayerAuth(x, y, player);
-                        continue;
-                }
-
-            }
-        }
-
-        public void Display()
-        {
-            text_.DisplayedString = $"Frame: {frame_}\nDirection: {direction_}";
-
-            if (!Window.IsOpen)
-                return;
-
-            Window.DispatchEvents();
-            Window.Clear(Background);
-            DrawGrid();
-            DrawLevel();
-            Window.Draw(text_);
-            Window.Display();
-        }
-        
-        readonly Text text_ = new();
-        readonly CircleShape player_ = new();
-        
-        public RenderWindow Window { get; }
-
-        static readonly Pallete PlayerPallete = new()
-        {
-            A = new(.5f, .5f, .5f),
-            B = new(.5f, .5f, .5f),
-            C = new(1, 1, 1),
-            D = new(0, .33f, .67f)
-        };
-
-        static readonly float PlayerPalleteSpacing = 0.1f;
-
-        readonly Vector2u size_;
-    
-        readonly float unitLength_;
-        readonly Vector2f origin_;
-
-        static readonly Color GridLineColor = new(100, 100, 100);
-        static readonly float GridLineThickness = 1f;
-
-        readonly RectangleShape gridShape_ = new();
-
-        public Displayer(string name)
-        {
-            player_.SetPointCount(16);
-            text_.Font = new("LiberationMono-Regular.ttf");
-            text_.CharacterSize = 24;
-            text_.FillColor = Color.White;
-            Window = new(Mode, name);
-            size_ = Window.Size;
-            unitLength_ = MathF.Min(size_.X / GridSize.X, size_.Y / GridSize.Y);
-
-            Vector2f offset = ((Vector2f)GridSize) / 2 * unitLength_;
-            Vector2f center = ((Vector2f)size_) / 2;
-            origin_ = center - offset;
-
-            gridShape_.OutlineThickness = -GridLineThickness;
-            gridShape_.Size = new(unitLength_, unitLength_);
-            gridShape_.FillColor = Color.Transparent;
-            gridShape_.OutlineColor = GridLineColor;
-
-            player_.Radius = unitLength_ / 2;
-
-            Window.SetVerticalSyncEnabled(true);
-            Window.Closed += (sender, args) => Window.Close();
-        }
+        gameState.level_.CopyS(ref level_);
     }
 }
