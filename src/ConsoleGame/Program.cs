@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using Core.Extensions;
 using DefaultTransport;
 using DefaultTransport.Client;
@@ -7,18 +6,13 @@ using DefaultTransport.Server;
 using DefaultTransport.TcpTransport;
 using Serilog;
 using Serilog.Events;
+using SFML.Graphics;
 using SimpleCommandLine;
 
 namespace TestGame;
 
 static class Program
 {
-    const string ServerAddress = "127.0.0.1:15965";
-    const int ServerSidePort = 15965;
-
-    static readonly IPEndPoint ServerTargetPoint = IPEndPoint.Parse(ServerAddress);
-    static readonly IPEndPoint ServerSidePoint = new(IPAddress.Loopback, ServerSidePort);
-
     const string ServerLogFile = "server_{0}.log";
     const string ClientLogFile = "client_{0}.log";
 
@@ -29,7 +23,7 @@ static class Program
     {
         while (true)
         {
-            switch (Command.GetCommand(() => Console.Write("Set mode ([c]lient, [s]erver): ")))
+            switch (Command.GetCommand("Set mode ([c]lient, [s]erver): "))
             {
                 case 'c':
                     RunClient();
@@ -61,15 +55,22 @@ static class Program
             .WriteTo.File(TimestampFile(ClientLogFile), outputTemplate: ClientOutputTemplate)
             .CreateLogger();
 
+        IPEndPoint target = Command.GetEndPoint("Enter server IP address and port: ", IPAddress.Loopback);
+
+        float delay = Command.GetFloat("Enter latency padding value (s): ");
+
+        Log.Information("Connecting to {EndPoint}...", target);
+
         TcpClientTransport<IMessageToClient, IMessageToServer> transport = new()
         {
-            Target = ServerTargetPoint
+            Target = target
         };
 
         Displayer displayer = new("Client");
         ClientInputProvider input = new(displayer.Window);
 
         var client = DefaultClientConstructor.Construct<ClientInput, ServerInput, GameState>(transport, input, displayer: displayer);
+        client.PredictDelayMargin = delay;
         client.UseChecksum = true;
         client.TraceFrameTime = true;
         client.TraceState = true;
@@ -89,7 +90,11 @@ static class Program
             .WriteTo.File(TimestampFile(ServerLogFile), outputTemplate: ServerOutputTemplate)
             .CreateLogger();
 
-        TcpServerTransport<IMessageToServer, IMessageToClient> transport = new(ServerSidePoint);
+        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", IPAddress.Any);
+
+        Log.Information("Starting server on {local}", local);
+
+        TcpServerTransport<IMessageToServer, IMessageToClient> transport = new(local);
         
         Displayer displayer = new("Server");
 

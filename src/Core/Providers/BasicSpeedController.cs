@@ -1,5 +1,5 @@
-﻿using Serilog;
-using Serilog.Core;
+﻿using Core.Utility;
+using Serilog;
 
 namespace Core.Providers;
 
@@ -7,13 +7,11 @@ public class BasicSpeedController : ISpeedController
 {
     public async Task RunAsync(CancellationToken cancelToken = new())
     {
-        double period;
-
-        lock (mutex_)
-            period = currentPeriod_;
+        double period = 0;
 
         while (true)
         {
+            logger_.Verbose("Clock waiting for {Period} seconds.", period);
             Task delay = Task.Delay(TimeSpan.FromSeconds(period), cancelToken);
             
             lock (mutex_)
@@ -25,49 +23,36 @@ public class BasicSpeedController : ISpeedController
         }
     }
 
-    void UpdateSpeed()
-    {
-        if (Math.Abs(targetDelta_ - currentDelta_) < SafeMargin)
-        {
-            logger_.Verbose("Keeping normal speed.");
-            currentPeriod_ = targetPeriod_;
-        }
-        else
-        {
-            if (targetDelta_ > currentDelta_)
-            {
-                logger_.Verbose("Running faster.");
-                currentPeriod_ = targetPeriod_ / SpeedUp;
-            }
-            else
-            {
-                logger_.Verbose("Running slower.");
-                currentPeriod_ = targetPeriod_ / SpeedDown;
-            }
-        }
-    }
-
-    public double SafeMargin { get; init; } = 0.01;
-    public double SpeedUp { get; init; } = 1.1;
-    public double SpeedDown { get; init; } = 0.95;
-
     double currentPeriod_ = 0;
-    double targetPeriod_ = 1;
     double targetDelta_ = 0;
     double currentDelta_ = 0;
+    double targetSpeed_ = 1;
+
+    public double SmoothingTime { get; init; } = 1d;
 
     readonly ILogger logger_ = Log.ForContext<BasicSpeedController>();
-
     readonly object mutex_ = new();
 
-    double targetTps_ = 1;
+    void Update()
+    {
+        // We need to catch up / lose D seconds over the time of one second.
+        double difference =  targetDelta_ - currentDelta_;
+        double deltaSpeed = targetSpeed_ * difference / SmoothingTime;
+
+        double newSpeed = deltaSpeed + targetSpeed_;
+
+        // The the update period in accordance to new speed.
+        currentPeriod_ = Math.Clamp(1 / newSpeed, 0.01d, 1d);
+
+        logger_.Verbose("Setting new speed to {currentPeriod_} TPS. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
+    }
 
     public double TargetTPS
     {
         get
         {
             lock (mutex_)
-                return targetTps_;
+                return targetSpeed_;
         }
         set
         {
@@ -79,9 +64,8 @@ public class BasicSpeedController : ISpeedController
 
             lock (mutex_)
             {
-                targetTps_ = value;
-                targetPeriod_ = 1 / value;
-                UpdateSpeed();
+                targetSpeed_ = value;
+                Update();
             }
         }
     }
@@ -102,10 +86,13 @@ public class BasicSpeedController : ISpeedController
             lock (mutex_)
             {
                 targetDelta_ = value;
-                UpdateSpeed();
+                average_ = new(5, value);
+                Update();
             }
         }
     }
+    
+    MovingAverage<double> average_ = new(5);
 
     public double CurrentDelta
     {
@@ -122,9 +109,9 @@ public class BasicSpeedController : ISpeedController
 
             lock (mutex_)
             {
-                
-                currentDelta_ = value;
-                UpdateSpeed();
+                (double sum, int length) = average_.Add(value);
+                currentDelta_ = sum / length;
+                Update();
             }
         }
     }
@@ -137,6 +124,6 @@ public class BasicSpeedController : ISpeedController
                 return 1f / currentPeriod_;
         }
     }
-    
+
     public event Action? OnTick;
 }

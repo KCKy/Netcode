@@ -41,7 +41,7 @@ public sealed partial class DelayInfoMessage : IMessageToClient
 
         // TODO: give an average
 
-        session.SetDelay(delay);
+        session.SetDelay(delay / 1000);
     }
 }
 

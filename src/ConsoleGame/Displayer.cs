@@ -72,7 +72,7 @@ class Displayer : IDisplayer<GameState>
 
     void Draw()
     {
-        debugText_.DisplayedString = $"Pred: {predictFrame_}\nAuth: {authFrame_}\nDir: {direction_}";
+        debugText_.DisplayedString = $"Pred: {predictFrame_}\nAuth: {authFrame_}\nDelta: {predictFrame_ - authFrame_}\nDir: {direction_}";
         
         Window.Clear(Background);
         grid_.Draw(Window, origin_);

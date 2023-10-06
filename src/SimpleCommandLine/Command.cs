@@ -1,10 +1,11 @@
-﻿using System.Net;
+﻿using System.Formats.Tar;
+using System.Net;
 
 namespace SimpleCommandLine;
 
 public static class Command
 {
-    public static char? TryGetCommand()
+    static char? TryGetCommand()
     {
         string? input = Console.ReadLine();
         if (input is { Length: 1 })
@@ -12,6 +13,9 @@ public static class Command
         return null;
     }
 
+    static Action Info(string info) => () => Console.Write(info);
+
+    public static char GetCommand(string info) => GetCommand(Info(info));
     public static char GetCommand(Action info)
     {
         while (true)
@@ -23,7 +27,8 @@ public static class Command
         }
     }
 
-    public static IPEndPoint GetEndPoint(Action info)
+    public static IPEndPoint GetEndPoint(string info, IPAddress defaultAddress) => GetEndPoint(Info(info), defaultAddress);
+    public static IPEndPoint GetEndPoint(Action info, IPAddress defaultAddress)
     {
         while (true)
         {
@@ -32,13 +37,54 @@ public static class Command
             string? input = Console.ReadLine();
 
             if (string.IsNullOrWhiteSpace(input))
-                return IPEndPoint.Parse("127.0.0.1:12345");
+                return new (defaultAddress, DefaultPort);
 
             if (IPEndPoint.TryParse(input, out IPEndPoint? point))
                 return point;
         }
     }
 
+    public static int DefaultPort => 13675;
+
+    public static int GetPort(string info) => GetPort(Info(info));
+
+    public static int GetPort(Action info)
+    {
+        const int minPort = ushort.MinValue;
+        const int maxPort = ushort.MaxValue;
+
+        while (true)
+        {
+            info();
+
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+                return DefaultPort;
+
+            if (int.TryParse(input, out int port) && port is >= minPort and <= maxPort)
+                return port;
+        }
+    }
+
+    public static float GetFloat(string info) => GetFloat(Info(info));
+    public static float GetFloat(Action info)
+    {
+        while (true)
+        {
+            info();
+
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+                return DefaultPort;
+
+            if (float.TryParse(input, out float value))
+                return value;
+        }
+    }
+
+    public static long GetLong(string info) => GetLong(Info(info));
     public static long GetLong(Action info)
     {
         while (true)

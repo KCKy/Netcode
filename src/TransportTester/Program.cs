@@ -15,7 +15,7 @@ static class Program
 
         while (true)
         {
-            switch (Command.GetCommand(() => Console.Write("Set mode ([c]lient, [s]erver): ")))
+            switch (Command.GetCommand("Set mode ([c]lient, [s]erver): "))
             {
                 case 'c':
                     RunClient();
@@ -32,7 +32,7 @@ static class Program
 
     static void RunClient()
     {
-        IPEndPoint server = Command.GetEndPoint(() => Console.Write("Enter server IP address and port: "));
+        IPEndPoint server = Command.GetEndPoint("Enter server IP address and port: ", IPAddress.Loopback);
 
         TcpClientTransport<string, string> client = new()
         {
@@ -44,8 +44,8 @@ static class Program
 
         while (true)
         {
-            Console.WriteLine($"Enter client command ([b]egin, [s]end, [e]nd, [q]uit).");
-            char command = Command.GetCommand(() => Console.Write("> "));
+            Console.WriteLine("Enter client command ([b]egin, [s]end, [e]nd, [q]uit).");
+            char command = Command.GetCommand("> ");
 
             switch (command)
             {
@@ -79,7 +79,7 @@ static class Program
 
     static void RunServer()
     {
-        IPEndPoint local = Command.GetEndPoint(() => Console.Write("Enter local IP address and port: "));
+        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", IPAddress.Loopback);
 
         TcpServerTransport<string, string> server = new(local);
 
@@ -91,8 +91,8 @@ static class Program
         
         while (true)
         {
-            Console.WriteLine("Enter client command ([b]egin, [s]end, send-[a]ll, [e]nd, [k]ick, [q]uit).");
-            char command = Command.GetCommand(() => Console.Write("> "));
+            Console.WriteLine("Enter server command ([b]egin, [s]end, send-[a]ll, [e]nd, [k]ick, [q]uit).");
+            char command = Command.GetCommand("> ");
             long id;
 
             switch (command)
@@ -101,7 +101,7 @@ static class Program
                     server.Start().Wait();
                     continue;
                 case 's':
-                    id = Command.GetLong(() => Console.WriteLine("Enter addressee id: "));
+                    id = Command.GetLong("Enter addressee id: ");
                     server.SendReliable(GetMessage(), id);
                     continue;
                 case 'a':
@@ -112,7 +112,7 @@ static class Program
                     server.Terminate();
                     continue;
                 case 'k':
-                    id = Command.GetLong(() => Console.WriteLine("Enter id to kick: "));
+                    id = Command.GetLong("Enter id to kick: ");
                     server.Terminate(id);
                     continue;
                 case 'q':

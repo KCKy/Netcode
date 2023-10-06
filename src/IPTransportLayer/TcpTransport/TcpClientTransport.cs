@@ -38,7 +38,12 @@ public sealed class TcpClientTransport<TIn, TOut> : IClientTransport<TIn, TOut>
         TcpClient client = new();
         NetworkStream stream;
 
-        await client.ConnectAsync(Target);
+        var connectTask = client.ConnectAsync(Target);
+
+        await Task.WhenAny(connectTask, Task.Delay(500));
+
+        if (!connectTask.IsCompletedSuccessfully)
+            throw new("Timed out");
 
         try
         {

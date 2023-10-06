@@ -30,7 +30,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
     bool initiated_ = false;
     bool identified_ = false;
 
-    double PredictDelayMargin
+    public double PredictDelayMargin
     {
         get => clock_.TargetDelta;
         set => clock_.TargetDelta = value;
@@ -63,7 +63,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
             Displayer = displayer_
         };
 
-        PredictDelayMargin = 50f;
+        PredictDelayMargin = 0.15f;
         timer_ = new()
         {
             Logger = logger_
@@ -80,7 +80,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
         predictManager_ = predictManager;
         authInputs_ = updateInputs;
 
-        PredictDelayMargin = 50f;
+        PredictDelayMargin = 0.15f;
         timer_ = new()
         {
             Logger = logger_
