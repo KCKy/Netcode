@@ -81,6 +81,8 @@ where TClientInput : class, new()
     readonly Dictionary<long, SingleClientQueue> idToInputs_ = new();
     readonly List<long> removedClients_ = new();
 
+    public required double TicksPerSeconds { private get; init; }
+
     readonly object mutex_ = new();
 
     /// <inheritdoc/>/// 
@@ -139,6 +141,9 @@ where TClientInput : class, new()
 
             if (frame <= frame_)
             {
+                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) * TicksPerSeconds);
+                OnInputAuthored?.Invoke(id, frame, difference);
+
                 logger_.Debug("Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
                 return;
             }
@@ -165,7 +170,7 @@ where TClientInput : class, new()
         lock (mutex_)
         {
             long now = Stopwatch.GetTimestamp();
-
+            
             int length = idToInputs_.Count + removedClients_.Count;
 
             Memory<UpdateClientInfo<TClientInput>> frame = new UpdateClientInfo<TClientInput>[length];
@@ -180,11 +185,12 @@ where TClientInput : class, new()
                 long? timestamp = queue.WriteUpdateInfo(nextFrame, ref span[i]);
                 span[i].Id = id;
 
-                TimeSpan difference = timestamp.HasValue
-                    ? Stopwatch.GetElapsedTime(timestamp.Value, now)
-                    : TimeSpan.MinValue;
+                if (timestamp is {} value)
+                {
+                    TimeSpan difference = Stopwatch.GetElapsedTime(value, now);
+                    OnInputAuthored?.Invoke(id, nextFrame, difference);
+                }
                 
-                OnInputAuthored?.Invoke(id, nextFrame, difference);
                 i++;
             }
 

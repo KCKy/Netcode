@@ -28,7 +28,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
         DelayInfoMessage message = new()
         {
             Frame = frame,
-            DelayMs = difference.TotalMilliseconds,
+            Delay = difference.TotalSeconds,
         };
 
         outTransport_.SendUnreliable(message, id);

@@ -36,7 +36,10 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
         dispatcher_ = dispatcher;
         displayer_ = displayer ?? new DefaultDisplayer<TGameState>();
         inputProvider_ = serverProvider ?? new DefaultServerInputProvider<TServerInput, TGameState>();
-        inputQueue_ = new ClientInputQueue<TClientInput>();
+        inputQueue_ = new ClientInputQueue<TClientInput>()
+        {
+            TicksPerSeconds = TGameState.DesiredTickRate
+        };
         holder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
         clock_ = new BasicClock();
 

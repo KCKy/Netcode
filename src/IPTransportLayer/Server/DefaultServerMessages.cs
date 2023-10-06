@@ -33,15 +33,11 @@ public sealed partial class AuthoritativeInputMessage : IMessageToClient
 public sealed partial class DelayInfoMessage : IMessageToClient
 {
     public long Frame;
-    public double DelayMs;
+    public double Delay;
 
     public void Inform(IClientSession session)
     {
-        double delay = DelayMs > 0 ? DelayMs : 0;
-
-        // TODO: give an average
-
-        session.SetDelay(delay / 1000);
+        session.SetDelay(Delay);
     }
 }
 
