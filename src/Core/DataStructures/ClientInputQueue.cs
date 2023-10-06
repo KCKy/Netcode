@@ -141,7 +141,7 @@ where TClientInput : class, new()
 
             if (frame <= frame_)
             {
-                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) * TicksPerSeconds);
+                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / TicksPerSeconds);
                 OnInputAuthored?.Invoke(id, frame, difference);
 
                 logger_.Debug("Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);

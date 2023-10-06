@@ -28,7 +28,7 @@ public class BasicSpeedController : ISpeedController
     double currentDelta_ = 0;
     double targetSpeed_ = 1;
 
-    public double SmoothingTime { get; init; } = 1d;
+    public double SmoothingTime { get; init; } = 1;
 
     readonly ILogger logger_ = Log.ForContext<BasicSpeedController>();
     readonly object mutex_ = new();
@@ -39,10 +39,10 @@ public class BasicSpeedController : ISpeedController
         double difference =  targetDelta_ - currentDelta_;
         double deltaSpeed = targetSpeed_ * difference / SmoothingTime;
 
-        double newSpeed = deltaSpeed + targetSpeed_;
+        double newSpeed = Math.Max(0, deltaSpeed + targetSpeed_);
 
         // The the update period in accordance to new speed.
-        currentPeriod_ = Math.Clamp(1 / newSpeed, 0.01d, 1d);
+        currentPeriod_ = Math.Min(1 / newSpeed, 1);
 
         logger_.Verbose("Setting new speed to {currentPeriod_} TPS. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
     }
