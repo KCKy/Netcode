@@ -6,9 +6,12 @@ namespace Core.Utility;
 readonly struct UpdateTimer
 {
     readonly Stopwatch stopwatch_ = new();
-    public required ILogger Logger { private get; init; }
+    readonly ILogger logger_;
 
-    public UpdateTimer() { }
+    public UpdateTimer(ILogger logger)
+    {
+        logger_ = logger;
+    }
 
     public void Start()
     {
@@ -18,7 +21,7 @@ readonly struct UpdateTimer
     public void End(long frame)
     {
         stopwatch_.Stop();
-        Logger.Verbose("Update {Frame} took {Milliseconds}.", frame, stopwatch_.ElapsedMilliseconds);
+        logger_.Verbose("Update {Frame} took {Milliseconds}.", frame, stopwatch_.ElapsedMilliseconds);
         stopwatch_.Reset();
     }
 }

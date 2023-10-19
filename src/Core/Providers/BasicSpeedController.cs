@@ -7,15 +7,20 @@ public class BasicSpeedController : ISpeedController
 {
     public async Task RunAsync(CancellationToken cancelToken = new())
     {
-        double period = 0;
-
         while (true)
         {
+            double period;
+
+            lock (mutex_)
+            {
+                period = currentPeriod_;
+                double speed = 1 / period - targetSpeed_;
+                currentDelta_ += speed * period;
+                Update();
+            }
+            
             logger_.Verbose("Clock waiting for {Period} seconds.", period);
             Task delay = Task.Delay(TimeSpan.FromSeconds(period), cancelToken);
-            
-            lock (mutex_)
-                period = currentPeriod_;
 
             await delay;
 

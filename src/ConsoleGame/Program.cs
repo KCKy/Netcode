@@ -2,8 +2,8 @@
 using Core.Extensions;
 using DefaultTransport;
 using DefaultTransport.Client;
+using DefaultTransport.IpTransport;
 using DefaultTransport.Server;
-using DefaultTransport.TcpTransport;
 using Serilog;
 using Serilog.Events;
 using SFML.Graphics;
@@ -61,10 +61,7 @@ static class Program
 
         Log.Information("Connecting to {EndPoint}...", target);
 
-        TcpClientTransport<IMessageToClient, IMessageToServer> transport = new()
-        {
-            Target = target
-        };
+        IpClientTransport transport = new(target);
 
         Displayer displayer = new("Client");
         ClientInputProvider input = new(displayer.Window);
@@ -76,7 +73,7 @@ static class Program
         client.TraceState = true;
 
         client.RunAsync().AssureSuccess();
-        transport.Start().AssureSuccess();
+        transport.RunAsync().AssureSuccess();
         
         while (true)
             displayer.Update();
@@ -94,7 +91,7 @@ static class Program
 
         Log.Information("Starting server on {local}", local);
 
-        TcpServerTransport<IMessageToServer, IMessageToClient> transport = new(local);
+        IpServerTransport transport = new(local);
         
         Displayer displayer = new("Server");
 
@@ -104,7 +101,7 @@ static class Program
         server.TraceState = true;
 
         server.RunAsync().AssureSuccess();
-        transport.Start().AssureSuccess();
+        transport.RunAsync().AssureSuccess();
 
         while (true)
             displayer.Update();

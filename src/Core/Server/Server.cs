@@ -1,5 +1,5 @@
-﻿using System.Diagnostics;
-using Core.DataStructures;
+﻿using Core.DataStructures;
+using Core.Extensions;
 using Core.Providers;
 using Core.Transport;
 using Core.Utility;
@@ -36,18 +36,10 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
         dispatcher_ = dispatcher;
         displayer_ = displayer ?? new DefaultDisplayer<TGameState>();
         inputProvider_ = serverProvider ?? new DefaultServerInputProvider<TServerInput, TGameState>();
-        inputQueue_ = new ClientInputQueue<TClientInput>()
-        {
-            TicksPerSeconds = TGameState.DesiredTickRate
-        };
+        inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate);
         holder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
         clock_ = new BasicClock();
-
-        timer_ = new UpdateTimer()
-        {
-            Logger = logger_
-        };
-
+        timer_ = new(logger_);
         inputQueue_.OnInputAuthored += dispatcher.InputAuthored;
     }
 
@@ -65,10 +57,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
         holder_ = holder;
         clock_ = clock;
 
-        timer_ = new UpdateTimer()
-        {
-            Logger = logger_
-        };
+        timer_ = new(logger_);
 
         inputQueue_.OnInputAuthored += dispatcher.InputAuthored;
     }
@@ -106,10 +95,14 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
             terminated_ = true;
             clock_.OnTick -= Tick;
             clockCancellation_.Cancel();
+            authInputWriter_.Dispose();
         }
     }
 
     readonly UpdateTimer timer_;
+
+    PooledBufferWriter<byte> authInputWriter_ = new();
+    PooledBufferWriter<byte> traceStateWriter_ = new();
 
     long Update()
     {
@@ -119,7 +112,8 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
 
         TServerInput serverInput = inputProvider_.GetInput(holder_.State);
         UpdateInput<TClientInput, TServerInput> input = new(clientInput, serverInput);
-        byte[] serializedInput = MemoryPackSerializer.Serialize(input);
+
+        var serializedInput = authInputWriter_.MemoryPackSerializeS(input);
 
         // Update
         UpdateOutput output;
@@ -127,11 +121,11 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
             output = holder_.Update(input);
         
         displayer_.AddAuthoritative(holder_.Frame, holder_.State);
-        byte[]? trace = TraceState ? MemoryPackSerializer.Serialize(holder_.State) : null;
+        var trace = TraceState ? traceStateWriter_.MemoryPackSerialize(holder_.State) : Memory<byte>.Empty;
         long? checksum = SendChecksum ? holder_.GetChecksum() : null;
 
         // Trace
-        if (trace is not null)
+        if (!trace.IsEmpty)
             logger_.Verbose("Finished state update for {Frame} resulting with {State}", frame, trace);
 
         // Kick?
@@ -194,10 +188,13 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServerSess
         if (input is null)
         {
             logger_.Debug("Got invalid {Input}.", serializedInput);
-            return;
+            goto end;
         }
 
         inputQueue_.AddInput(id, frame, input);
+
+        end:
+        serializedInput.ReturnToArrayPool();
     }
 
     void IServerSession.FinishClient(long id)

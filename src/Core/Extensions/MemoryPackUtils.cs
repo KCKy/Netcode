@@ -3,10 +3,10 @@ using MemoryPack;
 
 namespace Core.Extensions;
 
-/*
 public static class MemoryPackUtils
 {
-    public static TObject? DeserializePooled<TObject>(ReadOnlySpan<byte> data) where TObject : class, new()
+    public static TObject? DeserializePooled<TObject>(ReadOnlySpan<byte> data)
+        where TObject : class, new()
     {
         TObject original = ObjectPool<TObject>.Create();
         TObject? state = original;
@@ -19,4 +19,3 @@ public static class MemoryPackUtils
         return state;
     }
 }
-*/

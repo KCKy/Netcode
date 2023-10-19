@@ -4,7 +4,6 @@ using MemoryPack;
 
 namespace Core.Utility;
 
-/*
 /// <summary>
 /// Thread-safe, lock free object pool.
 /// </summary>
@@ -35,18 +34,3 @@ public static class ObjectPool<TObject> where TObject : class, new()
         return new();
     }
 }
-
-
-public static class DefaultProvider<TObject> where TObject : class, new()
-{
-    static readonly ReadOnlyMemory<byte> Default = MemoryPackSerializer.Serialize(new TObject());
-
-    public static TObject Create()
-    {
-        TObject instance = ObjectPool<TObject>.Create();
-        MemoryPackSerializer.Deserialize(Default.Span, ref instance!);
-        Debug.Assert(instance != null);
-        return instance;
-    }
-}
-*/

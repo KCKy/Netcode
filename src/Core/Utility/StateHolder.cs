@@ -1,5 +1,5 @@
-﻿using HashDepot;
-using MemoryPack;
+﻿using Core.Extensions;
+using HashDepot;
 
 namespace Core.Utility;
 
@@ -24,10 +24,16 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
     long? checksum_ = null;
     TG state_ = new();
 
+    PooledBufferWriter<byte> writer_ = new();
+
     public Memory<byte> Serialize()
     {
-        Memory<byte> serialized = MemoryPackSerializer.Serialize(State);
+        if (serialized_ is { } value)
+            return value;
+        
+        var serialized = writer_.MemoryPackSerialize(state_);
         SetHash(serialized.Span);
+        
         return serialized;
     }
 
@@ -41,7 +47,7 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
         if (checksum_ is not null)
             return checksum_.Value;
 
-        serialized_ = MemoryPackSerializer.Serialize(State);
+        serialized_ = writer_.MemoryPackSerialize(state_);
         SetHash(serialized_.Value.Span);
         
         return checksum_!.Value;

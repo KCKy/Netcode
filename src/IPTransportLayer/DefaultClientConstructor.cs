@@ -9,7 +9,7 @@ namespace DefaultTransport;
 
 public static class DefaultClientConstructor
 {
-    public static Client<TC, TS, TG> Construct<TC, TS, TG>(IClientTransport<IMessageToClient, IMessageToServer> transport,
+    public static Client<TC, TS, TG> Construct<TC, TS, TG>(IClientTransport transport,
         IClientInputProvider<TC>? inputProvider,
         IServerInputPredictor<TS, TG>? serverInputPredictor = null,
         IClientInputPredictor<TC>? clientInputPredictor = null,
@@ -22,10 +22,8 @@ public static class DefaultClientConstructor
 
         IClientSession session = client;
 
-        transport.OnMessage += message => message.Inform(session);
-        transport.OnFinish += session.Finish;
-
-        // TODO: how to deregister
+        // TODO: do
+        //transport.OnMessage += message => message.Inform(session);
 
         return client;
     }

@@ -2,49 +2,32 @@
 
 // TODO: finish docs (thread safety)
 
-public interface IClientTransport<TIn, TOut> : IClientInTransport<TIn>, IClientOutTransport<TOut>
-where TIn : class
-where TOut : class
+public interface IClientTransport : IClientInTransport, IClientOutTransport { }
+
+public interface IClientInTransport
 {
     /// <summary>
-    /// Starts the client, attempts to connect to the server.
+    /// Event which is invoked when a reliable message from a server is received.
     /// </summary>
-    /// <remarks>
-    /// May be called only once. All events this client produces will be called only after the client has been started.
-    /// </remarks>
-    /// <returns>Task which completes when the connection attempt is finished.</returns>
-    Task Start();
+    event Action<Memory<byte>> OnReliableMessage;
+
+    /// <summary>
+    /// Event which is invoked when an unreliable message from a server is received.
+    /// </summary>
+    event Action<Memory<byte>> OnUnreliableMessage;
 }
 
-public interface IClientInTransport<TIn>
+public interface IClientOutTransport
 {
-    /// <summary>
-    /// Event which is invoked when the client completes..
-    /// </summary>
-    event Action OnFinish;
+    int UnreliableMessageMaxLength { get; }
 
-    /// <summary>
-    /// Event which is invoked when a message from a client is invoked.
-    /// </summary>
-    event Action<TIn> OnMessage;
-}
+    void Terminate();
 
-public interface IClientOutTransport<TOut>
-{
-    /// <summary>
-    /// Sends a message to the server. The server must receive this message, unless the client is terminated.
-    /// </summary>
-    /// <param name="message">Message to send.</param>
-    void SendReliable(TOut message);
+    void SendReliable(Memory<byte> message);
 
     /// <summary>
     /// Sends a message to the server. The server may not receive this message due to packet loss.
     /// </summary>
     /// <param name="message"></param>
-    void SendUnreliable(TOut message);
-
-    /// <summary>
-    /// Terminate the connection. Some sent messages may not arrive.
-    /// </summary>
-    void Terminate();
+    void SendUnreliable(Memory<byte> message);
 }

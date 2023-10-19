@@ -1,29 +1,28 @@
-﻿using Core.Transport;
+﻿using System.Buffers;
+using Core.Extensions;
+using Core.Transport;
 
 namespace DefaultTransport.Client;
 
 public sealed class DefaultClientDispatcher : IClientDispatcher
 {
-    readonly IClientOutTransport<IMessageToServer> outTransport_;
+    readonly IClientOutTransport outTransport_;
 
-    public DefaultClientDispatcher(IClientOutTransport<IMessageToServer> outTransport)
+    public DefaultClientDispatcher(IClientOutTransport outTransport)
     {
         outTransport_ = outTransport;
     }
 
-    public void Disconnect()
-    {
-        outTransport_.Terminate();
-    }
+    public void Disconnect() => outTransport_.Terminate();
 
     public void SendInput(long frame, Memory<byte> input)
     {
-        ClientInputMessage message = new()
-        {
-            Input = input,
-            Frame = frame
-        };
+        const int inputPosition = DefaultApplicationProtocol.HeaderSize + sizeof(long);
 
-        outTransport_.SendReliable(message);
+        int payloadSize = sizeof(long) + input.Length;
+        var packet = DefaultApplicationProtocol.PreparePacket(Messages.ClientInput, payloadSize);
+        
+        input.CopyTo(packet[inputPosition..]);
+        input.ReturnToArrayPool();
     }
 }

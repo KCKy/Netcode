@@ -2,16 +2,9 @@
 
 namespace TestGame;
 
-readonly struct Palette
+readonly record struct Palette(Vector3f A, Vector3f B, Vector3f C, Vector3f D)
 {
-    public required Vector3f A { get; init; }
-    public required Vector3f B { get; init; }
-    public required Vector3f C { get; init; }
-    public required Vector3f D { get; init; }
-
-    public Palette() { }
-
-    float Formula(float a, float b, float c, float d, float t) => a + b * MathF.Cos(MathF.Tau * (c * t + d));
+    static float Formula(float a, float b, float c, float d, float t) => a + b * MathF.Cos(MathF.Tau * (c * t + d));
 
     public Vector3f this[float t]
     {

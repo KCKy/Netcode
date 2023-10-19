@@ -115,10 +115,14 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
 
         // This is only called synchronously within the state update lock, so no further locking should be needed
         Debug.Assert(AuthState.Frame == frame);
-        Memory<byte> authState = AuthState.Serialize();
+        var authState = AuthState.Serialize();
 
         ReplaceGameStateAsync(index, frame, authState, input).AssureSuccess();
     }
+
+    PooledBufferWriter<byte> replacementInputWriter_ = new();
+    PooledBufferWriter<byte> predictInputWriter_ = new();
+    PooledBufferWriter<byte> predictLocalInputWriter_ = new();
 
     async Task ReplaceGameStateAsync(long replacementIndex, long frame, Memory<byte> serializedState, UpdateInput<TC, TS> input)
     {
@@ -141,13 +145,12 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
             TG? state = replacementState_.State;
 
             MemoryPackSerializer.Deserialize(serializedState.Span, ref state);
+            serializedState.ReturnToArrayPool();
 
             // Prepare replacement state
             if (state is null)
-            {
-                const string failed = "Failed to copy state.";
-                throw new ArgumentException(failed, nameof(serializedState));
-            }
+                throw new ArgumentException("Failed to copy state.", nameof(serializedState));
+            
             replacementState_.Frame = frame;
             replacementState_.State = state;
 
@@ -201,15 +204,19 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
                     PredictClientInput(input.ClientInput.Span, localInput);
                     ServerInputPredictor.PredictInput(ref input.ServerInput, replacementState_.State);
 
+                    MemoryPackSerializer.Serialize(replacementInputWriter_, input);
+
                     lock (replacementMutex_)
                     {
                         if (currentReplacement_ > replacementIndex)
+                        {
+                            replacementInputWriter_.Reset();
                             return;
+                        }
 
                         // If were still current, we may add our prediction
 
-                        Memory<byte> serialized = MemoryPackSerializer.Serialize(input);
-                        predictQueue_.Enqueue(serialized);
+                        predictQueue_.Enqueue(replacementInputWriter_.ExtractAndReplace());
                     }
 
                     replacementState_.Update(input);
@@ -224,8 +231,9 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     {
         // Input
         TC localInput = InputProvider.GetInput();
-        
-        Memory<byte> input = MemoryPackSerializer.Serialize(localInput);
+
+        // TODO: this results in needless copying in SendInput, but input is short, so it does not matter much
+        var input = predictLocalInputWriter_.MemoryPackSerialize(localInput); 
         long frame = predictState_.Frame + 1;
         ClientInputs.Add(localInput, frame);
         
@@ -246,11 +254,20 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
             Displayer.AddPredict(frame, predictState_.State);
 
             // Save prediction input if this timeline is not stale
-            Memory<byte> predict = MemoryPackSerializer.Serialize(predictInput_);
+            MemoryPackSerializer.Serialize(predictInputWriter_, predictInput_);
 
             lock (replacementMutex_)
-                if (!activeReplacement_) 
-                    predictQueue_.Enqueue(predict);
+            {
+                if (!activeReplacement_)
+                {
+                    var serialized = predictInputWriter_.ExtractAndReplace();
+                    predictQueue_.Enqueue(serialized);
+                }
+                else
+                {
+                    predictInputWriter_.Reset();
+                }
+            }
         }
     }
 

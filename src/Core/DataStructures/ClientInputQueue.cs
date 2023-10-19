@@ -81,9 +81,14 @@ where TClientInput : class, new()
     readonly Dictionary<long, SingleClientQueue> idToInputs_ = new();
     readonly List<long> removedClients_ = new();
 
-    public required double TicksPerSeconds { private get; init; }
+    readonly double ticksPerSecond_;
 
     readonly object mutex_ = new();
+
+    public ClientInputQueue(double tps)
+    {
+        ticksPerSecond_ = tps;
+    }
 
     /// <inheritdoc/>/// 
     public long Frame
@@ -141,7 +146,7 @@ where TClientInput : class, new()
 
             if (frame <= frame_)
             {
-                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / TicksPerSeconds);
+                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_);
                 OnInputAuthored?.Invoke(id, frame, difference);
 
                 logger_.Debug("Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);

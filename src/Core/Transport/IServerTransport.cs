@@ -1,24 +1,21 @@
 ﻿namespace Core.Transport;
 
-public interface IServerTransport<TIn, TOut> : IServerInTransport<TIn>, IServerOutTransport<TOut>
-    where TIn : class
-    where TOut : class
-{
-    Task Start();
-}
+public interface IServerTransport : IServerInTransport, IServerOutTransport
+{ }
 
-public interface IServerInTransport<TIn>
+public interface IServerInTransport
 {
-    event Action<long, TIn> OnMessage;
+    event Action<long, Memory<byte>> OnReliableMessage;
+    event Action<long, Memory<byte>> OnUnreliableMessage;
     event Action<long> OnClientJoin;
     event Action<long> OnClientFinish;
 }
 
-public interface IServerOutTransport<TOut>
+public interface IServerOutTransport
 {
-    void SendReliable(TOut message);
-    void SendUnreliable(TOut message);
-    void SendReliable(TOut message, long id);
-    void SendUnreliable(TOut message, long id);
+    void SendReliable(Memory<byte> message);
+    void SendReliable(Memory<byte> message, long id);
+    void SendUnreliable(Memory<byte> message);
+    void SendUnreliable(Memory<byte> message, long id);
     void Terminate(long id);
 }

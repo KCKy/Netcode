@@ -9,7 +9,7 @@ namespace DefaultTransport;
 
 public static class DefaultServerConstructor
 {
-    public static Server<TC, TS, TG> Construct<TC, TS, TG>(IServerTransport<IMessageToServer, IMessageToClient> transport, IServerInputProvider<TS, TG>? inputProvider = null,IDisplayer<TG>? displayer = null)
+    public static Server<TC, TS, TG> Construct<TC, TS, TG>(IServerTransport transport, IServerInputProvider<TS, TG>? inputProvider = null,IDisplayer<TG>? displayer = null)
         where TC : class, new()
         where TS : class, new()
         where TG : class, IGameState<TC, TS>, new()
@@ -18,11 +18,10 @@ public static class DefaultServerConstructor
 
         IServerSession session = server;
 
-        transport.OnMessage += (id, message) => message.Inform(session, id);
+        // TODO: do
+        // transport.OnMessage += (id, message) => message.Inform(session, id);
         transport.OnClientJoin += session.AddClient;
         transport.OnClientFinish += session.FinishClient;
-
-        // TODO: how to deregister
 
         return server;
     }

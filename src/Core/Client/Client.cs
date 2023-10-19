@@ -19,7 +19,6 @@ public sealed class Client<TC, TS, TG> : IClientSession
     readonly IDisplayer<TG> displayer_;
     readonly IClientDispatcher dispatcher_;
     readonly IPredictManager<TC, TS, TG> predictManager_;
-    readonly IUpdateInputQueue<UpdateInputInfo> authInputs_;
 
     readonly CancellationTokenSource clockCancellation_ = new();
     readonly object terminationMutex_ = new();
@@ -50,7 +49,6 @@ public sealed class Client<TC, TS, TG> : IClientSession
         };
 
         authStateHolder_ = new StateHolder<TC, TS, TG>();
-        authInputs_ = new UpdateInputQueue<UpdateInputInfo>();
 
         predictManager_ = new PredictManager<TC, TS, TG>
         {
@@ -64,27 +62,19 @@ public sealed class Client<TC, TS, TG> : IClientSession
         };
 
         PredictDelayMargin = 0.15f;
-        timer_ = new()
-        {
-            Logger = logger_
-        };
+        timer_ = new(logger_);
     }
 
     internal Client(IClientDispatcher dispatcher, IDisplayer<TG> displayer, ISpeedController controller, IStateHolder<TC, TS, TG> authStateHolder,
-        IPredictManager<TC, TS, TG> predictManager, IUpdateInputQueue<UpdateInputInfo> updateInputs)
+        IPredictManager<TC, TS, TG> predictManager)
     {
         dispatcher_ = dispatcher;
         displayer_ = displayer;
         clock_ = controller;
         authStateHolder_ = authStateHolder;
         predictManager_ = predictManager;
-        authInputs_ = updateInputs;
-
         PredictDelayMargin = 0.15f;
-        timer_ = new()
-        {
-            Logger = logger_
-        };
+        timer_ = new(logger_);
     }
 
     public long Id { get; private set; } = long.MaxValue;
@@ -148,48 +138,44 @@ public sealed class Client<TC, TS, TG> : IClientSession
             logger_.Fatal("Desync detected {ActualSum} != {ExpectedSum} - {State}.", actual, check, serialized);
             throw new InvalidOperationException("The auth state has diverged from the server.");
         }
+
+        serialized.ReturnToArrayPool();
     }
 
-    long UpdateAuth(UpdateInputInfo inputInfo)
+    void Update(Memory<byte> serializedInput, long? checksum, long inputFrame)
     {
-        (var serializedInput, long? checksum) = inputInfo;
-        var inputSpan = serializedInput.Span;
-
-        var input = MemoryPackSerializer.Deserialize<UpdateInput<TC, TS>>(inputSpan);
-
-        long frame;
+        // TODO: maybe pool?
+        var input = MemoryPackSerializer.Deserialize<UpdateInput<TC, TS>>(serializedInput.Span);
 
         lock (authStateHolder_)
         {
-            authStateHolder_.Update(input); // TODO: do something with output?
-            frame = authStateHolder_.Frame;
+            authStateHolder_.Update(input);
+            long frame = authStateHolder_.Frame;
+
+            if (frame != inputFrame)
+            {
+                logger_.Fatal("Given invalid input of frame {Frame} for auth update {Index}.", inputFrame, frame);
+                throw new ArgumentException("Given invalid frame for auth update.", nameof(inputFrame));
+            }
+
             AssertChecksum(checksum);
             displayer_.AddAuthoritative(frame, authStateHolder_.State);
-
             logger_.Verbose("Authorized frame {Frame}", frame);
-
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
 
-        return frame;
+        serializedInput.ReturnToArrayPool();
     }
 
-    async Task AuthorizeAsync()
+    void Authorize(Memory<byte> input, long? checksum, long frame)
     {
-        logger_.Debug("Began authorizing thread.");
-
-        while (true)
-        {
-             UpdateInputInfo inputInfo = await authInputs_.GetNextInputAsync();
+        if (TraceFrameTime)
+            timer_.Start();
              
-             if (TraceFrameTime)
-                timer_.Start();
-             
-             long frame = UpdateAuth(inputInfo);
+        Update(input, checksum, frame);
 
-             if (TraceFrameTime)
-                timer_.End(frame);
-        }
+        if (TraceFrameTime)
+            timer_.End(frame);
     }
 
     void IClientSession.Start(long id)
@@ -208,7 +194,6 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
             if (initiated_ && identified_)
             {
-                AuthorizeAsync().AssureNoFault();
                 clock_.OnTick += predictManager_.Tick;
             }
         }
@@ -236,22 +221,19 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
             logger_.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
 
+            serializedState.ReturnToArrayPool();
+
             // Init auth, no need to lock
             authStateHolder_.Frame = frame;
             authStateHolder_.State = authState;
             displayer_.AddAuthoritative(frame, authState);
-
-            authInputs_.CurrentFrame = frame + 1;
 
             // Init predict
             predictManager_.Init(frame, predictState);
             
             // Run
             if (initiated_ && identified_)
-            {
-                AuthorizeAsync().AssureNoFault();
                 clock_.OnTick += predictManager_.Tick;
-            }
         }
     }
 
@@ -264,10 +246,8 @@ public sealed class Client<TC, TS, TG> : IClientSession
     void IClientSession.AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum)
     {
         logger_.Verbose("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
-        authInputs_.AddInput(frame, new (input, checksum));
+        Authorize(input, checksum, frame);
     }
 
     void IClientSession.SetDelay(double delay) => clock_.CurrentDelta = delay;
 }
-
-record struct UpdateInputInfo(Memory<byte> Input, long? Checksum);
