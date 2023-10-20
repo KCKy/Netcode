@@ -1,6 +1,9 @@
-﻿using System.Net;
+﻿using System.Drawing;
+using System.Net;
 using System.Net.Sockets;
 using Core.Transport;
+using Serilog;
+using Serilog.Core;
 
 namespace DefaultTransport.IpTransport;
 
@@ -9,8 +12,9 @@ namespace DefaultTransport.IpTransport;
 public sealed class IpClientTransport : IClientTransport
 {
     readonly IPEndPoint target_;
+    readonly ILogger logger_ = Log.ForContext<IpClientTransport>();
 
-    public int ConnectTimeoutMs { get; init; } = 500;
+    public int ConnectTimeoutMs { get; init; } = 2000;
 
     readonly QueueMessages<Memory<byte>> tcpMessages_ = new();
     readonly BagMessages<Memory<byte>> udpMessages_ = new();
@@ -37,14 +41,6 @@ public sealed class IpClientTransport : IClientTransport
         return (tcpTransceiver, udpTransceiver);
     }
 
-    Socket CreateUdpSocket()
-    {
-        Socket udp = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        IPEndPoint udpPoint = new(IPAddress.Any, target_.Port);
-        udp.Bind(udpPoint);
-        return udp;
-    }
-
     async ValueTask<(Transceiver<Tcp, QueueMessages<Memory<byte>>, Memory<byte>, Memory<byte>> tcpTransceiver, 
                      Transceiver<UdpSingleTarget, BagMessages<Memory<byte>>, Memory<byte>, Memory<byte>> udpTransceiver)>
         ConnectAsync(CancellationToken cancellation)
@@ -52,9 +48,17 @@ public sealed class IpClientTransport : IClientTransport
         TcpClient tcp = new();
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
-        Socket udp = CreateUdpSocket();
-        
         await Task.WhenAny(connectTask, Task.Delay(ConnectTimeoutMs, cancellation));
+
+        Socket udp = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
+        IPEndPoint local = tcp.Client.LocalEndPoint as IPEndPoint ??
+                           throw new InvalidOperationException("Local end point does not exist.");
+        IPEndPoint udpPoint = new(IPAddress.Any, local.Port);
+
+        logger_.Debug("Starting UDP socket over endpoint {Endpoint}", udpPoint);
+
+        udp.Bind(udpPoint);
 
         cancellation.ThrowIfCancellationRequested();
 

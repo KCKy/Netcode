@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using CommunityToolkit.HighPerformance.Buffers;
 using Core.Extensions;
 using Core.Utility;
 using DefaultTransport.IpTransport;
@@ -53,7 +52,7 @@ static class Program
             switch (command)
             {
                 case 's':
-                    client.SendReliable(GetMessage());
+                    client.SendUnreliable(GetMessage());
                     continue;
                 case 'e':
                     Console.WriteLine("Stopping the client.");
