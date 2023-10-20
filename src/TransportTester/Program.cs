@@ -46,17 +46,20 @@ static class Program
 
         while (true)
         {
-            Console.WriteLine("Enter client command ([s]end, [e]nd, [q]uit).");
+            Console.WriteLine("Enter client command ([s]end, [u]nreliable-send, [e]nd, [q]uit).");
             char command = Command.GetCommand("> ");
 
             switch (command)
             {
                 case 's':
-                    client.SendUnreliable(GetMessage());
+                    client.SendReliable(GetMessage());
                     continue;
                 case 'e':
                     Console.WriteLine("Stopping the client.");
                     client.Terminate();
+                    continue;
+                case 'u':
+                    client.SendUnreliable(GetPaddedMessage());
                     continue;
                 case 'q':
                     return;
@@ -81,9 +84,19 @@ static class Program
 
     static Memory<byte> GetMessage()
     {
-        Console.WriteLine("Enter message to send.");
-        Console.Write("> ");
+        Console.Write("Enter message: ");
 
+        MemoryPackSerializer.Serialize(messageWriter_, Console.ReadLine() ?? "");
+
+        return messageWriter_.ExtractAndReplace();
+    }
+
+    static Memory<byte> GetPaddedMessage()
+    {
+        Console.Write("Enter message: ");
+
+        messageWriter_.GetMemory(sizeof(long));
+        messageWriter_.Advance(sizeof(long));
         MemoryPackSerializer.Serialize(messageWriter_, Console.ReadLine() ?? "");
 
         return messageWriter_.ExtractAndReplace();
@@ -91,7 +104,7 @@ static class Program
 
     static void RunServer()
     {
-        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", IPAddress.Loopback);
+        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", IPAddress.Any);
 
         IpServerTransport server = new(local);
 
@@ -104,7 +117,7 @@ static class Program
         
         while (true)
         {
-            Console.WriteLine("Enter server command ([s]end, send-[a]ll, [k]ick, [q]uit).");
+            Console.WriteLine("Enter server command ([s]end, [u]nreliable-send, send-[a]ll, u[n]reliable-send-all, [k]ick, [e]nd, [q]uit).");
             char command = Command.GetCommand("> ");
             long id;
 
@@ -112,14 +125,24 @@ static class Program
             {
                 case 's':
                     id = Command.GetLong("Enter addressee id: ");
+                    server.SendReliable(GetMessage(), id);
+                    continue;
+                case 'u':
+                    id = Command.GetLong("Enter addressee id: ");
                     server.SendUnreliable(GetMessage(), id);
                     continue;
                 case 'a':
+                    server.SendReliable(GetMessage());
+                    continue;
+                case 'n':
                     server.SendUnreliable(GetMessage());
                     continue;
                 case 'k':
                     id = Command.GetLong("Enter id to kick: ");
                     server.Terminate(id);
+                    continue;
+                case 'e':
+                    server.Terminate();
                     continue;
                 case 'q':
                     return;

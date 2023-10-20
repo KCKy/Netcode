@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using Core.Transport;
+using Core.Utility;
 using Serilog;
 using Serilog.Core;
 
@@ -28,27 +29,17 @@ public sealed class IpClientTransport : IClientTransport
 
     public void Cancel() => cancellationSource_.Cancel();
 
-    (Transceiver<Tcp, QueueMessages<Memory<byte>>, Memory<byte>, Memory<byte>> tcpTransceiver, 
-    Transceiver<UdpSingleTarget, BagMessages<Memory<byte>>, Memory<byte>, Memory<byte>> udpTransceiver)
-    ConstructTransceivers(TcpClient tcpClient, Socket udpSocket, IPEndPoint localTarget)
+    async ValueTask<(TcpClient, TcpClientTransceiver, UdpClientTransceiver)> ConnectAsync(CancellationToken cancellation)
     {
-        Transceiver<Tcp, QueueMessages<Memory<byte>>, Memory<byte>, Memory<byte>> tcpTransceiver = new(new(tcpClient), tcpMessages_);
-        Transceiver<UdpSingleTarget, BagMessages<Memory<byte>>, Memory<byte>, Memory<byte>> udpTransceiver = new(new(udpSocket, localTarget), udpMessages_);
-        
-        tcpTransceiver.OnMessage += InvokeReliableMessage;
-        udpTransceiver.OnMessage += InvokeUnreliableMessage;
-
-        return (tcpTransceiver, udpTransceiver);
-    }
-
-    async ValueTask<(Transceiver<Tcp, QueueMessages<Memory<byte>>, Memory<byte>, Memory<byte>> tcpTransceiver, 
-                     Transceiver<UdpSingleTarget, BagMessages<Memory<byte>>, Memory<byte>, Memory<byte>> udpTransceiver)>
-        ConnectAsync(CancellationToken cancellation)
-    {
-        TcpClient tcp = new();
+        TcpClient tcp = new(AddressFamily.InterNetwork);
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
         await Task.WhenAny(connectTask, Task.Delay(ConnectTimeoutMs, cancellation));
+
+        cancellation.ThrowIfCancellationRequested();
+
+        if (!connectTask.IsCompleted)
+            throw new TimedOutException("TCP failed to connect in time.");
 
         Socket udp = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
@@ -56,28 +47,40 @@ public sealed class IpClientTransport : IClientTransport
                            throw new InvalidOperationException("Local end point does not exist.");
         IPEndPoint udpPoint = new(IPAddress.Any, local.Port);
 
-        logger_.Debug("Starting UDP socket over endpoint {Endpoint}", udpPoint);
-
         udp.Bind(udpPoint);
 
-        cancellation.ThrowIfCancellationRequested();
+        logger_.Debug("Began tcp at {local} and udp at {UdpLocal}.", local, udpPoint);
 
-        if (!connectTask.IsCompleted)
-            throw new TimedOutException("TCP failed to connect in time.");
+        NetworkStream stream = tcp.GetStream();
 
-        return ConstructTransceivers(tcp, udp, target_);
+        Memory<byte> idRaw = new byte[sizeof(long)];
+        await stream.ReadExactlyAsync(idRaw, cancellation);
+        long id = Bits.ReadLong(idRaw.Span);
+
+        return (tcp, new(stream), new(udp, target_, id));
     }
 
     public async Task RunAsync()
     {
         CancellationToken cancellation = cancellationSource_.Token;
 
-        var (tcp, udp) = await ConnectAsync(cancellation);
+        (TcpClient tcpClient, TcpClientTransceiver tcp, UdpClientTransceiver udp) = await ConnectAsync(cancellation);
+        
+        Sender<TcpClientTransceiver, QueueMessages<Memory<byte>>, Memory<byte>> tcpSender = new(tcp,  tcpMessages_);
+        Receiver<TcpClientTransceiver, Memory<byte>> tcpReceiver = new(tcp);
 
-        Task tcpTask = tcp.Run(cancellation);
-        Task udpTask = udp.Run(cancellation);
+        Sender<UdpClientTransceiver, BagMessages<Memory<byte>>, Memory<byte>> udpSender = new(udp, udpMessages_);
+        Receiver<UdpClientTransceiver, Memory<byte>> udpReceiver = new(udp);
 
-        Task first = await Task.WhenAny(tcpTask, udpTask);
+        tcpReceiver.OnMessage += InvokeReliableMessage;
+        udpReceiver.OnMessage += InvokeUnreliableMessage;
+
+        Task tcpSendTask = tcpSender.RunAsync(cancellation);
+        Task tcpReceiveTask = tcpReceiver.RunAsync(cancellation);
+        Task udpSendTask = udpReceiver.RunAsync(cancellation);
+        Task udpReceiveTask = udpSender.RunAsync(cancellation);
+
+        Task first = await Task.WhenAny(tcpSendTask, tcpReceiveTask, udpSendTask, udpReceiveTask);
 
         cancellationSource_.Cancel();
 
@@ -86,6 +89,10 @@ public sealed class IpClientTransport : IClientTransport
             await first;
         }
         catch (OtherSideEndedException) { }
+        finally
+        {
+            tcpClient.Dispose();
+        }
     }
 
     public int UnreliableMessageMaxLength => 1500;
