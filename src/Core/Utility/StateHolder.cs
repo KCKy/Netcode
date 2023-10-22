@@ -1,5 +1,5 @@
-﻿using Core.Extensions;
-using HashDepot;
+﻿using HashDepot;
+using Useful;
 
 namespace Core.Utility;
 
@@ -24,7 +24,7 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
     long? checksum_ = null;
     TG state_ = new();
 
-    PooledBufferWriter<byte> writer_ = new();
+    readonly PooledBufferWriter<byte> writer_ = new();
 
     public Memory<byte> Serialize()
     {

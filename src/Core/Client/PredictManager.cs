@@ -1,12 +1,13 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Core.DataStructures;
-using Core.Extensions;
 using Core.Providers;
 using Core.Transport;
 using Core.Utility;
 using MemoryPack;
 using Serilog;
+using Useful;
 
 namespace Core.Client;
 
@@ -55,7 +56,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     // Following objects are thread safe
     public required IClientInputPredictor<TC> InputPredictor { private get; init; }
     public required IServerInputPredictor<TS, TG> ServerInputPredictor { private get; init; }
-    public required IClientDispatcher Dispatcher { private get; init; }
+    public required IClientSender Sender { private get; init; }
     //
 
     /// <inheritdoc/>
@@ -122,7 +123,6 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
 
     PooledBufferWriter<byte> replacementInputWriter_ = new();
     PooledBufferWriter<byte> predictInputWriter_ = new();
-    PooledBufferWriter<byte> predictLocalInputWriter_ = new();
 
     async Task ReplaceGameStateAsync(long replacementIndex, long frame, Memory<byte> serializedState, UpdateInput<TC, TS> input)
     {
@@ -145,7 +145,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
             TG? state = replacementState_.State;
 
             MemoryPackSerializer.Deserialize(serializedState.Span, ref state);
-            serializedState.ReturnToArrayPool();
+            ArrayPool<byte>.Shared.Return(serializedState);
 
             // Prepare replacement state
             if (state is null)
@@ -231,14 +231,13 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     {
         // Input
         TC localInput = InputProvider.GetInput();
-
-        // TODO: this results in needless copying in SendInput, but input is short, so it does not matter much
-        var input = predictLocalInputWriter_.MemoryPackSerialize(localInput); 
         long frame = predictState_.Frame + 1;
         ClientInputs.Add(localInput, frame);
-        
-        Dispatcher.SendInput(frame, input);
 
+        // Send
+        Sender.SendInput(frame, localInput);
+
+        // Modify
         logger_.Verbose("Updating predict at frame {frame}.", frame);
             
         lock (predictState_)

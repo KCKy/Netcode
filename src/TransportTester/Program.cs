@@ -1,10 +1,8 @@
 ﻿using System.Net;
-using Core.Extensions;
-using Core.Utility;
 using DefaultTransport.IpTransport;
 using MemoryPack;
 using Serilog;
-using SimpleCommandLine;
+using Useful;
 
 namespace TransportTester;
 
@@ -33,9 +31,11 @@ static class Program
         }
     }
 
+    const int DefaultPort = 13675;
+
     static void RunClient()
     {
-        IPEndPoint server = Command.GetEndPoint("Enter server IP address and port: ", IPAddress.Loopback);
+        IPEndPoint server = Command.GetEndPoint("Enter server IP address and port: ", new(IPAddress.Loopback, DefaultPort));
 
         IpClientTransport client = new(server);
 
@@ -52,14 +52,14 @@ static class Program
             switch (command)
             {
                 case 's':
-                    client.SendReliable(GetMessage());
+                    client.SendReliable(GetMessage(client.ReliableMessageHeader));
                     continue;
                 case 'e':
                     Console.WriteLine("Stopping the client.");
                     client.Terminate();
                     continue;
                 case 'u':
-                    client.SendUnreliable(GetPaddedMessage());
+                    client.SendUnreliable(GetMessage(client.UnreliableMessageHeader));
                     continue;
                 case 'q':
                     return;
@@ -82,21 +82,13 @@ static class Program
 
     static PooledBufferWriter<byte> messageWriter_ = new();
 
-    static Memory<byte> GetMessage()
+    static Memory<byte> GetMessage(int padding)
     {
         Console.Write("Enter message: ");
 
-        MemoryPackSerializer.Serialize(messageWriter_, Console.ReadLine() ?? "");
+        messageWriter_.GetMemory(padding);
+        messageWriter_.Advance(padding);
 
-        return messageWriter_.ExtractAndReplace();
-    }
-
-    static Memory<byte> GetPaddedMessage()
-    {
-        Console.Write("Enter message: ");
-
-        messageWriter_.GetMemory(sizeof(long));
-        messageWriter_.Advance(sizeof(long));
         MemoryPackSerializer.Serialize(messageWriter_, Console.ReadLine() ?? "");
 
         return messageWriter_.ExtractAndReplace();
@@ -104,7 +96,7 @@ static class Program
 
     static void RunServer()
     {
-        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", IPAddress.Any);
+        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", new(IPAddress.Any, DefaultPort));
 
         IpServerTransport server = new(local);
 
@@ -125,17 +117,17 @@ static class Program
             {
                 case 's':
                     id = Command.GetLong("Enter addressee id: ");
-                    server.SendReliable(GetMessage(), id);
+                    server.SendReliable(GetMessage(server.ReliableMessageHeader), id);
                     continue;
                 case 'u':
                     id = Command.GetLong("Enter addressee id: ");
-                    server.SendUnreliable(GetMessage(), id);
+                    server.SendUnreliable(GetMessage(server.UnreliableMessageHeader), id);
                     continue;
                 case 'a':
-                    server.SendReliable(GetMessage());
+                    server.SendReliable(GetMessage(server.ReliableMessageHeader));
                     continue;
                 case 'n':
-                    server.SendUnreliable(GetMessage());
+                    server.SendUnreliable(GetMessage(server.UnreliableMessageHeader));
                     continue;
                 case 'k':
                     id = Command.GetLong("Enter id to kick: ");

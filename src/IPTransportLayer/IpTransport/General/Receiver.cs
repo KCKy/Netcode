@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Serilog;
+﻿using Serilog;
 
 namespace DefaultTransport.IpTransport
 {
-    struct Receiver<TProtocol, TIn>
-        where TProtocol : IReceiveProtocol<TIn>
+    struct Receiver<TIn>
     {
-        readonly TProtocol protocol_;
-        readonly ILogger logger_ = Log.ForContext<Receiver<TProtocol, TIn>>();
+        readonly IReceiveProtocol<TIn> protocol_;
+        readonly ILogger logger_ = Log.ForContext<Receiver<TIn>>();
 
-        public Receiver(TProtocol protocol)
+        public Receiver(IReceiveProtocol<TIn> protocol)
         {
             protocol_ = protocol;
         }

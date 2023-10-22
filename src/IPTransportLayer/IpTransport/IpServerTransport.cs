@@ -1,12 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using CommunityToolkit.HighPerformance;
-using Core.Extensions;
 using Core.Transport;
 using Core.Utility;
 using Serilog;
 using Serilog.Core;
+using Useful;
 
 namespace DefaultTransport.IpTransport;
 
@@ -36,7 +35,7 @@ public class IpServerTransport : IServerTransport
     public IpServerTransport(IPEndPoint local)
     {
         local_ = local;
-        tcpBroadcast_ = new(new(idToConnection_), tcpBroadcastMessages_);
+        tcpBroadcast_ = new(new TcpMultiTransceiver(idToConnection_), tcpBroadcastMessages_);
     }
 
     public event Action<long, Memory<byte>>? OnReliableMessage;
@@ -49,7 +48,7 @@ public class IpServerTransport : IServerTransport
     readonly CancellationTokenSource cancellationSource_ = new();
 
     readonly QueueMessages<Memory<byte>> tcpBroadcastMessages_ = new();
-    Sender<TcpMultiTransceiver, QueueMessages<Memory<byte>>, Memory<byte>> tcpBroadcast_;
+    Sender<QueueMessages<Memory<byte>>, Memory<byte>> tcpBroadcast_;
 
     readonly ILogger logger_ = Log.ForContext<IpServerTransport>();
 
@@ -82,8 +81,8 @@ public class IpServerTransport : IServerTransport
 
         await SendInitIdAsync(stream, id, cancellation);
 
-        Receiver<SafeTcpClientTransceiver, Memory<byte>> receiver = new(layer);
-        Sender<SafeTcpClientTransceiver, QueueMessages<Memory<byte>>, Memory<byte>> sender = new(layer, record.TcpMessages);
+        Receiver<Memory<byte>> receiver = new(layer);
+        Sender<QueueMessages<Memory<byte>>, Memory<byte>> sender = new(layer, record.TcpMessages);
         
         long idCapture = id;
         receiver.OnMessage += m => OnReliableMessage?.Invoke(idCapture, m);
@@ -135,8 +134,10 @@ public class IpServerTransport : IServerTransport
 
         logger_.Debug("Began server at {Local}.", local_);
 
-        Receiver<UdpServerTransceiver, (Memory<byte>, long)> udpReceiver = new(new(udp, idToConnection_));
-        Sender<UdpServerTransceiver, BagMessages<(Memory<byte>, long?)>, (Memory<byte>, long?)> udpSender = new(new(udp, idToConnection_), udpMessages_);
+        UdpServerTransceiver transceiver = new(udp, idToConnection_);
+
+        Receiver<(Memory<byte>, long)> udpReceiver = new(transceiver);
+        Sender<BagMessages<(Memory<byte>, long?)>, (Memory<byte>, long?)> udpSender = new(transceiver, udpMessages_);
 
         udpReceiver.OnMessage += HandleUdpReceive;
         
@@ -158,6 +159,8 @@ public class IpServerTransport : IServerTransport
     
     public void Terminate() => cancellationSource_.Cancel();
 
+    public int ReliableMessageHeader => TcpClientTransceiver.HeaderSize;
+
     public void SendReliable(Memory<byte> message)
     {
         tcpBroadcastMessages_.Post(message);
@@ -168,6 +171,8 @@ public class IpServerTransport : IServerTransport
         if (idToConnection_.TryGetValue(id, out ConnectedClient? client))
             client.TcpMessages.Post(message);
     }
+
+    public int UnreliableMessageHeader => UdpClientTransceiver.HeaderSize;
 
     public void SendUnreliable(Memory<byte> message)
     {

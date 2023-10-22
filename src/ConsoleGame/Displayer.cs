@@ -1,10 +1,9 @@
-﻿using System.Numerics;
-using Core.Providers;
-using MemoryPack;
+﻿using Core.Providers;
+using Core.Utility;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
-using Core.Extensions;
+using Useful;
 
 namespace TestGame;
 
@@ -89,13 +88,18 @@ class Displayer : IDisplayer<GameState>
             throw new ArgumentException($"Frame and tick mismatch {frame} {state.Frame}.");
     }
 
+    PooledBufferWriter<byte> authWriter_ = new();
+
     public void AddAuthoritative(long frame, GameState gameState)
     {
         authFrame_ = frame;
         
         CheckState(frame, gameState);
-        gameState.level_.CopyS(ref authLevel_);
+
+        authWriter_.Copy(gameState.level_, ref authLevel_);
     }
+
+    PooledBufferWriter<byte> predictWriter_ = new();
 
     public void AddPredict(long frame, GameState gameState)
     {
@@ -111,7 +115,7 @@ class Displayer : IDisplayer<GameState>
             direction_ = player.Direction;
             break;
         }
-
-        gameState.level_.CopyS(ref level_);
+        
+        predictWriter_.Copy(gameState.level_, ref level_);
     }
 }

@@ -1,18 +1,10 @@
-﻿using System.Formats.Tar;
+﻿using System.Globalization;
 using System.Net;
 
-namespace SimpleCommandLine;
+namespace Useful;
 
 public static class Command
 {
-    static char? TryGetCommand()
-    {
-        string? input = Console.ReadLine();
-        if (input is { Length: 1 })
-            return input.ToLowerInvariant()[0];
-        return null;
-    }
-
     static Action Info(string info) => () => Console.Write(info);
 
     public static char GetCommand(string info) => GetCommand(Info(info));
@@ -22,13 +14,13 @@ public static class Command
         {
             info();
 
-            if (TryGetCommand() is {} command)
-                return command;
+            if (Console.ReadLine() is { Length: > 0 } command )
+                return command.ToLowerInvariant()[0];
         }
     }
 
-    public static IPEndPoint GetEndPoint(string info, IPAddress defaultAddress) => GetEndPoint(Info(info), defaultAddress);
-    public static IPEndPoint GetEndPoint(Action info, IPAddress defaultAddress)
+    public static IPEndPoint GetEndPoint(string info, IPEndPoint defaultPoint) => GetEndPoint(Info(info), defaultPoint);
+    public static IPEndPoint GetEndPoint(Action info, IPEndPoint defaultPoint)
     {
         while (true)
         {
@@ -37,18 +29,16 @@ public static class Command
             string? input = Console.ReadLine();
 
             if (string.IsNullOrWhiteSpace(input))
-                return new (defaultAddress, DefaultPort);
-
+                return defaultPoint;
+            
             if (IPEndPoint.TryParse(input, out IPEndPoint? point))
                 return point;
         }
     }
 
-    public static int DefaultPort => 13675;
+    public static int GetPort(string info, int defaultPort) => GetPort(Info(info), defaultPort);
 
-    public static int GetPort(string info) => GetPort(Info(info));
-
-    public static int GetPort(Action info)
+    public static int GetPort(Action info, int defaultPort)
     {
         const int minPort = ushort.MinValue;
         const int maxPort = ushort.MaxValue;
@@ -60,9 +50,9 @@ public static class Command
             string? input = Console.ReadLine();
 
             if (string.IsNullOrWhiteSpace(input))
-                return DefaultPort;
+                return defaultPort;
 
-            if (int.TryParse(input, out int port) && port is >= minPort and <= maxPort)
+            if (int.TryParse(input, CultureInfo.InvariantCulture, out int port) && port is >= minPort and <= maxPort)
                 return port;
         }
     }
@@ -76,10 +66,7 @@ public static class Command
 
             string? input = Console.ReadLine();
 
-            if (string.IsNullOrWhiteSpace(input))
-                return DefaultPort;
-
-            if (float.TryParse(input, out float value))
+            if (float.TryParse(input, CultureInfo.InvariantCulture, out float value))
                 return value;
         }
     }
@@ -93,10 +80,7 @@ public static class Command
 
             string? input = Console.ReadLine();
 
-            if (input is null)
-                continue;
-
-            if (long.TryParse(input, out long value))
+            if (long.TryParse(input, CultureInfo.InvariantCulture, out long value))
                 return value;
         }
     }

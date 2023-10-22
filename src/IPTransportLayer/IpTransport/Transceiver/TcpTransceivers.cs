@@ -1,10 +1,11 @@
-﻿using Core.Extensions;
+﻿using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
+using Useful;
 
 namespace DefaultTransport.IpTransport;
 
-class SafeTcpClientTransceiver : TcpClientTransceiver
+sealed class SafeTcpClientTransceiver : TcpClientTransceiver
 {
     readonly SemaphoreSlim mutex_ = new(1, 1);
 
@@ -25,7 +26,7 @@ class SafeTcpClientTransceiver : TcpClientTransceiver
     }
 }
 
-class TcpMultiTransceiver : ISendProtocol<Memory<byte>>
+sealed class TcpMultiTransceiver : ISendProtocol<Memory<byte>>
 {
     readonly ConcurrentDictionary<long, ConnectedClient> idToConnection_;
 
@@ -38,6 +39,6 @@ class TcpMultiTransceiver : ISendProtocol<Memory<byte>>
     {
         foreach ((_, ConnectedClient client) in idToConnection_)
             await client.Layer.SendAsync(data, cancellation);
-        data.ReturnToArrayPool();
+        ArrayPool<byte>.Shared.Return(data);
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
-using Core.Extensions;
 using Core.Utility;
 using Serilog;
 

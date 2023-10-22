@@ -13,7 +13,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
-    <ProjectReference Include="..\SimpleCommandLine\SimpleCommandLine.csproj" />
   </ItemGroup>
-
 </Project>

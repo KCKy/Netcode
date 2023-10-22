@@ -1,4 +1,4 @@
-﻿namespace Core.Utility;
+﻿namespace Useful;
 
 public static class Bits
 {
@@ -22,6 +22,21 @@ public static class Bits
             output[i] = (byte)(value >> (i * 8) & 0xFF);
     }
 
+
+    public const int NullableLongSize = sizeof(long) + 1;
+
+    public static void Write(long? value, Span<byte> output)
+    {
+        if (value is not { } valid)
+        {
+            output[..NullableLongSize].Clear();
+            return;
+        }
+
+        output[0] = 1;
+        Write(valid, output[1..]);
+    }
+    
     public static int ReadInt(ReadOnlySpan<byte> input)
     {
         if (input.Length < sizeof(int))
@@ -46,5 +61,16 @@ public static class Bits
             value |= (long)input[i] << (i * 8);
 
         return value;
+    }
+
+    public static long? ReadNullableLong(ReadOnlySpan<byte> input)
+    {
+        if (input.Length < sizeof(long) + 1)
+            throw new ArgumentException(BufferSmall, nameof(input));
+
+        if (input[0] == 0)
+            return null;
+
+        return ReadLong(input[1..]);
     }
 }

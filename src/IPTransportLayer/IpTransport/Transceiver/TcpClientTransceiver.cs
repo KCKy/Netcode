@@ -1,8 +1,7 @@
 ﻿using System.Buffers;
 using System.Net.Sockets;
-using Core.Extensions;
-using Core.Utility;
 using Serilog;
+using Useful;
 
 namespace DefaultTransport.IpTransport;
 
@@ -18,6 +17,8 @@ class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     readonly Memory<byte> readLengthBuffer_ = new byte[sizeof(int)];
 
     readonly ILogger logger_ = Log.ForContext<TcpClientTransceiver>();
+
+    public const int HeaderSize = 0;
 
     async ValueTask ReadAsync(Memory<byte> buffer, CancellationToken cancellation)
     {

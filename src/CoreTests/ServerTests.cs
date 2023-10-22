@@ -46,7 +46,7 @@ class MockClock : IClock
     }
 }
 
-class MockDispatcher : IServerDispatcher
+class MockDispatcher : IServerSender
 {
     public void Kick(long id)
     {

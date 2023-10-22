@@ -1,9 +1,8 @@
 ﻿using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
-using Core.Extensions;
-using Core.Utility;
 using Serilog;
+using Useful;
 
 namespace DefaultTransport.IpTransport;
 
@@ -12,7 +11,7 @@ static class Udp
     internal const int MaxDatagramSize = 0x10000;
 }
 
-class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
+sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 {
     readonly Socket client_;
     readonly IPEndPoint target_;
@@ -27,6 +26,8 @@ class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         id_ = new byte[sizeof(long)];
         Bits.Write(id, id_.Span);
     }
+
+    public const int HeaderSize = sizeof(long);
 
     public async ValueTask<Memory<byte>> ReceiveAsync(CancellationToken cancellation)
     {
@@ -52,7 +53,8 @@ class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         id_.CopyTo(message); // Put id in header
         await client_.SendToAsync(message, target_, cancellation);
         logger_.Verbose("Sent unreliable message to target {Target} with length {Length}.", target_, message.Length);
-        message.ReturnToArrayPool();
+
+        ArrayPool<byte>.Shared.Return(message);
     }
 
     public Task CloseAsync()

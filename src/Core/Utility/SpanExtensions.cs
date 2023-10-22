@@ -1,11 +1,10 @@
-﻿using Core.Utility;
-using MemoryPack;
+﻿using MemoryPack;
 
-namespace Core.Extensions;
+namespace Core.Utility;
 
-public static class MemoryPackUtils
+public static class SpanExtensions
 {
-    public static TObject? DeserializePooled<TObject>(ReadOnlySpan<byte> data)
+    public static TObject? DeserializePooled<TObject>(this ReadOnlySpan<byte> data)
         where TObject : class, new()
     {
         TObject original = ObjectPool<TObject>.Create();

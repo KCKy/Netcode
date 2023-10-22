@@ -1,13 +1,12 @@
 ﻿using System.Net;
-using Core.Extensions;
-using DefaultTransport;
-using DefaultTransport.Client;
+using Core.Client;
+using Core.Providers;
+using Core.Server;
+using DefaultTransport.Dispatcher;
 using DefaultTransport.IpTransport;
-using DefaultTransport.Server;
 using Serilog;
 using Serilog.Events;
-using SFML.Graphics;
-using SimpleCommandLine;
+using Useful;
 
 namespace TestGame;
 
@@ -47,6 +46,8 @@ static class Program
         return string.Format(filename, timestamp);
     }
 
+    const int DefaultPort = 13675;
+
     static void RunClient()
     {
         Log.Logger = new LoggerConfiguration()
@@ -55,7 +56,7 @@ static class Program
             .WriteTo.File(TimestampFile(ClientLogFile), outputTemplate: ClientOutputTemplate)
             .CreateLogger();
 
-        IPEndPoint target = Command.GetEndPoint("Enter server IP address and port: ", IPAddress.Loopback);
+        IPEndPoint target = Command.GetEndPoint("Enter server IP address and port: ", new(IPAddress.Loopback, DefaultPort));
 
         float delay = Command.GetFloat("Enter latency padding value (s): ");
 
@@ -66,14 +67,18 @@ static class Program
         Displayer displayer = new("Client");
         ClientInputProvider input = new(displayer.Window);
 
-        var client = DefaultClientConstructor.Construct<ClientInput, ServerInput, GameState>(transport, input, displayer: displayer);
-        client.PredictDelayMargin = delay;
-        client.UseChecksum = true;
-        client.TraceFrameTime = true;
-        client.TraceState = true;
+        DefaultClientDispatcher dispatcher = new(transport);
+
+        Client<ClientInput, ServerInput, GameState> client = new(dispatcher, dispatcher, displayer, input, new DefaultServerInputPredictor<ServerInput, GameState>(), new DefaultClientInputPredictor<ClientInput>())
+        {
+            PredictDelayMargin = delay,
+            UseChecksum = true,
+            TraceFrameTime = true,
+            TraceState = true
+        };
 
         client.RunAsync().AssureSuccess();
-        transport.RunAsync().AssureSuccess();
+        transport.RunAsync().ContinueWith(_ => client.Terminate());
         
         while (true)
             displayer.Update();
@@ -87,7 +92,7 @@ static class Program
             .WriteTo.File(TimestampFile(ServerLogFile), outputTemplate: ServerOutputTemplate)
             .CreateLogger();
 
-        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", IPAddress.Any);
+        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", new(IPAddress.Any, DefaultPort));
 
         Log.Information("Starting server on {local}", local);
 
@@ -95,10 +100,13 @@ static class Program
         
         Displayer displayer = new("Server");
 
-        var server = DefaultServerConstructor.Construct<ClientInput, ServerInput, GameState>(transport, new ServerInputProvider(), displayer: displayer);
-        server.SendChecksum = true;
-        server.TraceFrameTime = true;
-        server.TraceState = true;
+        DefaultServerDispatcher dispatcher = new(transport);
+        Server<ClientInput, ServerInput, GameState> server = new(dispatcher, dispatcher, displayer, new ServerInputProvider())
+        {
+            SendChecksum = true,
+            TraceFrameTime = true,
+            TraceState = true
+        };
 
         server.RunAsync().AssureSuccess();
         transport.RunAsync().AssureSuccess();

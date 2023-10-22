@@ -1,14 +1,15 @@
-﻿using Core.DataStructures;
-using Core.Extensions;
+﻿using System.Buffers;
+using Core.DataStructures;
 using Core.Transport;
 using Core.Providers;
 using Core.Utility;
 using MemoryPack;
 using Serilog;
+using Useful;
 
 namespace Core.Client;
 
-public sealed class Client<TC, TS, TG> : IClientSession
+public sealed class Client<TC, TS, TG>
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
@@ -17,7 +18,8 @@ public sealed class Client<TC, TS, TG> : IClientSession
     readonly ILogger logger_ = Log.ForContext<Client<TC, TS, TG>>();
     readonly ISpeedController clock_;
     readonly IDisplayer<TG> displayer_;
-    readonly IClientDispatcher dispatcher_;
+    readonly IClientSender sender_;
+    readonly IClientReceiver receiver_;
     readonly IPredictManager<TC, TS, TG> predictManager_;
 
     readonly CancellationTokenSource clockCancellation_ = new();
@@ -35,13 +37,14 @@ public sealed class Client<TC, TS, TG> : IClientSession
         set => clock_.TargetDelta = value;
     }
     
-    public Client(IClientDispatcher dispatcher,
+    public Client(IClientSender sender, IClientReceiver receiver,
         IDisplayer<TG>? displayer,
         IClientInputProvider<TC>? inputProvider,
         IServerInputPredictor<TS, TG>? serverInputPredictor = null,
         IClientInputPredictor<TC>? clientInputPredictor = null)
     {
-        dispatcher_ = dispatcher;
+        sender_ = sender;
+        receiver_ = receiver;
         displayer_ = displayer ?? new DefaultDisplayer<TG>();
         clock_ = new BasicSpeedController()
         {
@@ -57,24 +60,43 @@ public sealed class Client<TC, TS, TG> : IClientSession
             ServerInputPredictor = serverInputPredictor ?? new DefaultServerInputPredictor<TS, TG>(),
             InputProvider = inputProvider ?? new DefaultClientInputProvider<TC>(),
             AuthState = authStateHolder_,
-            Dispatcher = dispatcher_,
+            Sender = sender_,
             Displayer = displayer_
         };
 
         PredictDelayMargin = 0.15f;
         timer_ = new(logger_);
+        SetHandlers();
     }
 
-    internal Client(IClientDispatcher dispatcher, IDisplayer<TG> displayer, ISpeedController controller, IStateHolder<TC, TS, TG> authStateHolder,
+    void SetHandlers()
+    {
+        receiver_.OnAddAuthInput += AddAuthoritativeInput;
+        receiver_.OnInitialize += Initialize;
+        receiver_.OnSetDelay += SetDelay;
+        receiver_.OnStart += Start;
+    }
+
+    void UnsetHandlers()
+    {
+        receiver_.OnAddAuthInput -= AddAuthoritativeInput;
+        receiver_.OnInitialize -= Initialize;
+        receiver_.OnSetDelay -= SetDelay;
+        receiver_.OnStart -= Start;
+    }
+    
+    internal Client(IClientSender sender, IClientReceiver receiver, IDisplayer<TG> displayer, ISpeedController controller, IStateHolder<TC, TS, TG> authStateHolder,
         IPredictManager<TC, TS, TG> predictManager)
     {
-        dispatcher_ = dispatcher;
+        sender_ = sender;
+        receiver_ = receiver;
         displayer_ = displayer;
         clock_ = controller;
         authStateHolder_ = authStateHolder;
         predictManager_ = predictManager;
         PredictDelayMargin = 0.15f;
         timer_ = new(logger_);
+        SetHandlers();
     }
 
     public long Id { get; private set; } = long.MaxValue;
@@ -115,11 +137,12 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
             terminated_ = true;
 
-            dispatcher_.Disconnect();
+            sender_.Disconnect();
 
             predictManager_.Stop();
             clock_.OnTick -= predictManager_.Tick;
             clockCancellation_.Cancel();
+            UnsetHandlers();
         }
     }
 
@@ -139,7 +162,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
             throw new InvalidOperationException("The auth state has diverged from the server.");
         }
 
-        serialized.ReturnToArrayPool();
+        ArrayPool<byte>.Shared.Return(serialized);
     }
 
     void Update(Memory<byte> serializedInput, long? checksum, long inputFrame)
@@ -164,7 +187,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
 
-        serializedInput.ReturnToArrayPool();
+        ArrayPool<byte>.Shared.Return(serializedInput);
     }
 
     void Authorize(Memory<byte> input, long? checksum, long frame)
@@ -178,7 +201,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
             timer_.End(frame);
     }
 
-    void IClientSession.Start(long id)
+    void Start(long id)
     {
         lock (terminationMutex_)
         {
@@ -199,7 +222,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
         }
     }
 
-    void IClientSession.Initialize(long frame, Memory<byte> serializedState)
+    void Initialize(long frame, Memory<byte> serializedState)
     {
         lock (terminationMutex_)
         {
@@ -221,7 +244,7 @@ public sealed class Client<TC, TS, TG> : IClientSession
 
             logger_.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
 
-            serializedState.ReturnToArrayPool();
+            ArrayPool<byte>.Shared.Return(serializedState);
 
             // Init auth, no need to lock
             authStateHolder_.Frame = frame;
@@ -237,17 +260,11 @@ public sealed class Client<TC, TS, TG> : IClientSession
         }
     }
 
-    void IClientSession.Finish()
-    {
-        logger_.Information("The client has finished.");
-        Terminate();
-    }
-
-    void IClientSession.AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum)
+    void AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum)
     {
         logger_.Verbose("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
         Authorize(input, checksum, frame);
     }
 
-    void IClientSession.SetDelay(double delay) => clock_.CurrentDelta = delay;
+    void SetDelay(double delay) => clock_.CurrentDelta = delay;
 }

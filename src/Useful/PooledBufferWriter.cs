@@ -1,22 +1,19 @@
 ﻿using System.Buffers;
 using System.Numerics;
-using CommunityToolkit.HighPerformance;
 
-namespace Core.Utility;
+namespace Useful;
 
 // Modified version of ArrayPoolBufferWriter{T}.cs from https://github.com/CommunityToolkit/dotnet
 
-public struct PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
+public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
 {
     const int DefaultInitialBufferSize = 256;
 
     readonly ArrayPool<T> pool_ = ArrayPool<T>.Shared;
 
-    T[] array_ = Array.Empty<T>();
+    T[] array_;
 
     int index_ = 0;
-
-    public PooledBufferWriter() { }
 
     public PooledBufferWriter(int initialCapacity = DefaultInitialBufferSize)
     {
@@ -112,8 +109,39 @@ public struct PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
         if (minimumSize > 1024 * 1024)
             minimumSize = (int)BitOperations.RoundUpToPowerOf2((uint)minimumSize);
 
-        pool_.Resize(ref array_, minimumSize);
+        Resize(pool_, ref array_!, minimumSize);
     }
 
+    static void Resize(ArrayPool<T> pool, ref T[]? array, int newSize, bool clearArray = false)
+    {
+        // If the old array is null, just create a new one with the requested size
+        if (array is null)
+        {
+            array = pool.Rent(newSize);
+
+            return;
+        }
+
+        // If the new size is the same as the current size, do nothing
+        if (array.Length == newSize)
+        {
+            return;
+        }
+
+        // Rent a new array with the specified size, and copy as many items from the current array
+        // as possible to the new array. This mirrors the behavior of the Array.Resize API from
+        // the BCL: if the new size is greater than the length of the current array, copy all the
+        // items from the original array into the new one. Otherwise, copy as many items as possible,
+        // until the new array is completely filled, and ignore the remaining items in the first array.
+        T[] newArray = pool.Rent(newSize);
+        int itemsToCopy = Math.Min(array.Length, newSize);
+
+        Array.Copy(array, 0, newArray, 0, itemsToCopy);
+
+        pool.Return(array, clearArray);
+
+        array = newArray;
+    }
+    
     public void Dispose() => Empty();
 }

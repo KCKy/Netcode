@@ -19,11 +19,13 @@ public interface IClientInTransport
 
 public interface IClientOutTransport
 {
-    int UnreliableMessageMaxLength { get; }
-
     void Terminate();
 
+    int ReliableMessageHeader { get; }
     void SendReliable(Memory<byte> message);
+
+    int UnreliableMessageHeader { get; }
+    int UnreliableMessageMaxLength { get; }
 
     /// <summary>
     /// Sends a message to the server. The server may not receive this message due to packet loss.

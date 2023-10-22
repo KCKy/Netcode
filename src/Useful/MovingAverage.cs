@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 
-namespace Core.Utility;
+namespace Useful;
 
-struct MovingAverage<T> where T : struct, IAdditionOperators<T, T, T>, IAdditiveIdentity<T, T>
+public struct MovingAverage<T> where T : struct, IAdditionOperators<T, T, T>, IAdditiveIdentity<T, T>
 {
     readonly T[] values_;
     int current_ = 0;

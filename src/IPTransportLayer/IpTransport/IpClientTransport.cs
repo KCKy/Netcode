@@ -1,10 +1,8 @@
-﻿using System.Drawing;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using Core.Transport;
-using Core.Utility;
 using Serilog;
-using Serilog.Core;
+using Useful;
 
 namespace DefaultTransport.IpTransport;
 
@@ -66,11 +64,11 @@ public sealed class IpClientTransport : IClientTransport
 
         (TcpClient tcpClient, TcpClientTransceiver tcp, UdpClientTransceiver udp) = await ConnectAsync(cancellation);
         
-        Sender<TcpClientTransceiver, QueueMessages<Memory<byte>>, Memory<byte>> tcpSender = new(tcp,  tcpMessages_);
-        Receiver<TcpClientTransceiver, Memory<byte>> tcpReceiver = new(tcp);
+        Sender<QueueMessages<Memory<byte>>, Memory<byte>> tcpSender = new(tcp,  tcpMessages_);
+        Receiver<Memory<byte>> tcpReceiver = new(tcp);
 
-        Sender<UdpClientTransceiver, BagMessages<Memory<byte>>, Memory<byte>> udpSender = new(udp, udpMessages_);
-        Receiver<UdpClientTransceiver, Memory<byte>> udpReceiver = new(udp);
+        Sender<BagMessages<Memory<byte>>, Memory<byte>> udpSender = new(udp, udpMessages_);
+        Receiver<Memory<byte>> udpReceiver = new(udp);
 
         tcpReceiver.OnMessage += InvokeReliableMessage;
         udpReceiver.OnMessage += InvokeUnreliableMessage;
@@ -99,7 +97,9 @@ public sealed class IpClientTransport : IClientTransport
 
     public void Terminate() => cancellationSource_.Cancel();
 
+    public int ReliableMessageHeader => TcpClientTransceiver.HeaderSize;
     public void SendReliable(Memory<byte> message) => tcpMessages_.Post(message);
+    public int UnreliableMessageHeader => UdpClientTransceiver.HeaderSize;
     public void SendUnreliable(Memory<byte> message) => udpMessages_.Post(message);
 
     void InvokeReliableMessage(Memory<byte> message) => OnReliableMessage?.Invoke(message);

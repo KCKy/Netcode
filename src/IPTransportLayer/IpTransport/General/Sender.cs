@@ -3,16 +3,15 @@ using Serilog;
 
 namespace DefaultTransport.IpTransport
 {
-    struct Sender<TProtocol, TMessages, TMessage>
+    struct Sender<TMessages, TMessage>
         where TMessages : IPendingMessages<TMessage>
-        where TProtocol : ISendProtocol<TMessage>
     {
-        readonly TProtocol protocol_;
+        readonly ISendProtocol<TMessage> protocol_;
         readonly TMessages messages_;
 
-        readonly ILogger logger_ = Log.ForContext<Sender<TProtocol, TMessages, TMessage>>();
+        readonly ILogger logger_ = Log.ForContext<Sender<TMessages, TMessage>>();
 
-        public Sender(TProtocol protocol, TMessages messages)
+        public Sender(ISendProtocol<TMessage> protocol, TMessages messages)
         {
             protocol_ = protocol;
             messages_ = messages;

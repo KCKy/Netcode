@@ -1,13 +1,37 @@
-﻿using Serilog;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
-namespace Core.Extensions;
+namespace Useful;
 
 /// <summary>
 /// Utility extension methods for tasks.
 /// </summary>
 public static class TaskExtensions
 {
+    public delegate void FaultDelegate(Task task, Exception exception);
+    public delegate void CanceledDelegate(Task task);
+    
+    /// <summary>
+    /// Non-blocking method, which assures the given task completes successfully, otherwise an error is signaled via <see cref="OnCanceled"/> or <see cref="OnFault"/>.
+    /// </summary>
+    /// <param name="task">Task to await</param>
+    public static void AssureSuccess(this Task task) => task.ContinueWith(TestTaskSuccess);
+
+    /// <summary>
+    /// Non-blocking method, which assures the given task completes successfully or is canceled, otherwise an error is signaled via <see cref="OnCanceled"/>. 
+    /// </summary>
+    /// <param name="task">Task to await</param>
+    public static void AssureNoFault(this Task task) => task.ContinueWith(TestTaskNoFault);
+
+    /// <summary>
+    /// Called when an assured task fails although it should not.
+    /// </summary>
+    public static event FaultDelegate? OnFault;
+
+    /// <summary>
+    /// Called when an assured task is canceled although it should not.
+    /// </summary>
+    public static event CanceledDelegate? OnCanceled;
+
     static void TestTaskSuccess(Task task)
     {
         switch (task.Status)
@@ -15,10 +39,10 @@ public static class TaskExtensions
             case TaskStatus.RanToCompletion:
                 return;
             case TaskStatus.Faulted:
-                Log.Information("Task {Task} assure failed: the task faulted with exception: {Exception}", task, task.Exception);
+                OnFault?.Invoke(task, task.Exception!);
                 return;
             case TaskStatus.Canceled:
-                Log.Information("Task {Task} assure failed: the task was canceled.", task);
+                OnCanceled?.Invoke(task);
                 return;
             case TaskStatus.Created:
             case TaskStatus.WaitingForActivation:
@@ -39,7 +63,7 @@ public static class TaskExtensions
             case TaskStatus.Canceled:
                 return;
             case TaskStatus.Faulted:
-                Log.Information("Task {Task} assure failed: the task faulted with exception: {Exception}", task, task.Exception);
+                OnFault?.Invoke(task, task.Exception!);
                 return;
             case TaskStatus.Created:
             case TaskStatus.WaitingForActivation:
@@ -51,16 +75,4 @@ public static class TaskExtensions
                 return;
         }
     }
-
-    /// <summary>
-    /// Non-blocking method, which assures the given task completes successfully, otherwise an error is written into debug. 
-    /// </summary>
-    /// <param name="task">Task to await</param>
-    public static void AssureSuccess(this Task task) => task.ContinueWith(TestTaskSuccess);
-
-    /// <summary>
-    /// Non-blocking method, which assures the given task completes successfully or is canceled, otherwise an error is written into debug. 
-    /// </summary>
-    /// <param name="task">Task to await</param>
-    public static void AssureNoFault(this Task task) => task.ContinueWith(TestTaskNoFault);
 }
