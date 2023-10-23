@@ -121,8 +121,8 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         ReplaceGameStateAsync(index, frame, authState, input).AssureSuccess();
     }
 
-    PooledBufferWriter<byte> replacementInputWriter_ = new();
-    PooledBufferWriter<byte> predictInputWriter_ = new();
+    readonly PooledBufferWriter<byte> replacementInputWriter_ = new();
+    readonly PooledBufferWriter<byte> predictInputWriter_ = new();
 
     async Task ReplaceGameStateAsync(long replacementIndex, long frame, Memory<byte> serializedState, UpdateInput<TC, TS> input)
     {

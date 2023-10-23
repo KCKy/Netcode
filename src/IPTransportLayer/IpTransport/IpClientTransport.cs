@@ -64,19 +64,19 @@ public sealed class IpClientTransport : IClientTransport
 
         (TcpClient tcpClient, TcpClientTransceiver tcp, UdpClientTransceiver udp) = await ConnectAsync(cancellation);
         
-        Sender<QueueMessages<Memory<byte>>, Memory<byte>> tcpSender = new(tcp,  tcpMessages_);
+        MemorySender<QueueMessages<Memory<byte>>> tcpMemorySender = new(tcp,  tcpMessages_);
         Receiver<Memory<byte>> tcpReceiver = new(tcp);
 
-        Sender<BagMessages<Memory<byte>>, Memory<byte>> udpSender = new(udp, udpMessages_);
+        MemorySender<BagMessages<Memory<byte>>> udpMemorySender = new(udp, udpMessages_);
         Receiver<Memory<byte>> udpReceiver = new(udp);
 
         tcpReceiver.OnMessage += InvokeReliableMessage;
         udpReceiver.OnMessage += InvokeUnreliableMessage;
 
-        Task tcpSendTask = tcpSender.RunAsync(cancellation);
+        Task tcpSendTask = tcpMemorySender.RunAsync(cancellation);
         Task tcpReceiveTask = tcpReceiver.RunAsync(cancellation);
         Task udpSendTask = udpReceiver.RunAsync(cancellation);
-        Task udpReceiveTask = udpSender.RunAsync(cancellation);
+        Task udpReceiveTask = udpMemorySender.RunAsync(cancellation);
 
         Task first = await Task.WhenAny(tcpSendTask, tcpReceiveTask, udpSendTask, udpReceiveTask);
 

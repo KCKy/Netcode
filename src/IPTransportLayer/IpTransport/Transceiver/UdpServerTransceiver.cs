@@ -47,7 +47,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
                 continue;
             }
 
-            logger_.Verbose("It came from {Sender}.", sender);
+            logger_.Verbose("It came from {MemorySender}.", sender);
 
             long id = Bits.ReadLong(buffer[..headerSize].Span);
 

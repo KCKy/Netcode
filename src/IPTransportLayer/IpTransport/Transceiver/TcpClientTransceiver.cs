@@ -5,7 +5,7 @@ using Useful;
 
 namespace DefaultTransport.IpTransport;
 
-class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
+sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 {
     public TcpClientTransceiver(NetworkStream stream)
     {
@@ -32,7 +32,7 @@ class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         }
     }
 
-    async ValueTask WriteAsync(Memory<byte> buffer, CancellationToken cancellation)
+    async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellation)
     {
         try
         {
@@ -64,7 +64,7 @@ class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 
     readonly Memory<byte> writeLengthBuffer_ = new byte[sizeof(int)];
     
-    public virtual async ValueTask SendAsync(Memory<byte> message, CancellationToken cancellation)
+    public async ValueTask SendAsync(Memory<byte> message, CancellationToken cancellation)
     {
         int length = message.Length;
 
