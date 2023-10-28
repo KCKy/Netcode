@@ -2,7 +2,6 @@
 
 namespace CoreTests;
 
-// TODO: expands tests
 public class LocalInputQueueTests
 {
     /*
@@ -40,6 +39,4 @@ public class LocalInputQueueTests
 
         Assert.Fail("No exception was thrown.");
     }*/
-
-    // TODO: more tests
 }

@@ -104,8 +104,7 @@ public sealed class Client<TC, TS, TG>
     public bool TraceState { get; set; }
     public bool UseChecksum { get; set; }
 
-    // TODO: this could break the stopwatch, even for server
-    public bool TraceFrameTime { get; set; }
+    public bool TraceFrameTime { get; init; }
 
     public async Task RunAsync()
     {

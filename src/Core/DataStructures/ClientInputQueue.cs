@@ -74,7 +74,7 @@ where TClientInput : class, new()
 
             if (frameToInput_.Remove(frame, out (TClientInput input, long timestamp) rec))
             {
-                previousInput_ = info.Input;
+                previousInput_ = rec.input;
                 time = rec.timestamp;
             }
             else

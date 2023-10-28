@@ -284,7 +284,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     
     void PredictClientInput(Span<UpdateClientInfo<TC>> clientInputs, TC localInput)
     {
-        // TODO: what to do with terminated players?
+        // Terminated players are going to be predicted as well, but the game state update should ignore the removed player.
 
         long localId = LocalId;
 

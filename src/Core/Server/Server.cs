@@ -87,7 +87,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 
     public bool TraceState { get; set; }
     public bool SendChecksum { get; set; }
-    public bool TraceFrameTime { get; set; }
+    public bool TraceFrameTime { get; init; }
 
     public async Task RunAsync()
     {

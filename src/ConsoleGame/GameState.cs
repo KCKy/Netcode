@@ -75,7 +75,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
         ref ILevelObject? place = ref level_[newPos];
 
-        if (place is not null) // TODO: do something else
+        if (place is not null)
             return;
 
         ref ILevelObject? oldPlace = ref level_[oldPos];

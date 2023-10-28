@@ -58,5 +58,4 @@ public class ClientInputQueueTests
         Assert.True(frame.IsEmpty);
 
     }
-    // TODO: more tests
 }

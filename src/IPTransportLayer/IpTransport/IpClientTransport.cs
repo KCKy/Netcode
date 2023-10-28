@@ -6,8 +6,6 @@ using Useful;
 
 namespace DefaultTransport.IpTransport;
 
-// TODO: add more logging
-
 public sealed class IpClientTransport : IClientTransport
 {
     readonly IPEndPoint target_;

@@ -19,8 +19,6 @@ public static class PooledBufferWriterExtensions
         writer.Reset();
     }
 
-    // TODO: consider moving these to fit all buffer writers
-
     public static void Write(this PooledBufferWriter<byte> writer, int value)
     {
         const int size = sizeof(int);

@@ -1,7 +1,5 @@
 ﻿namespace Core.Transport;
 
-// TODO: finish docs (thread safety)
-
 public interface IClientTransport : IClientInTransport, IClientOutTransport { }
 
 public interface IClientInTransport
