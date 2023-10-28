@@ -23,7 +23,7 @@ public sealed class IpClientTransport : IClientTransport
         target_ = target;
     }
 
-    public void Cancel() => cancellationSource_.Cancel();
+    public void Terminate() => cancellationSource_.Cancel();
 
     async ValueTask<(TcpClient, TcpClientTransceiver, UdpClientTransceiver)> ConnectAsync(CancellationToken cancellation)
     {
@@ -92,8 +92,6 @@ public sealed class IpClientTransport : IClientTransport
     }
 
     public int UnreliableMessageMaxLength => 1500;
-
-    public void Terminate() => cancellationSource_.Cancel();
 
     public int ReliableMessageHeader => TcpClientTransceiver.HeaderSize;
     public void SendReliable(Memory<byte> message) => tcpMessages_.Post(message);
