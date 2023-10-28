@@ -1,6 +1,4 @@
-﻿using System.Buffers;
-using System.Reflection;
-using Core.DataStructures;
+﻿using Core.DataStructures;
 using Core.Providers;
 using Core.Transport;
 using Core.Utility;
@@ -21,6 +19,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
     readonly IClock clock_;
     readonly CancellationTokenSource clockCancellation_ = new();
     readonly IServerInputProvider<TServerInput, TGameState> inputProvider_;
+    readonly IClientInputPredictor<TClientInput> inputPredictor_;
     readonly IDisplayer<TGameState> displayer_;
     readonly IServerSender sender_;
     readonly IServerReceiver receiver_;
@@ -34,13 +33,15 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 
     public Server(IServerSender sender, IServerReceiver receiver,
         IDisplayer<TGameState>? displayer = null,
-        IServerInputProvider<TServerInput, TGameState>? serverProvider = null)
+        IServerInputProvider<TServerInput, TGameState>? serverProvider = null,
+        IClientInputPredictor<TClientInput>? inputPredictor = null)
     {
         sender_ = sender;
         receiver_ = receiver;
         displayer_ = displayer ?? new DefaultDisplayer<TGameState>();
         inputProvider_ = serverProvider ?? new DefaultServerInputProvider<TServerInput, TGameState>();
-        inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate);
+        inputPredictor_ = inputPredictor ?? new DefaultClientInputPredictor<TClientInput>();
+        inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate, inputPredictor_);
         holder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
         clock_ = new BasicClock();
         
@@ -53,7 +54,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         IServerInputProvider<TServerInput, TGameState> serverProvider,
         IClientInputQueue<TClientInput> queue,
         IStateHolder<TClientInput, TServerInput, TGameState> holder,
-        IClock clock)
+        IClock clock, IClientInputPredictor<TClientInput> inputPredictor)
     {
         sender_ = sender;
         receiver_ = receiver;
@@ -62,6 +63,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         inputQueue_ = queue;
         holder_ = holder;
         clock_ = clock;
+        inputPredictor_ = inputPredictor;
 
         timer_ = new(logger_);
         SetHandlers();

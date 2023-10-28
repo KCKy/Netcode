@@ -1,4 +1,5 @@
 using Core.DataStructures;
+using Core.Providers;
 
 namespace CoreTests;
 
@@ -13,7 +14,7 @@ public class ClientInputQueueTests
     [InlineData(long.MinValue)]
     public void BasicTest(long id)
     {
-        ClientInputQueue<MockInput> queue = new(1);
+        ClientInputQueue<MockInput> queue = new(1, new DefaultClientInputPredictor<MockInput>());
         
         MockInput thirdInput = new(1, 1, 1, 1);
 

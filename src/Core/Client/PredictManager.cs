@@ -88,12 +88,12 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     }
 
     /// <inheritdoc/>
-    public void InformAuthInput(ReadOnlyMemory<byte> serializedInput, long frame, UpdateInput<TC, TS> input)
+    public void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TC, TS> input)
     {
         if (!predictQueue_.TryDequeue(out var predictedInput))
             predictedInput = Memory<byte>.Empty;
 
-        if (predictedInput.Span.SequenceEqual(serializedInput.Span))
+        if (predictedInput.Span.SequenceEqual(serializedInput))
             return;
 
         logger_.Debug("Divergence appeared for frame {Frame}.", frame);

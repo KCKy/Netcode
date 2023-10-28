@@ -165,19 +165,22 @@ public sealed class Client<TC, TS, TG>
         ArrayPool<byte>.Shared.Return(serialized);
     }
 
-    void Update(Memory<byte> serializedInput, long? checksum, long inputFrame)
+    void Update(UpdateInput<TC, TS> input, Span<byte> serializedInput, long? checksum, long inputFrame)
     {
-        // TODO: maybe pool?
-        var input = MemoryPackSerializer.Deserialize<UpdateInput<TC, TS>>(serializedInput.Span);
-
         lock (authStateHolder_)
         {
             authStateHolder_.Update(input);
             long frame = authStateHolder_.Frame;
 
-            if (frame != inputFrame)
+            if (frame < inputFrame)
             {
-                logger_.Fatal("Given invalid input of frame {Frame} for auth update {Index}.", inputFrame, frame);
+                logger_.Warning("Given old undesired input of frame {Frame} for auth update {Index}. Skipping.", inputFrame, frame);
+                return;
+            }
+            
+            if (frame > inputFrame)
+            {
+                logger_.Fatal("Given newer input of frame {Frame} before receiving for auth update {Index}.", inputFrame, frame);
                 throw new ArgumentException("Given invalid frame for auth update.", nameof(inputFrame));
             }
 
@@ -186,16 +189,19 @@ public sealed class Client<TC, TS, TG>
             logger_.Verbose("Authorized frame {Frame}", frame);
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
-
-        ArrayPool<byte>.Shared.Return(serializedInput);
     }
 
-    void Authorize(Memory<byte> input, long? checksum, long frame)
+    void Authorize(Memory<byte> serializedInput, long? checksum, long frame)
     {
         if (TraceFrameTime)
             timer_.Start();
-             
-        Update(input, checksum, frame);
+
+        var inputSpan = serializedInput.Span;
+        var input = MemoryPackSerializer.Deserialize<UpdateInput<TC, TS>>(inputSpan);
+
+        Update(input, inputSpan, checksum, frame);
+            
+        ArrayPool<byte>.Shared.Return(serializedInput);
 
         if (TraceFrameTime)
             timer_.End(frame);

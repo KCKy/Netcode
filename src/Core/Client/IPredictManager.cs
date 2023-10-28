@@ -24,7 +24,7 @@ interface IPredictManager<TC, TS, TG>
     /// <param name="serializedInput">Serialized authoritative input, only borrowed.</param>
     /// <param name="frame">Index of the frame the input belongs to.</param>
     /// <param name="input"><see cref="serializedInput"/> deserialized, ownership given.</param>
-    void InformAuthInput(ReadOnlyMemory<byte> serializedInput, long frame, UpdateInput<TC, TS> input);
+    void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TC, TS> input);
     
     /// <summary>
     /// Stops the predict manager from further management.

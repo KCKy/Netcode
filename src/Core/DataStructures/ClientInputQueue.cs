@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
+using Core.Providers;
 using Core.Utility;
 using Serilog;
 
@@ -54,26 +55,36 @@ public delegate void InputAuthoredDelegate(long id, long frame, TimeSpan differe
 public sealed class ClientInputQueue<TClientInput> : IClientInputQueue<TClientInput>
 where TClientInput : class, new()
 {
-    readonly struct SingleClientQueue
+    sealed class SingleClientQueue
     {
+        readonly IClientInputPredictor<TClientInput> predictor_;
         readonly Dictionary<long, (TClientInput input, long timestamp)> frameToInput_ = new();
+        TClientInput previousInput_ = new();
 
-        public SingleClientQueue() { }
+        public SingleClientQueue(IClientInputPredictor<TClientInput> predictor)
+        {
+            predictor_ = predictor;
+        }
 
         public bool TryAdd(long frame, TClientInput input, long timestamp) => frameToInput_.TryAdd(frame, (input, timestamp));
 
         public long? WriteUpdateInfo(long frame, ref UpdateClientInfo<TClientInput> info)
         {
-            if (!frameToInput_.Remove(frame, out var rec))
-            {
-                info.Input = new();
+            long? time;
 
-                return null;
+            if (frameToInput_.Remove(frame, out (TClientInput input, long timestamp) rec))
+            {
+                previousInput_ = info.Input;
+                time = rec.timestamp;
+            }
+            else
+            {
+                predictor_.PredictInput(ref previousInput_);
+                time = null;
             }
 
-            info.Input = rec.input;
-
-            return rec.timestamp;
+            info.Input = previousInput_;
+            return time;
         }
     }
 
@@ -81,12 +92,14 @@ where TClientInput : class, new()
     readonly List<long> removedClients_ = new();
 
     readonly double ticksPerSecond_;
+    readonly IClientInputPredictor<TClientInput> predictor_;
 
     readonly object mutex_ = new();
 
-    public ClientInputQueue(double tps)
+    public ClientInputQueue(double tps, IClientInputPredictor<TClientInput> predictor)
     {
         ticksPerSecond_ = tps;
+        predictor_ = predictor;
     }
 
     /// <inheritdoc/>/// 
@@ -108,7 +121,7 @@ where TClientInput : class, new()
     {
         lock (mutex_)
         {
-            if (!idToInputs_.TryAdd(id, new()))
+            if (!idToInputs_.TryAdd(id, new(predictor_)))
             {
                 logger_.Fatal("To add duplicate client {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));
