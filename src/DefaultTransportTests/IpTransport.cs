@@ -51,6 +51,9 @@ public class IpTransport
 
         await Task.Delay(100);
 
+        if (serverTask.IsCompleted)
+            await serverTask;
+
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
         var clients = ConstructClients(target, clientCount).ToArray();
         var clientTasks = RunClients(clients).ToArray();
