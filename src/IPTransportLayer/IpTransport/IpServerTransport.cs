@@ -45,7 +45,7 @@ public class IpServerTransport : IServerTransport
     readonly QueueMessages<(Memory<byte>, long?)> tcpMessages_ = new();
 
     readonly ILogger logger_ = Log.ForContext<IpServerTransport>();
-
+    
     void RemoveClient(long id)
     {
         if (!idToConnection_.TryRemove(id, out _))
@@ -59,6 +59,8 @@ public class IpServerTransport : IServerTransport
         if (!idToConnection_.TryAdd(client.Id, client))
             throw new InvalidOperationException("Client is already present.");
     }
+
+    public int Port { get; private set; } = 0;
 
     async Task RunClientAsync(TcpClient client, long id, CancellationToken cancellation)
     {
@@ -114,14 +116,18 @@ public class IpServerTransport : IServerTransport
     {
         CancellationToken cancellation = cancellationSource_.Token;
 
-        TcpListener tpcListener = new(local_);
-        tpcListener.Start();
-
         Socket udp = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         udp.Bind(local_);
 
-        logger_.Debug("Began server at {Local}.", local_);
+        IPEndPoint endpoint = udp.LocalEndPoint as IPEndPoint ?? throw new InvalidOperationException();
 
+        TcpListener tpcListener = new(endpoint);
+        tpcListener.Start();
+
+        Port = endpoint.Port;
+
+        logger_.Debug("Began server at {Local} -> {Transformed}.", local_, endpoint);
+        
         UdpServerTransceiver udpTransceiver = new(udp, idToConnection_);
         TcpServerTransceiver tcpServerTransceiver = new(idToConnection_);
 

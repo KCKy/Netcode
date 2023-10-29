@@ -30,6 +30,8 @@ public sealed class IpClientTransport : IClientTransport
         TcpClient tcp = new(AddressFamily.InterNetwork);
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
+        logger_.Debug("Client trying to connect to {Target}.", target_);
+
         await Task.WhenAny(connectTask, Task.Delay(ConnectTimeoutMs, cancellation));
 
         cancellation.ThrowIfCancellationRequested();
@@ -37,15 +39,17 @@ public sealed class IpClientTransport : IClientTransport
         if (!connectTask.IsCompleted)
             throw new TimedOutException("TCP failed to connect in time.");
 
+        await connectTask;
+
         Socket udp = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
         IPEndPoint local = tcp.Client.LocalEndPoint as IPEndPoint ??
                            throw new InvalidOperationException("Local end point does not exist.");
-        IPEndPoint udpPoint = new(IPAddress.Any, local.Port);
+        
+        IPEndPoint anyPoint = new(IPAddress.Any, 0);
+        udp.Bind(anyPoint);
 
-        udp.Bind(udpPoint);
-
-        logger_.Debug("Began tcp at {local} and udp at {UdpLocal}.", local, udpPoint);
+        logger_.Debug("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
 
         NetworkStream stream = tcp.GetStream();
 
