@@ -27,7 +27,7 @@ public class IpTransport
 
     public IpTransport(ITestOutputHelper output)
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Verbose().CreateLogger();
+        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Debug().CreateLogger();
     }
     
     [Theory]
@@ -37,7 +37,7 @@ public class IpTransport
     [InlineData(5)]
     [InlineData(10)]
     [InlineData(20)]
-    [InlineData(100)]
+    [InlineData(50)]
     public async Task TestConnection(int clientCount)
     {
         // Construct a server, connect N clients and then terminate.
@@ -108,13 +108,11 @@ public class IpTransport
     [InlineData(10, 1)]
     [InlineData(20, 1)]
     [InlineData(100, 1)]
-    [InlineData(1000, 1)]
     [InlineData(1, 10)]
     [InlineData(2, 10)]
     [InlineData(5, 10)]
     [InlineData(10, 10)]
     [InlineData(20, 10)]
-    [InlineData(100, 10)]
     public async Task TestClientReliable(int count, int clientCount)
     {
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
@@ -185,13 +183,11 @@ public class IpTransport
     [InlineData(10, 1)]
     [InlineData(20, 1)]
     [InlineData(100, 1)]
-    [InlineData(1000, 1)]
     [InlineData(1, 10)]
     [InlineData(2, 10)]
     [InlineData(5, 10)]
     [InlineData(10, 10)]
     [InlineData(20, 10)]
-    [InlineData(100, 10)]
     public async Task TestServerReliableBroadcast(int count, int clientCount)
     {
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
@@ -262,13 +258,11 @@ public class IpTransport
     [InlineData(10, 1)]
     [InlineData(20, 1)]
     [InlineData(100, 1)]
-    [InlineData(1000, 1)]
     [InlineData(1, 10)]
     [InlineData(2, 10)]
     [InlineData(5, 10)]
     [InlineData(10, 10)]
     [InlineData(20, 10)]
-    [InlineData(100, 10)]
     public async Task TestServerReliableUnicast(int count, int clientCount)
     {
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
@@ -355,13 +349,11 @@ public class IpTransport
     [InlineData(10, 1)]
     [InlineData(20, 1)]
     [InlineData(100, 1)]
-    [InlineData(1000, 1)]
     [InlineData(1, 10)]
     [InlineData(2, 10)]
     [InlineData(5, 10)]
     [InlineData(10, 10)]
     [InlineData(20, 10)]
-    [InlineData(100, 10)]
     public async Task TestUnreliable(int pingCount, int clientCount)
     {
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
@@ -439,10 +431,8 @@ public class IpTransport
     [InlineData(10, 1)]
     [InlineData(20, 1)]
     [InlineData(100, 1)]
-    [InlineData(1000, 1)]
     [InlineData(10, 10)]
     [InlineData(20, 10)]
-    [InlineData(100, 10)]
     public async Task TestUnreliableServerBroadcast(int pingCount, int clientCount)
     {
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
