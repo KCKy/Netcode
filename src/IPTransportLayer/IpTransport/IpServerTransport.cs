@@ -88,9 +88,13 @@ public class IpServerTransport : IServerTransport
         {
             await receiver.RunAsync(cancellation);
         }
-        catch (OtherSideEndedException) { }
+        catch (OtherSideEndedException)
+        {
+            logger_.Verbose("Client with id {Id} disconnected from server.", id);
+        }
         finally
         {
+            logger_.Verbose("Client with id {Id} was removed.", id);
             RemoveClient(id);
             client.Dispose();
         }
@@ -109,6 +113,7 @@ public class IpServerTransport : IServerTransport
         {
             TcpClient client = await listener.AcceptTcpClientAsync(cancellation);
             RunClientAsync(client, id, cancellation).AssureNoFault();
+            logger_.Verbose("Client connected to server with id {Id}.", id);
         }
     }
 
@@ -155,11 +160,11 @@ public class IpServerTransport : IServerTransport
     
     public void Terminate() => cancellationSource_.Cancel();
 
-    public int ReliableMessageHeader => TcpClientTransceiver.HeaderSize;
+    public int ReliableMessageHeader => TcpServerTransceiver.HeaderSize;
     public void SendReliable(Memory<byte> message) => tcpMessages_.Post((message, null));
     public void SendReliable(Memory<byte> message, long id) => tcpMessages_.Post((message, id));
 
-    public int UnreliableMessageHeader => UdpClientTransceiver.HeaderSize;
+    public int UnreliableMessageHeader => UdpServerTransceiver.HeaderSize;
     public void SendUnreliable(Memory<byte> message) => udpMessages_.Post((message, null));
     public void SendUnreliable(Memory<byte> message, long id) => udpMessages_.Post((message, id));
 

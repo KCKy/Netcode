@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using Serilog;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
@@ -81,10 +82,9 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
         }
     }
 
-    ValueTask<int> SendToTargetAsync(ConnectedClient client, Memory<byte> payload, CancellationToken cancellation)
+    ValueTask<int> SendToTargetAsync(IPEndPoint target, Memory<byte> payload, CancellationToken cancellation)
     {
-        IPEndPoint target = client.UdpTarget;
-        var task = client_.SendToAsync(payload, client.UdpTarget, cancellation);
+        var task = client_.SendToAsync(payload, target, cancellation);
         logger_.Verbose("Sent unreliable message to target {Target} with length {Length}.", target, payload.Length);
         return task;
     }
@@ -96,12 +96,20 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
         if (id is {} valid)
         {
             if (idToConnection_.TryGetValue(valid, out ConnectedClient? client))
-                await SendToTargetAsync(client, payload, cancellation);
+                await SendToTargetAsync(client.UdpTarget, payload, cancellation);
         }
         else
         {
+            bool sent = false;
+
             foreach ((_, ConnectedClient client) in idToConnection_)
-                await SendToTargetAsync(client, payload, cancellation);
+            {
+                await SendToTargetAsync(client.UdpTarget, payload, cancellation);
+                sent = true;
+            }
+
+            if (!sent)
+                logger_.Verbose("Got no target to send unreliable broadcast to.");
         }
 
         ArrayPool<byte>.Shared.Return(value.payload);

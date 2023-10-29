@@ -16,6 +16,8 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id
         idToConnection_ = clients;
     }
 
+    public const int HeaderSize = 0;
+
     async ValueTask SafeSendAsync(ConnectedClient client, Memory<byte> message, CancellationToken cancellation)
     {
         try

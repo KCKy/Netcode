@@ -20,11 +20,19 @@ struct Sender<TMessages, TMessage>
 
     public async Task RunAsync(CancellationToken cancellation)
     {
-        while (true)
+        try
         {
-            TMessage message = await messages_.GetAsync(cancellation);
-            logger_.Verbose("Got message {Payload} to send to a remote.", message);
-            await protocol_.SendAsync(message, cancellation);
+            while (true)
+            {
+                TMessage message = await messages_.GetAsync(cancellation);
+                logger_.Verbose("Got message {Payload} to send to a remote.", message);
+                await protocol_.SendAsync(message, cancellation);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger_.Error(ex, "Sender failed.");
+            throw;
         }
     }
 }
@@ -45,12 +53,20 @@ struct MemorySender<TMessages>
 
     public async Task RunAsync(CancellationToken cancellation)
     {
-        while (true)
+        try
         {
-            var message = await messages_.GetAsync(cancellation);
-            logger_.Verbose("Got message {Payload} to send to a remote.", message);
-            await protocol_.SendAsync(message, cancellation);
-            ArrayPool<byte>.Shared.Return(message);
+            while (true)
+            {
+                var message = await messages_.GetAsync(cancellation);
+                logger_.Verbose("Got message {Payload} to send to a remote.", message);
+                await protocol_.SendAsync(message, cancellation);
+                ArrayPool<byte>.Shared.Return(message);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger_.Error(ex, "Sender failed.");
+            throw;
         }
     }
 }

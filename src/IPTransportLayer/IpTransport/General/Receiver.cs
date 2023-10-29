@@ -16,10 +16,18 @@ namespace DefaultTransport.IpTransport
 
         public async Task RunAsync(CancellationToken cancellation)
         {
-            while (true)
+            try
             {
-                TIn message = await protocol_.ReceiveAsync(cancellation);
-                OnMessage?.Invoke(message);
+                while (true)
+                {
+                    TIn message = await protocol_.ReceiveAsync(cancellation);
+                    OnMessage?.Invoke(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger_.Error(ex, "Receiver failed.");
+                throw;
             }
         }
     }

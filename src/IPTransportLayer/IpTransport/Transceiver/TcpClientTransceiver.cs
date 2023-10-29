@@ -28,7 +28,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         }
         catch (Exception ex) when (ex is EndOfStreamException or IOException)
         {
-            throw new OtherSideEndedException("Stream failed to read.");
+            throw new OtherSideEndedException("Stream failed to read.", ex);
         }
     }
 
@@ -40,7 +40,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         }
         catch (Exception ex) when (ex is EndOfStreamException or IOException)
         {
-            throw new OtherSideEndedException("Stream failed to write.");
+            throw new OtherSideEndedException("Stream failed to write.", ex);
         }
     }
 
