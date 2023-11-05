@@ -54,10 +54,4 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         await client_.SendToAsync(message, target_, cancellation);
         logger_.Verbose("Sent unreliable message to target {Target} with length {Length}.", target_, message.Length);
     }
-
-    public Task CloseAsync()
-    {
-        client_.Dispose();
-        return Task.CompletedTask;
-    }
 }

@@ -29,6 +29,11 @@ struct Sender<TMessages, TMessage>
                 await protocol_.SendAsync(message, cancellation);
             }
         }
+        catch (OperationCanceledException)
+        {
+            logger_.Debug("Sender was canceled.");
+            throw;
+        }
         catch (Exception ex)
         {
             logger_.Error(ex, "Sender failed.");
@@ -62,6 +67,11 @@ struct MemorySender<TMessages>
                 await protocol_.SendAsync(message, cancellation);
                 ArrayPool<byte>.Shared.Return(message);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            logger_.Debug("Sender was canceled.");
+            throw;
         }
         catch (Exception ex)
         {

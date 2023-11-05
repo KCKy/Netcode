@@ -62,7 +62,7 @@ public class IpServerTransport : IServerTransport
 
     public int Port { get; private set; } = 0;
 
-    async Task RunClientAsync(TcpClient client, long id, CancellationToken cancellation)
+    async Task RunClientAsync(TcpClient client, long id)
     {
         if (client.Client.RemoteEndPoint is not IPEndPoint target || client.TryGetStream() is not { } stream)
         {
@@ -75,7 +75,9 @@ public class IpServerTransport : IServerTransport
         ConnectedClient record = new(layer, target, new(), id);
         AddClient(record);
 
-        await SendInitIdAsync(stream, id, cancellation);
+        CancellationToken clientCancellation = record.Cancellation.Token;
+
+        await SendInitIdAsync(stream, id, clientCancellation);
 
         Receiver<Memory<byte>> receiver = new(layer);
         
@@ -86,7 +88,7 @@ public class IpServerTransport : IServerTransport
 
         try
         {
-            await receiver.RunAsync(cancellation);
+            await receiver.RunAsync(clientCancellation);
         }
         catch (OtherSideEndedException)
         {
@@ -112,7 +114,7 @@ public class IpServerTransport : IServerTransport
         for (long id = 1; ; id++)
         {
             TcpClient client = await listener.AcceptTcpClientAsync(cancellation);
-            RunClientAsync(client, id, cancellation).AssureNoFault();
+            RunClientAsync(client, id).AssureNoFault();
             logger_.Verbose("Client connected to server with id {Id}.", id);
         }
     }
@@ -150,8 +152,19 @@ public class IpServerTransport : IServerTransport
         Task first = await Task.WhenAny(tcpManageTask, udpReceiveTask, udpSendTask, tcpSendTask);
 
         tpcListener.Stop();
-        await first;
 
+        foreach (var client in idToConnection_)
+            client.Value.Cancellation.Cancel();
+
+        try
+        {
+            await first;
+        }
+        finally
+        {
+            udp.Dispose();
+        }
+        
         void HandleUdpReceive((Memory<byte> message, long id) value)
         {
             OnUnreliableMessage?.Invoke(value.id, value.message);
@@ -165,6 +178,7 @@ public class IpServerTransport : IServerTransport
     public void SendReliable(Memory<byte> message, long id) => tcpMessages_.Post((message, id));
 
     public int UnreliableMessageHeader => UdpServerTransceiver.HeaderSize;
+    public int UnreliableMessageMaxLength => 1500;
     public void SendUnreliable(Memory<byte> message) => udpMessages_.Post((message, null));
     public void SendUnreliable(Memory<byte> message, long id) => udpMessages_.Post((message, id));
 

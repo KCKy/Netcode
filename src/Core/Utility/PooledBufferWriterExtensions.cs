@@ -43,7 +43,7 @@ public static class PooledBufferWriterExtensions
         writer.Advance(size);
     }
 
-    public static void Ignore(this PooledBufferWriter<byte> writer, int amount)
+    public static void Skip(this PooledBufferWriter<byte> writer, int amount)
     {
         writer.GetSpan(amount);
         writer.Advance(amount);

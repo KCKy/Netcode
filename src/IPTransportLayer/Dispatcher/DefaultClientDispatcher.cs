@@ -35,6 +35,12 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
 
     void HandleMessage(Memory<byte> message)
     {
+        if (message.IsEmpty)
+        {
+            ArrayPool<byte>.Shared.Return(message);
+            return;
+        }
+
         var type = (MessageType)message.Span[0];
         message = message[1..];
 
@@ -58,11 +64,16 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
 
     void HandleServerInitialize(Memory<byte> binary)
     {
-        var header = binary.Span[..DefaultServerDispatcher.InitializeHeader];
+        const int length = DefaultServerDispatcher.InputAuthoredHeader;
+
+        if (binary.Length < length)
+            return;
+
+        var header = binary.Span[..length];
         
         long id = header.ReadLong();
         long frame = header.ReadLong();
-        var state = binary[DefaultServerDispatcher.InitializeHeader..];
+        var state = binary[length..];
         
         OnStart?.Invoke(id);
         OnInitialize?.Invoke(frame, state);
@@ -70,25 +81,34 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
 
     void HandleServerAuthorize(Memory<byte> binary)
     {
-        var header = binary.Span[..DefaultServerDispatcher.InputAuthoredHeader];
+        const int length = DefaultServerDispatcher.InputAuthoredHeader;
+
+        if (binary.Length >= length)
+        {
+            var header = binary.Span[..length];
         
-        long frame = header.ReadLong();
-        long differenceRaw = header.ReadLong();
+            long frame = header.ReadLong();
+            long differenceRaw = header.ReadLong();
         
-        double difference = BitConverter.Int64BitsToDouble(differenceRaw);
-        OnSetDelay?.Invoke(difference);
-        aggregator_.Pop(frame);
+            double difference = BitConverter.Int64BitsToDouble(differenceRaw);
+            OnSetDelay?.Invoke(difference);
+            aggregator_.Pop(frame);
+        }
 
         ArrayPool<byte>.Shared.Return(binary);
     }
 
     void HandleServerAuthInput(Memory<byte> binary)
     {
-        var header = binary.Span[..DefaultServerDispatcher.InputAuthoredHeader];
-        
+        const int length = DefaultServerDispatcher.AuthoritativeInputHeader;
+
+        if (binary.Length < length)
+            return;
+
+        var header = binary.Span[..length];
         long frame = header.ReadLong();
         long? checksum = header.ReadNullableLong();
-        var input = binary[DefaultServerDispatcher.InputAuthoredHeader..];
+        var input = binary[length..];
 
         OnAddAuthInput?.Invoke(frame, input, checksum);
         aggregator_.Pop(frame);
@@ -101,7 +121,7 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
     public void SendInput<TInputPayload>(long frame, TInputPayload payload)
     {
         inputBuffer_.Write(frame);
-        inputBuffer_.Ignore(sizeof(int));
+        inputBuffer_.Skip(sizeof(int));
         MemoryPackSerializer.Serialize(inputBuffer_, payload);
         var message = inputBuffer_.ExtractAndReplace();
         

@@ -57,6 +57,7 @@ where TClientInput : class, new()
 {
     sealed class SingleClientQueue
     {
+        public long LastAuthorizedInput = long.MinValue;
         readonly IClientInputPredictor<TClientInput> predictor_;
         readonly Dictionary<long, (TClientInput input, long timestamp)> frameToInput_ = new();
         TClientInput previousInput_ = new();
@@ -156,22 +157,27 @@ where TClientInput : class, new()
         {
             long timestamp = Stopwatch.GetTimestamp();
 
+            if (!idToInputs_.TryGetValue(id, out var clientInfo))
+            {
+                logger_.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
+                return;
+            }
+
             if (frame <= frame_)
             {
+                if (frame < clientInfo.LastAuthorizedInput)
+                    return; // No need to notify, notification has already been made.
+
+                clientInfo.LastAuthorizedInput = frame;
+
                 TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_);
                 OnInputAuthored?.Invoke(id, frame, difference);
 
                 logger_.Debug("Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
                 return;
             }
-
-            if (!idToInputs_.TryGetValue(id, out var frameToInput))
-            {
-                logger_.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
-                return;
-            }
-
-            if (!frameToInput.TryAdd(frame, input, timestamp))
+            
+            if (!clientInfo.TryAdd(frame, input, timestamp))
             {
                 logger_.Debug("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;

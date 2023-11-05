@@ -10,7 +10,4 @@ interface IReceiveProtocol<TIn>
     ValueTask<TIn> ReceiveAsync(CancellationToken cancellation);
 }
 
-interface IProtocol<TIn, in TOut> : IReceiveProtocol<TIn>, ISendProtocol<TOut>
-{
-    Task CloseAsync();
-}
+interface IProtocol<TIn, in TOut> : IReceiveProtocol<TIn>, ISendProtocol<TOut> { }

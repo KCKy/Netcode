@@ -2,7 +2,7 @@
 
 namespace DefaultTransport.Dispatcher;
 
-enum MessageType : byte
+public enum MessageType : byte
 {
     ServerInitialize = 1,
     ServerAuthorize = 2,

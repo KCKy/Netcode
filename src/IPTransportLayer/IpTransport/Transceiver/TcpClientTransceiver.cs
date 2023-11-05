@@ -77,9 +77,4 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         
         await stream_.FlushAsync(cancellation);
     }
-
-    public async Task CloseAsync()
-    {
-        await stream_.DisposeAsync();
-    }
 }

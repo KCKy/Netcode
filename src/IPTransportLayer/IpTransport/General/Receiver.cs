@@ -24,6 +24,11 @@ namespace DefaultTransport.IpTransport
                     OnMessage?.Invoke(message);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                logger_.Debug("Receiver was canceled.");
+                throw;
+            }
             catch (Exception ex)
             {
                 logger_.Error(ex, "Receiver failed.");

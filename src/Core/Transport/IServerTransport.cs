@@ -17,6 +17,7 @@ public interface IServerOutTransport
     void SendReliable(Memory<byte> message);
     void SendReliable(Memory<byte> message, long id);
     int UnreliableMessageHeader { get; }
+    int UnreliableMessageMaxLength { get; }
     void SendUnreliable(Memory<byte> message);
     void SendUnreliable(Memory<byte> message, long id);
     void Terminate(long id);

@@ -1,5 +1,4 @@
 ﻿using Serilog;
-using Serilog;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
@@ -113,11 +112,5 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
         }
 
         ArrayPool<byte>.Shared.Return(value.payload);
-    }
-    
-    public Task CloseAsync()
-    {
-        client_.Dispose();
-        return Task.CompletedTask;
     }
 }

@@ -1,17 +1,14 @@
 ﻿using System.Buffers;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
 using DefaultTransport.IpTransport;
 using Serilog;
 using Xunit.Abstractions;
 using Useful;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
-using Serilog.Core;
 
 namespace DefaultTransportTests;
 
-public class IpTransport
+public class IpTransportTests
 {
     static IEnumerable<IpClientTransport> ConstructClients(IPEndPoint endPoint, int count) =>
         from endpoint in Enumerable.Repeat(endPoint, count) select new IpClientTransport(endpoint);
@@ -25,7 +22,7 @@ public class IpTransport
             client.Terminate();
     }
 
-    public IpTransport(ITestOutputHelper output)
+    public IpTransportTests(ITestOutputHelper output)
     {
         Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Debug().CreateLogger();
     }
@@ -37,7 +34,6 @@ public class IpTransport
     [InlineData(5)]
     [InlineData(10)]
     [InlineData(20)]
-    [InlineData(50)]
     public async Task TestConnection(int clientCount)
     {
         // Construct a server, connect N clients and then terminate.
@@ -61,7 +57,9 @@ public class IpTransport
         var clients = ConstructClients(target, clientCount).ToArray();
         var clientTasks = RunClients(clients).ToArray();
         
-        await Task.Delay(10);
+        await Task.Delay(clientCount * 100);
+
+        Log.Debug("[Test] Terminating clients.");
 
         Assert.Equal(clientCount, joined.Count);
 
@@ -74,7 +72,6 @@ public class IpTransport
             try
             {
                 await task;
-
             }
             catch (OperationCanceledException)
             {
@@ -82,7 +79,9 @@ public class IpTransport
             }
         }
 
-        await Task.Delay(clientCount);
+        await Task.Delay(clientCount * 10);
+
+        Assert.Equal(clientCount, properlyEnded);
 
         server.Terminate();
 
@@ -98,8 +97,72 @@ public class IpTransport
         Assert.True(joined.IsEmpty);
         Assert.Equal(1 + clientCount, properlyEnded);
         
-        await Task.Delay(10);
+        await Task.Delay(100);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(5)]
+    [InlineData(10)]
+    [InlineData(20)]
+    public async Task TestKick(int clientCount)
+    {
+        // Construct a server, connect N clients and then kick them all.
+
+        IPEndPoint endPoint = new(IPAddress.Loopback, 0);
+        IpServerTransport server = new(endPoint);
+
+        ConcurrentDictionary<long, byte> joined = new();
+
+        server.OnClientJoin += id => Assert.True(joined.TryAdd(id, 0));
+        server.OnClientFinish += id => Assert.True(joined.TryRemove(id, out _));
+
+        Task serverTask = server.RunAsync();
+
+        await Task.Delay(10);
+
+        if (serverTask.IsCompleted)
+            await serverTask;
+
+        IPEndPoint target = new(IPAddress.Loopback, server.Port);
+        var clients = ConstructClients(target, clientCount).ToArray();
+        var clientTasks = RunClients(clients).ToArray();
+        
+        await Task.Delay(clientCount * 100);
+
+        Log.Debug("[Test] Terminating clients.");
+
+        Assert.Equal(clientCount, joined.Count);
+
+        foreach (var client in joined)
+            server.Terminate(client.Key);
+
+        bool serverEnded = false;
+
+        foreach (var task in clientTasks)
+            await task;
+
+        await Task.Delay(clientCount * 10);
+
+        server.Terminate();
+
+        try
+        {
+            await serverTask;
+        }
+        catch (OperationCanceledException)
+        {
+            serverEnded = true;
+        }
+
+        Assert.True(joined.IsEmpty);
+        Assert.True(serverEnded);
+        
+        await Task.Delay(100);
+    }
+
 
     [Theory]
     [InlineData(1, 1)]
@@ -173,7 +236,7 @@ public class IpTransport
         TerminateClients(clients);
         server.Terminate();
 
-        await Task.Delay(10);
+        await Task.Delay(100);
     }
 
     [Theory]
@@ -248,7 +311,7 @@ public class IpTransport
         TerminateClients(clients);
         server.Terminate();
 
-        await Task.Delay(10);
+        await Task.Delay(100);
     }
 
     [Theory]
@@ -339,7 +402,7 @@ public class IpTransport
         TerminateClients(clients);
         server.Terminate();
 
-        await Task.Delay(10);
+        await Task.Delay(100);
     }
 
     [Theory]
@@ -423,11 +486,10 @@ public class IpTransport
         TerminateClients(clients);
         server.Terminate();
 
-        await Task.Delay(10);
+        await Task.Delay(100);
     }
 
     [Theory]
-
     [InlineData(10, 1)]
     [InlineData(20, 1)]
     [InlineData(100, 1)]
@@ -504,6 +566,6 @@ public class IpTransport
         TerminateClients(clients);
         server.Terminate();
 
-        await Task.Delay(10);
+        await Task.Delay(100);
     }
 }

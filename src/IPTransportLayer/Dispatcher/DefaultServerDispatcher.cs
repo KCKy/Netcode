@@ -47,13 +47,19 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
 
     void WriteMessageHeader(PooledBufferWriter<byte> writer, int preHeader, MessageType type)
     {
-        writer.Ignore(preHeader);
+        writer.Skip(preHeader);
         writer.GetSpan(1)[0] = (byte)type;
         writer.Advance(1);
     }
     
     void HandleMessage(long id, Memory<byte> message)
     {
+        if (message.IsEmpty)
+        {
+            ArrayPool<byte>.Shared.Return(message);
+            return;
+        }
+
         var type = (MessageType)message.Span[0];
         message = message[1..];
 
@@ -68,22 +74,21 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
         }
     }
 
-    bool IsFrameRelevant(long frame)
-    {
-        lock (lastAuthorizedMutex_)
-            return lastAuthorized_ < frame;
-    }
-
     void HandleClientInput(long id, Memory<byte> owner)
     {
         var message = owner.Span;
-        while (!message.IsEmpty)
+        while (message.Length > sizeof(long) + sizeof(int))
         {
             long frame = message.ReadLong();
             int length = message.ReadInt();
+
+            if (length <= 0)
+                break;
+
+            if (message.Length < length)
+                break;
             
-            if (IsFrameRelevant(frame))
-                OnAddInput?.Invoke(id, frame, message[..length]);
+            OnAddInput?.Invoke(id, frame, message[..length]);
 
             message = message[length..];
         }

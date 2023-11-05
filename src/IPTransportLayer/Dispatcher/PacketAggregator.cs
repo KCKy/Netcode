@@ -3,7 +3,7 @@ using Useful;
 
 namespace DefaultTransport.Dispatcher;
 
-struct PacketAggregator
+public struct PacketAggregator
 {
     readonly object mutex_ = new();
     readonly Queue<Memory<byte>> aggregatedPackets_;
@@ -74,7 +74,7 @@ struct PacketAggregator
     {
         lock (mutex_)
         {
-            while (aggregatedPackets_.Count <= 0 && frame >= oldestFrame_)
+            while (aggregatedPackets_.Count > 0 && frame >= oldestFrame_)
                 Dequeue();
         }
     }

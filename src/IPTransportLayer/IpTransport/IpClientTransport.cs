@@ -25,7 +25,7 @@ public sealed class IpClientTransport : IClientTransport
 
     public void Terminate() => cancellationSource_.Cancel();
 
-    async ValueTask<(TcpClient, TcpClientTransceiver, UdpClientTransceiver)> ConnectAsync(CancellationToken cancellation)
+    async ValueTask<(TcpClient, Socket, TcpClientTransceiver, UdpClientTransceiver)> ConnectAsync(CancellationToken cancellation)
     {
         TcpClient tcp = new(AddressFamily.InterNetwork);
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
@@ -57,14 +57,14 @@ public sealed class IpClientTransport : IClientTransport
         await stream.ReadExactlyAsync(idRaw, cancellation);
         long id = Bits.ReadLong(idRaw.Span);
 
-        return (tcp, new(stream), new(udp, target_, id));
+        return (tcp, udp, new(stream), new(udp, target_, id));
     }
 
     public async Task RunAsync()
     {
         CancellationToken cancellation = cancellationSource_.Token;
 
-        (TcpClient tcpClient, TcpClientTransceiver tcp, UdpClientTransceiver udp) = await ConnectAsync(cancellation);
+        (TcpClient tcpClient, Socket udpClient, TcpClientTransceiver tcp, UdpClientTransceiver udp) = await ConnectAsync(cancellation);
         
         MemorySender<QueueMessages<Memory<byte>>> tcpMemorySender = new(tcp,  tcpMessages_);
         Receiver<Memory<byte>> tcpReceiver = new(tcp);
@@ -92,6 +92,7 @@ public sealed class IpClientTransport : IClientTransport
         finally
         {
             tcpClient.Dispose();
+            udpClient.Dispose();
         }
     }
 
