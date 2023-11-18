@@ -15,9 +15,6 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
     readonly int reliableHeader_;
     readonly ILogger logger_ = Log.ForContext<DefaultServerDispatcher>();
 
-    readonly object lastAuthorizedMutex_ = new();
-    long lastAuthorized_ = long.MinValue;
-
     public DefaultServerDispatcher(IServerTransport transport)
     {
         transport_ = transport;
@@ -109,9 +106,6 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
     }
     public void Initialize<TPayload>(long id, long frame, TPayload payload)
     {
-        lock (lastAuthorizedMutex_)
-            lastAuthorized_ = frame;
-
         var message = ConstructInitialize(id, frame, payload);
         transport_.SendReliable(message, id);
     }
@@ -139,9 +133,6 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
     internal const int AuthoritativeInputHeader = sizeof(long) + Bits.NullableLongSize;
     Memory<byte> ConstructAuthoritativeInput<TPayload>(long frame, long? checksum, TPayload payload)
     {
-        lock (lastAuthorizedMutex_)
-            lastAuthorized_ = frame;
-
         WriteMessageHeader(authInputBuffer_, reliableHeader_, MessageType.ServerAuthInput);
         authInputBuffer_.Write(frame);
         authInputBuffer_.Write(checksum);

@@ -133,7 +133,7 @@ public class IpServerTransport : IServerTransport
 
         Port = endpoint.Port;
 
-        logger_.Debug("Began server at {Local} -> {Transformed}.", local_, endpoint);
+        logger_.Information("Began server at {Local} -> {Transformed}.", local_, endpoint);
         
         UdpServerTransceiver udpTransceiver = new(udp, idToConnection_);
         TcpServerTransceiver tcpServerTransceiver = new(idToConnection_);

@@ -30,7 +30,7 @@ public sealed class IpClientTransport : IClientTransport
         TcpClient tcp = new(AddressFamily.InterNetwork);
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
-        logger_.Debug("Client trying to connect to {Target}.", target_);
+        logger_.Information("Client trying to connect to {Target}.", target_);
 
         await Task.WhenAny(connectTask, Task.Delay(ConnectTimeoutMs, cancellation));
 
@@ -49,7 +49,7 @@ public sealed class IpClientTransport : IClientTransport
         IPEndPoint anyPoint = new(IPAddress.Any, 0);
         udp.Bind(anyPoint);
 
-        logger_.Debug("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
+        logger_.Information("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
 
         NetworkStream stream = tcp.GetStream();
 

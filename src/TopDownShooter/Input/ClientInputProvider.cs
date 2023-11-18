@@ -1,9 +1,10 @@
 ﻿using Core.Providers;
+using Serilog;
 using SFML.Graphics;
 using SFML.Window;
 using static SFML.Window.Keyboard;
 
-namespace TestGame;
+namespace TopDownShooter.Input;
 
 class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
 {
@@ -19,23 +20,31 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
         window_.MouseMoved += MouseMovedHandler;
     }
 
-    Direction? direction_ = null;
+    int horizontal_;
+    int vertical_;
+    bool start_;
     readonly object mutex_ = new();
-    bool start_ = false;
+
+    static readonly ILogger logger = Log.ForContext<ClientInputProvider>();
 
     void KeyPressedHandler(object? sender, KeyEventArgs args)
     {
         lock (mutex_)
         {
-            direction_ = args.Code switch
+            horizontal_ = args.Code switch
             {
-                Key.A or Key.Left => Direction.Left,
-                Key.D or Key.Right => Direction.Right,
-                Key.W or Key.Up => Direction.Up,
-                Key.S or Key.Down => Direction.Down,
-                Key.Space => null,
-                _ => direction_
+                Key.A or Key.Left => -1,
+                Key.D or Key.Right => 1,
+                _ => horizontal_
             };
+
+            vertical_ = args.Code switch
+            {
+                Key.W or Key.Up => -1,
+                Key.S or Key.Down => 1,
+                _ => vertical_
+            };
+
             start_ = args.Code switch
             {
                 Key.Space => true,
@@ -44,7 +53,27 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
         }
     }
 
-    void KeyReleasedHandler(object? sender, KeyEventArgs args) { }
+    void KeyReleasedHandler(object? sender, KeyEventArgs args)
+    {
+            horizontal_ = args.Code switch
+            {
+                Key.A or Key.Left or Key.D or Key.Right => 0,
+                _ => horizontal_
+            };
+
+            vertical_ = args.Code switch
+            {
+                Key.W or Key.Up or Key.S or Key.Down => 0,
+                _ => vertical_
+            };
+
+            start_ = args.Code switch
+            {
+                Key.Space => false,
+                _ => start_
+            };
+    }
+
     void MousePressedHandler(object? sender, MouseButtonEventArgs args) { }
     void MouseReleasedHandler(object? sender, MouseButtonEventArgs args) { }
     void MouseMovedHandler(object? sender, MouseMoveEventArgs args) { }
@@ -55,11 +84,10 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
         {
             ClientInput input = new()
             {
-                Direction = direction_,
+                Vertical = vertical_,
+                Horizontal = horizontal_,
                 Start = start_
             };
-
-            start_ = false;
 
             return input;
         }

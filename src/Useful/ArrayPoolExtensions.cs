@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Useful;
@@ -36,4 +35,3 @@ public static class ArrayPoolExtensions
         pool.Return(array);
     }
 }
-

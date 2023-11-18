@@ -179,7 +179,7 @@ where TClientInput : class, new()
             
             if (!clientInfo.TryAdd(frame, input, timestamp))
             {
-                logger_.Debug("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
+                logger_.Verbose("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
