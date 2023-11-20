@@ -33,7 +33,7 @@ public class BasicSpeedController : ISpeedController
     double currentDelta_ = 0;
     double targetSpeed_ = 1;
 
-    public double SmoothingTime { get; init; } = 1;
+    public double SmoothingTime { get; init; } = 0.5;
 
     readonly ILogger logger_ = Log.ForContext<BasicSpeedController>();
     readonly object mutex_ = new();
@@ -91,13 +91,12 @@ public class BasicSpeedController : ISpeedController
             lock (mutex_)
             {
                 targetDelta_ = value;
-                average_ = new(5, value);
                 Update();
             }
         }
     }
     
-    MovingAverage<double> average_ = new(5);
+    DelayStats<double> stats_ = new(20 * 5); // TODO: make this mutable
 
     public double CurrentDelta
     {
@@ -110,12 +109,10 @@ public class BasicSpeedController : ISpeedController
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
             }
 
-            logger_.Verbose("Updated delta to {Delta}", value);
-
             lock (mutex_)
             {
-                (double sum, int length) = average_.Add(value);
-                currentDelta_ = sum / length;
+                currentDelta_ = stats_.Add(value);
+                logger_.Verbose("Updated delta to {Delta}", currentDelta_);
                 Update();
             }
         }

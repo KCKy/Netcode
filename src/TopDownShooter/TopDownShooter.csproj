@@ -26,7 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Extra\Extra.csproj" />
-    <ProjectReference Include="..\TransportTester\TransportTester.csproj" />
+    <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
     <ProjectReference Include="..\Useful\Useful.csproj" />
   </ItemGroup>
 

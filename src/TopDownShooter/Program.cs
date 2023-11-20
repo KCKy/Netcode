@@ -69,7 +69,7 @@ static class Program
 
         Displayer displayer = new("Top Down Shooter Demo (Client)");
         
-        ClientInputProvider input = new(displayer.Window);
+        ClientInputProvider input = new(displayer);
         DefaultClientDispatcher dispatcher = new(transport);
 
         Client<ClientInput, ServerInput, GameState> client = new(dispatcher, dispatcher, displayer, input, new DefaultServerInputPredictor<ServerInput, GameState>(), new DefaultClientInputPredictor<ClientInput>())

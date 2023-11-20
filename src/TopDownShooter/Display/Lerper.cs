@@ -34,7 +34,7 @@ sealed class Lerper<T>
     }
 
     // Seconds we spend drawing the current frame
-    float currentFrameTime_ = -0.1f;
+    float currentFrameTime_ = 0f;
 
     /// <summary>
     /// Moves the lerper by given delta, switches to next frame if available.
@@ -43,29 +43,22 @@ sealed class Lerper<T>
     /// <returns>The lerp amount between the current frame and the next frame.</returns>
     (float t, Frame? targetFrame) UpdateFrameOffset(float delta)
     {
-        currentFrameTime_ += delta;
-
         while (true)
         {
             if (!frames_.TryPeek(out Frame targetFrame))
                 return (0, null);
 
-            if (currentFrameTime_ >= targetFrame.Length)
-            {
-                currentFrameTime_ -= targetFrame.Length;
-                currentFrame_ = targetFrame;
-                frames_.TryDequeue(out _);
-                continue;
-            }
+            currentFrameTime_ += delta;
+            
 
-            return (currentFrameTime_ / targetFrame.Length, targetFrame);
+            if (currentFrameTime_ < targetFrame.Length)
+                return (currentFrameTime_ / targetFrame.Length, targetFrame);
+
+            currentFrameTime_ -= targetFrame.Length;
+            currentFrame_ = targetFrame;
+            frames_.TryDequeue(out _);
+
         }
-    }
-
-    void DrawNoPredictFallback(float t, EntityDraw onEntityDraw)
-    {
-        foreach (T from in currentFrame_.IdToEntity.Values)
-            onEntityDraw(from, from, 0);
     }
 
     void DrawProper(float t, Dictionary<long, T> idToTarget, EntityDraw onEntityDraw)
@@ -79,16 +72,24 @@ sealed class Lerper<T>
         }
     }
 
+    void DrawImproper(float t, EntityDraw onEntityDraw)
+    {
+        foreach ((long id, T from) in currentFrame_.IdToEntity)
+        {
+            onEntityDraw(from, from, t);
+        }
+    }
+
     public void Draw(float delta)
     {
         var result = UpdateFrameOffset(delta);
         if (OnEntityDraw is not { } onEntityDraw)
             return;
 
-        if (result is (_, Frame target))
+        if (result is (_, { } target))
             DrawProper(result.t, target.IdToEntity, onEntityDraw);
         else
-            DrawNoPredictFallback(result.t, onEntityDraw);
+            DrawImproper(result.t, onEntityDraw);
     }
 
     public override string ToString() => $"Lerper({frames_.Count})";

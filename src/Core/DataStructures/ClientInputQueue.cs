@@ -165,7 +165,7 @@ where TClientInput : class, new()
 
             if (frame <= frame_)
             {
-                if (frame < clientInfo.LastAuthorizedInput)
+                if (frame <= clientInfo.LastAuthorizedInput)
                     return; // No need to notify, notification has already been made.
 
                 clientInfo.LastAuthorizedInput = frame;
@@ -173,13 +173,13 @@ where TClientInput : class, new()
                 TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_);
                 OnInputAuthored?.Invoke(id, frame, difference);
 
-                logger_.Debug("Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
+                logger_.Debug( "Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
                 return;
             }
             
             if (!clientInfo.TryAdd(frame, input, timestamp))
             {
-                logger_.Verbose("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
+                //logger_.Verbose("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
@@ -210,6 +210,7 @@ where TClientInput : class, new()
 
                 if (timestamp is {} value)
                 {
+                    queue.LastAuthorizedInput = nextFrame;
                     TimeSpan difference = Stopwatch.GetElapsedTime(value, now);
                     OnInputAuthored?.Invoke(id, nextFrame, difference);
                 }

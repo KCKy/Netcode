@@ -6,14 +6,14 @@ using TopDownShooter.Game;
 using Useful;
 using System.Diagnostics;
 using Serilog;
-using Serilog.Core;
 
 namespace TopDownShooter.Display;
 
 class Renderer
 {
     readonly Color Background = Color.Black;
-    
+
+    readonly Displayer displayer_;
     readonly RenderWindow window_;
     readonly CircleShape Shape = new();
 
@@ -27,12 +27,15 @@ class Renderer
         Shape.FillColor = color;
         Shape.Radius = 32;
         window_.Draw(Shape);
+
+        if (position != new Vector2f(0, 0) && displayer_.FirstReaction is null)
+            displayer_.FirstReaction = Stopwatch.GetTimestamp();
     }
 
-    public Renderer(RenderWindow window)
+    public Renderer(Displayer displayer)
     {
-        window_ = window;
-        
+        displayer_ = displayer;
+        window_ = displayer_.Window;
     }
 }
 
@@ -52,7 +55,7 @@ class Displayer : IDisplayer<GameState>
         Window = new(Mode, name);
         Window.SetVerticalSyncEnabled(true);
         Window.Closed += (_, _) => Window.Close();
-        renderer_ = new(Window);
+        renderer_ = new(this);
         lerper_.OnEntityDraw += DrawHandler;
         debugText_ = new()
         {
@@ -95,6 +98,17 @@ class Displayer : IDisplayer<GameState>
 
     readonly Clock clock_ = new();
 
+    public long? FirstKeypress = null;
+    public long? FirstReaction = null;
+
+    double? GetReactionTime(long? start, long? end)
+    {
+        if (start is not { } s || end is not { } e)
+            return null;
+
+        return Stopwatch.GetElapsedTime(s, e).TotalSeconds;
+    }
+
     public bool Update()
     {
         if (!Window.IsOpen)
@@ -104,7 +118,7 @@ class Displayer : IDisplayer<GameState>
         var delta = clock_.ElapsedTime.AsSeconds();
         clock_.Restart();
 
-        debugText_.DisplayedString = $"Delta: {delta}\nLerper: {lerper_}";
+        debugText_.DisplayedString = $"Delta: {delta}\n{lerper_}\nReaction: {GetReactionTime(FirstKeypress, FirstReaction)}";
             
         Window.Clear();
         lerper_.Draw(delta);

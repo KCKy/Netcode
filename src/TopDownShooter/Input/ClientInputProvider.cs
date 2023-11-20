@@ -1,28 +1,31 @@
-﻿using Core.Providers;
+﻿using System.Diagnostics;
+using Core.Providers;
 using Serilog;
 using SFML.Graphics;
 using SFML.Window;
+using TopDownShooter.Display;
 using static SFML.Window.Keyboard;
 
 namespace TopDownShooter.Input;
 
 class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
 {
-    readonly RenderWindow window_;
+    readonly Displayer displayer_;
 
-    public ClientInputProvider(RenderWindow window)
+    public ClientInputProvider(Displayer displayer)
     {
-        window_ = window;
-        window_.KeyPressed += KeyPressedHandler;
-        window_.KeyReleased += KeyReleasedHandler;
-        window_.MouseButtonPressed += MousePressedHandler;
-        window_.MouseButtonReleased += MouseReleasedHandler;
-        window_.MouseMoved += MouseMovedHandler;
+        displayer_ = displayer;
+        RenderWindow window = displayer_.Window;
+        window.KeyPressed += KeyPressedHandler;
+        window.KeyReleased += KeyReleasedHandler;
+        window.MouseButtonPressed += MousePressedHandler;
+        window.MouseButtonReleased += MouseReleasedHandler;
+        window.MouseMoved += MouseMovedHandler;
     }
 
-    int horizontal_;
-    int vertical_;
-    bool start_;
+
+    bool left_, right_, up_, down_, start_;
+
     readonly object mutex_ = new();
 
     static readonly ILogger logger = Log.ForContext<ClientInputProvider>();
@@ -31,47 +34,47 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
     {
         lock (mutex_)
         {
-            horizontal_ = args.Code switch
+            switch (args.Code)
             {
-                Key.A or Key.Left => -1,
-                Key.D or Key.Right => 1,
-                _ => horizontal_
-            };
-
-            vertical_ = args.Code switch
-            {
-                Key.W or Key.Up => -1,
-                Key.S or Key.Down => 1,
-                _ => vertical_
-            };
-
-            start_ = args.Code switch
-            {
-                Key.Space => true,
-                _ => start_
-            };
+                case Key.A or Key.Left:
+                    left_ = true;
+                    return;
+                case Key.D or Key.Right:
+                    right_ = true;
+                    return;
+                case Key.W or Key.Up:
+                    up_ = true;
+                    return;
+                case Key.S or Key.Down:
+                    down_ = true;
+                    return;
+                case Key.Space:
+                    start_ = true;
+                    return;
+            }
         }
     }
 
     void KeyReleasedHandler(object? sender, KeyEventArgs args)
     {
-            horizontal_ = args.Code switch
-            {
-                Key.A or Key.Left or Key.D or Key.Right => 0,
-                _ => horizontal_
-            };
-
-            vertical_ = args.Code switch
-            {
-                Key.W or Key.Up or Key.S or Key.Down => 0,
-                _ => vertical_
-            };
-
-            start_ = args.Code switch
-            {
-                Key.Space => false,
-                _ => start_
-            };
+        switch (args.Code)
+        {
+            case Key.A or Key.Left:
+                left_ = false;
+                return;
+            case Key.D or Key.Right:
+                right_ = false;
+                return;
+            case Key.W or Key.Up:
+                up_ = false;
+                return;
+            case Key.S or Key.Down:
+                down_ = false;
+                return;
+            case Key.Space:
+                start_ = false;
+                return;
+        }
     }
 
     void MousePressedHandler(object? sender, MouseButtonEventArgs args) { }
@@ -82,12 +85,18 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
     {
         lock (mutex_)
         {
+            int horizontal = Convert.ToInt32(right_) - Convert.ToInt32(left_); 
+            int vertical = Convert.ToInt32(down_) - Convert.ToInt32(up_); 
+
             ClientInput input = new()
             {
-                Vertical = vertical_,
-                Horizontal = horizontal_,
+                Vertical = (sbyte)vertical,
+                Horizontal = (sbyte)horizontal,
                 Start = start_
             };
+
+            if ((horizontal != 0 || vertical != 0) && displayer_.FirstKeypress is null)
+                displayer_.FirstKeypress = Stopwatch.GetTimestamp();
 
             return input;
         }
@@ -95,10 +104,11 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
 
     public void Dispose()
     {
-        window_.KeyPressed -= KeyPressedHandler;
-        window_.KeyReleased -= KeyReleasedHandler;
-        window_.MouseButtonPressed -= MousePressedHandler;
-        window_.MouseButtonReleased -= MouseReleasedHandler;
-        window_.MouseMoved -= MouseMovedHandler;
+        RenderWindow window = displayer_.Window;
+        window.KeyPressed -= KeyPressedHandler;
+        window.KeyReleased -= KeyReleasedHandler;
+        window.MouseButtonPressed -= MousePressedHandler;
+        window.MouseButtonReleased -= MouseReleasedHandler;
+        window.MouseMoved -= MouseMovedHandler;
     }
 }
