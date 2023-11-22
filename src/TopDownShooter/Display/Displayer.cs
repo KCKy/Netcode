@@ -5,28 +5,62 @@ using SFML.Window;
 using TopDownShooter.Game;
 using Useful;
 using System.Diagnostics;
+using Core.Client;
 using Serilog;
+using TopDownShooter.Input;
 
 namespace TopDownShooter.Display;
 
 class Renderer
 {
-    readonly Color Background = Color.Black;
-
     readonly Displayer displayer_;
     readonly RenderWindow window_;
-    readonly CircleShape Shape = new();
+    readonly CircleShape shape_ = new();
+    readonly Texture backgroundTexture_;
+    readonly Sprite background_;
 
     public long Id { get; set; }
 
-    static readonly ILogger logger = Log.ForContext<Displayer>();
+    static readonly ILogger Logger = Log.ForContext<Displayer>();
 
-    public void DrawPlayer(long entityId, Vector2f position, Color color)
+    Vector2f origin_ = new();
+    Vector2f nextCenter_ = new();
+
+    static float GetTileOffset(float value, float size) => -value + MathF.Floor(value / size) * size;
+
+    void DrawBackground()
     {
-        Shape.Position = position;
-        Shape.FillColor = color;
-        Shape.Radius = 32;
-        window_.Draw(Shape);
+        var winSize = (Vector2f)window_.Size;
+        var size = (Vector2f)backgroundTexture_.Size;
+
+        float ax = GetTileOffset(origin_.X, size.X);
+        float ay = GetTileOffset(origin_.Y, size.Y);
+
+        for (float x = ax; x <= winSize.X; x += size.X)
+        for (float y = ay; y <= winSize.Y; y += size.Y)
+        {
+            background_.Position = new(x, y);
+            window_.Draw(background_);
+        }
+    }
+
+    public void StartDraw()
+    {   
+        origin_ = nextCenter_ - (Vector2f)window_.Size * .5f;
+        DrawBackground();
+    }
+
+    public void DrawPlayer(long entityId, Vector2f position, Color color, long playerId)
+    {
+        const int radius = 32;
+        shape_.Origin = new(radius / 2, radius / 2);
+        shape_.Position = position - origin_;
+        shape_.FillColor = color;
+        shape_.Radius = radius;
+        window_.Draw(shape_);
+
+        if (playerId == Id)
+            nextCenter_ = position;
 
         if (position != new Vector2f(0, 0) && displayer_.FirstReaction is null)
             displayer_.FirstReaction = Stopwatch.GetTimestamp();
@@ -36,6 +70,8 @@ class Renderer
     {
         displayer_ = displayer;
         window_ = displayer_.Window;
+        backgroundTexture_ = new("tile.png");
+        background_ = new(backgroundTexture_);
     }
 }
 
@@ -49,6 +85,7 @@ class Displayer : IDisplayer<GameState>
     
     readonly Text debugText_;
     readonly Font Font = new("LiberationMono-Regular.ttf");
+    public Client<ClientInput, ServerInput, GameState>? Client { get; set; }
 
     public Displayer(string name)
     {
@@ -109,6 +146,8 @@ class Displayer : IDisplayer<GameState>
         return Stopwatch.GetElapsedTime(s, e).TotalSeconds;
     }
 
+    bool debug_ = true;
+
     public bool Update()
     {
         if (!Window.IsOpen)
@@ -118,11 +157,21 @@ class Displayer : IDisplayer<GameState>
         var delta = clock_.ElapsedTime.AsSeconds();
         clock_.Restart();
 
-        debugText_.DisplayedString = $"Delta: {delta}\n{lerper_}\nReaction: {GetReactionTime(FirstKeypress, FirstReaction)}";
-            
         Window.Clear();
+        renderer_.StartDraw();
         lerper_.Draw(delta);
-        Window.Draw(debugText_);
+
+        if (debug_)
+        {
+            debugText_.DisplayedString = $"Draw Delta: {delta:0.00}\n" +
+                                         $"Frames behind: {lerper_.FramesBehind}\n" +
+                                         $"Reaction: {GetReactionTime(FirstKeypress, FirstReaction):0.00}\n" +
+                                         $"Current TPS: {Client?.CurrentTps:0.00}\n" +
+                                         $"Target TPS: {Client?.TargetTps:0.00}\n" +
+                                         $"Current Delta: {Client?.CurrentDelta:0.00}\n" +
+                                         $"Target Delta: {Client?.TargetDelta:0.00}\n";
+            Window.Draw(debugText_);
+        }
         Window.Display();
 
         return true;

@@ -33,7 +33,7 @@ public class BasicSpeedController : ISpeedController
     double currentDelta_ = 0;
     double targetSpeed_ = 1;
 
-    public double SmoothingTime { get; init; } = 0.5;
+    public double SmoothingTime { get; init; } = 1;
 
     readonly ILogger logger_ = Log.ForContext<BasicSpeedController>();
     readonly object mutex_ = new();
@@ -96,7 +96,7 @@ public class BasicSpeedController : ISpeedController
         }
     }
     
-    DelayStats<double> stats_ = new(20 * 5); // TODO: make this mutable
+    DelayStats<double> stats_ = new(5); // TODO: make this mutable
 
     public double CurrentDelta
     {

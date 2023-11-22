@@ -61,7 +61,7 @@ static class Program
        
         IPEndPoint target = Command.GetEndPoint("Enter server IP address and port: ", new(IPAddress.Loopback, DefaultPort));
 
-        float delay = Command.GetFloat("Enter latency padding value (s): ");
+        float delay = Command.GetFloat("Enter latency padding value (s): ", 0.03f);
 
         Log.Information("Connecting to {EndPoint}...", target);
 
@@ -72,13 +72,15 @@ static class Program
         ClientInputProvider input = new(displayer);
         DefaultClientDispatcher dispatcher = new(transport);
 
-        Client<ClientInput, ServerInput, GameState> client = new(dispatcher, dispatcher, displayer, input, new DefaultServerInputPredictor<ServerInput, GameState>(), new DefaultClientInputPredictor<ClientInput>())
+        Client<ClientInput, ServerInput, GameState> client = new(dispatcher, dispatcher, displayer, input, null, new ClientInputPredictor())
         {
             PredictDelayMargin = delay,
             UseChecksum = true,
             TraceFrameTime = true,
             TraceState = true
         };
+
+        displayer.Client = client;
 
         client.RunAsync().AssureSuccess();
         transport.RunAsync().ContinueWith(_ => client.Terminate());
@@ -101,7 +103,7 @@ static class Program
         IpServerTransport transport = new(local);
 
         DefaultServerDispatcher dispatcher = new(transport);
-        Server<ClientInput, ServerInput, GameState> server = new(dispatcher, dispatcher)
+        Server<ClientInput, ServerInput, GameState> server = new(dispatcher, dispatcher, null, null, new ClientInputPredictor())
         {
             SendChecksum = true,
             TraceFrameTime = true,

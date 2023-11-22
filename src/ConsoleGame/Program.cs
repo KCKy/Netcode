@@ -58,7 +58,7 @@ static class Program
 
         IPEndPoint target = Command.GetEndPoint("Enter server IP address and port: ", new(IPAddress.Loopback, DefaultPort));
 
-        float delay = Command.GetFloat("Enter latency padding value (s): ");
+        float delay = Command.GetFloat("Enter latency padding value (s): ", 0.03f);
 
         Log.Information("Connecting to {EndPoint}...", target);
 

@@ -31,6 +31,11 @@ public sealed class Client<TC, TS, TG>
     bool initiated_ = false;
     bool identified_ = false;
 
+    public double CurrentTps => clock_.CurrentTPS;
+    public double CurrentDelta => clock_.CurrentDelta;
+    public double TargetDelta => clock_.TargetDelta;
+    public double TargetTps => clock_.TargetTPS;
+
     public double PredictDelayMargin
     {
         get => clock_.TargetDelta;

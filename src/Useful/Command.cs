@@ -57,14 +57,17 @@ public static class Command
         }
     }
 
-    public static float GetFloat(string info) => GetFloat(Info(info));
-    public static float GetFloat(Action info)
+    public static float GetFloat(string info, float defaultValue) => GetFloat(Info(info), defaultValue);
+    public static float GetFloat(Action info, float defaultValue)
     {
         while (true)
         {
             info();
 
             string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+                return defaultValue;
 
             if (float.TryParse(input, CultureInfo.InvariantCulture, out float value))
                 return value;

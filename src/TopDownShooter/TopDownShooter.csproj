@@ -30,4 +30,10 @@
     <ProjectReference Include="..\Useful\Useful.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="tile.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

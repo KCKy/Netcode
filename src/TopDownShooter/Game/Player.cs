@@ -55,6 +55,9 @@ partial class Player : IEntity
     [MemoryPackInclude]
     long entityId_;
 
+    [MemoryPackInclude]
+    long playerId_;
+
     [MemoryPackConstructor]
     Player() { }
     
@@ -63,9 +66,10 @@ partial class Player : IEntity
         return Position.ToString();
     }
 
-    public Player(long entityId)
+    public Player(long entityId, long playerId)
     {
         entityId_ = entityId;
+        playerId_ = playerId;
     }
 
     static readonly Fixed MovementSpeed = 10;
@@ -91,17 +95,46 @@ partial class Player : IEntity
 
     public static bool CheckHit(Vec2<Fixed> origin, Vec2<Fixed> ray, Vec2<Fixed> targetPosition)
     {
+        /*
         var relativePos = targetPosition - origin;
         var projection = relativePos.Project(ray);
         var delta = relativePos - projection;
 
         return delta.Dot(delta) <= ColliderRadiusSquared
-               && projection.X > 0 ? relativePos.X > 0 : relativePos.X <= 0;
+               && projection.X > 0 ? relativePos.X > 0 : relativePos.X <= 0
+        */
+
+        var diff = origin + ray - targetPosition;
+
+        return diff.Dot(diff) <= ColliderRadiusSquared;
     }
 
     static readonly ILogger logger_ = Log.ForContext<Player>();
 
     public ref Vec2<Fixed> Position => ref position_.Current;
+
+    public Vec2<Fixed>? GetPositionHistory(int index) => position_.GetHistory(index);
+
+    public void Shoot(Vec2<Fixed> direction, List<Player> avatars, int histIndex)
+    {
+        if (position_.GetHistory(histIndex) is not { } position)
+            return;
+
+        foreach (Player player in avatars)
+        {
+            if (ReferenceEquals(player, this))
+                continue;
+
+            if (player.GetPositionHistory(histIndex) is not { } targetPos)
+                continue;
+
+            if (!CheckHit(position, direction, targetPos))
+                continue;
+            
+            player.Position = new(0, 0);
+            player.velocity_ = new(0, 0);
+        }
+    }
 
     public void DrawSelf(Renderer renderer, IEntity to, float t)
     {
@@ -118,7 +151,7 @@ partial class Player : IEntity
         Vector2f toPos = new(tpos.X, tpos.Y);
         Vector2f lerpedPos = fromPos.Lerp(toPos, t);
 
-        renderer.DrawPlayer(entityId_, lerpedPos, Color.Blue);
+        renderer.DrawPlayer(entityId_, lerpedPos, Color.Blue, playerId_);
     }
 
     public long EntityId => entityId_;

@@ -2,6 +2,7 @@
 using Core.Providers;
 using Serilog;
 using SFML.Graphics;
+using SFML.System;
 using SFML.Window;
 using TopDownShooter.Display;
 using static SFML.Window.Keyboard;
@@ -24,7 +25,8 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
     }
 
 
-    bool left_, right_, up_, down_, start_;
+    bool left_, right_, up_, down_, start_, shoot_;
+    int shootX, shootY;
 
     readonly object mutex_ = new();
 
@@ -77,8 +79,25 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
         }
     }
 
-    void MousePressedHandler(object? sender, MouseButtonEventArgs args) { }
+    void MousePressedHandler(object? sender, MouseButtonEventArgs args)
+    {
+        switch (args.Button)
+        {
+            case Mouse.Button.Left:
+                Vector2i center = (Vector2i)displayer_.Window.Size / 2;
+                Vector2i clickPoint = new(args.X, args.Y);
+                Vector2i shootVector = clickPoint - center;
+                shoot_ = true;
+                shootX = shootVector.X;
+                shootY = shootVector.Y;
+                
+                logger.Information("Shooting in direction {Direction}", shootVector);
+                return;
+        }
+    }
+
     void MouseReleasedHandler(object? sender, MouseButtonEventArgs args) { }
+
     void MouseMovedHandler(object? sender, MouseMoveEventArgs args) { }
 
     public ClientInput GetInput()
@@ -92,8 +111,16 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
             {
                 Vertical = (sbyte)vertical,
                 Horizontal = (sbyte)horizontal,
-                Start = start_
+                Start = start_,
+                Shoot = shoot_,
+                ShootX = shootX,
+                ShootY = shootY,
+                ShootFrameOffset = shoot_ ? 1 : 0
             };
+
+            shoot_ = false;
+            shootX = 0;
+            shootY = 0;
 
             if ((horizontal != 0 || vertical != 0) && displayer_.FirstKeypress is null)
                 displayer_.FirstKeypress = Stopwatch.GetTimestamp();

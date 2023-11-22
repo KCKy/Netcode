@@ -48,16 +48,17 @@ sealed class Lerper<T>
             if (!frames_.TryPeek(out Frame targetFrame))
                 return (0, null);
 
+            if (frames_.Count <= 1)
+                delta *= 0.95f;
+
             currentFrameTime_ += delta;
             
-
             if (currentFrameTime_ < targetFrame.Length)
                 return (currentFrameTime_ / targetFrame.Length, targetFrame);
 
             currentFrameTime_ -= targetFrame.Length;
             currentFrame_ = targetFrame;
             frames_.TryDequeue(out _);
-
         }
     }
 
@@ -92,7 +93,8 @@ sealed class Lerper<T>
             DrawImproper(result.t, onEntityDraw);
     }
 
-    public override string ToString() => $"Lerper({frames_.Count})";
+    public int FramesBehind => frames_.Count;
+
     public delegate void EntityDraw(T previous, T current, float t);
     public event EntityDraw? OnEntityDraw;
 }
