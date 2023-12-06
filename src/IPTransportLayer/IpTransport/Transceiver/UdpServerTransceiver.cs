@@ -22,14 +22,34 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
 
     public const int HeaderSize = 0;
 
+    public const int ConnectionResetByPeer = 10054;
+
     public async ValueTask<(Memory<byte> payload, long id)> ReceiveAsync(CancellationToken cancellation)
     {
         var buffer = ArrayPool<byte>.Shared.RentMemory(Udp.MaxDatagramSize);
         const int headerSize = sizeof(long);
 
+
         while (true)
         {
-            SocketReceiveFromResult result = await client_.ReceiveFromAsync(buffer, ipPoint_, cancellation);
+            SocketReceiveFromResult result;
+
+            try
+            {
+                result = await client_.ReceiveFromAsync(buffer, ipPoint_, cancellation);
+            }
+            catch (SocketException ex)
+            {
+                if (ex.ErrorCode == ConnectionResetByPeer)
+                {
+                    // This error seems to make no sense, its not the servers fault the other side closed.
+                    // SOURCE: https://stackoverflow.com/questions/34242622/windows-udp-sockets-recvfrom-fails-with-error-10054
+                    logger_.Warning("Received error " + ex.ErrorCode + "on UDP receive.");
+                    continue;
+                }
+                
+                throw;
+            }
 
             int length = result.ReceivedBytes;
 

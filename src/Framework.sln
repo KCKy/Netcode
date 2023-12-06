@@ -21,7 +21,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MemoryTestGame", "MemoryTes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopDownShooter", "TopDownShooter\TopDownShooter.csproj", "{5EEDC652-F64D-4084-9AD9-614737B2AE00}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extra", "Extra\Extra.csproj", "{4899A159-74B3-42E3-9C3C-4B8510C48CE8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Extra", "Extra\Extra.csproj", "{4899A159-74B3-42E3-9C3C-4B8510C48CE8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
