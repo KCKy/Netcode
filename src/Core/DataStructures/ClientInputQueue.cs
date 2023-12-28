@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using Core.Providers;
 using Core.Utility;
 using Serilog;
@@ -165,15 +166,19 @@ where TClientInput : class, new()
 
             if (frame <= frame_)
             {
+                long now = Stopwatch.GetTimestamp();
+
                 if (frame <= clientInfo.LastAuthorizedInput)
                     return; // No need to notify, notification has already been made.
 
                 clientInfo.LastAuthorizedInput = frame;
 
-                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_);
+                var framePart = Stopwatch.GetElapsedTime(lastFrameUpdate_, timestamp);
+
+                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_) - framePart;
                 OnInputAuthored?.Invoke(id, frame, difference);
 
-                logger_.Debug( "Got late input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
+                logger_.Debug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
                 return;
             }
             
@@ -187,12 +192,14 @@ where TClientInput : class, new()
         }
     }
 
+    long lastFrameUpdate_ = long.MaxValue;
+
     /// <inheritdoc/>
     public Memory<UpdateClientInfo<TClientInput>> ConstructAuthoritativeFrame()
     {
         lock (mutex_)
         {
-            long now = Stopwatch.GetTimestamp();
+            lastFrameUpdate_ = Stopwatch.GetTimestamp();
             
             int length = idToInputs_.Count + removedClients_.Count;
 
@@ -211,8 +218,10 @@ where TClientInput : class, new()
                 if (timestamp is {} value)
                 {
                     queue.LastAuthorizedInput = nextFrame;
-                    TimeSpan difference = Stopwatch.GetElapsedTime(value, now);
+                    TimeSpan difference = Stopwatch.GetElapsedTime(value, lastFrameUpdate_);
                     OnInputAuthored?.Invoke(id, nextFrame, difference);
+
+                    logger_.Verbose("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
                 }
                 
                 i++;

@@ -5,27 +5,14 @@ namespace Core.Providers;
 
 public class BasicSpeedController : ISpeedController
 {
-    public async Task RunAsync(CancellationToken cancelToken = new())
+    readonly BasicClock clock_ = new();
+
+    public Task RunAsync(CancellationToken cancelToken = new()) => clock_.RunAsync(cancelToken);
+
+    public event Action? OnTick
     {
-        while (true)
-        {
-            double period;
-
-            lock (mutex_)
-            {
-                period = currentPeriod_;
-                double speed = 1 / period - targetSpeed_;
-                currentDelta_ += speed * period;
-                Update();
-            }
-            
-            logger_.Verbose("Clock waiting for {Period} seconds.", period);
-            Task delay = Task.Delay(TimeSpan.FromSeconds(period), cancelToken);
-
-            await delay;
-
-            OnTick?.Invoke();
-        }
+        add => clock_.OnTick += value;
+        remove => clock_.OnTick -= value;
     }
 
     double currentPeriod_ = 0;
@@ -46,10 +33,12 @@ public class BasicSpeedController : ISpeedController
 
         double newSpeed = Math.Max(0, deltaSpeed + targetSpeed_);
 
-        // The the update period in accordance to new speed.
+        // The update period in accordance to new speed.
         currentPeriod_ = Math.Min(1 / newSpeed, 1);
 
-        logger_.Verbose("Setting new speed to {currentPeriod_} TPS. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
+        clock_.TargetTPS = CurrentTPS;
+
+        logger_.Verbose("Setting new period to {currentPeriod_} s. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
     }
 
     public double TargetTPS
@@ -126,6 +115,4 @@ public class BasicSpeedController : ISpeedController
                 return 1f / currentPeriod_;
         }
     }
-
-    public event Action? OnTick;
 }

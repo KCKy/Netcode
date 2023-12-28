@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using DefaultTransport.IpTransport;
+﻿using DefaultTransport.IpTransport;
 using MemoryPack;
 using Serilog;
 using System.Net;
@@ -20,7 +19,7 @@ static class Program
 
         Console.WriteLine("Transport Tester");
 
-        while (true)
+        while (true) 
         {
             switch (Command.GetCommand("Set mode ([c]lient, [s]erver): "))
             {
@@ -40,6 +39,8 @@ static class Program
     static async Task RunClientAsync()
     {
         IPEndPoint server = Command.GetEndPoint("Enter server IP address and port: ", new(IPAddress.Loopback, DefaultPort));
+        float delay = Command.GetFloat("Enter latency padding value (s): ", 0.03f);
+
         IpClientTransport transport = new(server);
 
         DefaultClientDispatcher dispatcher = new(transport);
@@ -47,7 +48,7 @@ static class Program
         Client<ClientInput, ServerInput, MockState> client = new(dispatcher, dispatcher, null, new InputProvider())
         {
             UseChecksum = true,
-            PredictDelayMargin = 0.3
+            PredictDelayMargin = delay
         };
 
         client.RunAsync().AssureSuccess();
@@ -100,6 +101,7 @@ sealed partial class ServerInput
 
 sealed class InputProvider : IClientInputProvider<ClientInput>, IServerInputProvider<ServerInput, MockState>
 {
+    const bool DoAction = false;
     const long ActionFrequency = 20;
     long counter_ = 0;
 
@@ -107,7 +109,7 @@ sealed class InputProvider : IClientInputProvider<ClientInput>, IServerInputProv
     {
         return new()
         {
-            ActionCounter = counter_++ / ActionFrequency
+            ActionCounter = counter_++
         };
     }
 
@@ -115,7 +117,7 @@ sealed class InputProvider : IClientInputProvider<ClientInput>, IServerInputProv
     {
         return new()
         {
-            ActionCounter = counter_++ / ActionFrequency
+            ActionCounter = DoAction ? counter_++ / ActionFrequency : 0
         };
     }
 }
@@ -136,5 +138,5 @@ sealed partial class MockState : IGameState<ClientInput, ServerInput>
         return UpdateOutput.Empty;
     }
     
-    public static double DesiredTickRate => 20;
+    public static double DesiredTickRate => 2;
 }
