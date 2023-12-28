@@ -148,6 +148,11 @@ class Displayer : IDisplayer<GameState>
 
     bool debug_ = true;
 
+    double framesBehindSum_ = 0;
+    double framesBehindCounter_ = 0;
+    float framesBehindDelay_ = 1;
+
+
     public bool Update()
     {
         if (!Window.IsOpen)
@@ -161,10 +166,20 @@ class Displayer : IDisplayer<GameState>
         renderer_.StartDraw();
         lerper_.Draw(delta);
 
+        if (framesBehindDelay_ > 10)
+        {
+            framesBehindDelay_ += delta;
+            framesBehindSum_ = 0;
+            framesBehindCounter_ = 0;
+        }
+
+        framesBehindSum_ += (double)lerper_.FramesBehind * delta;
+        framesBehindCounter_ += delta; 
+
         if (debug_)
         {
             debugText_.DisplayedString = $"Draw Delta: {delta:0.00}\n" +
-                                         $"Frames behind: {lerper_.FramesBehind}\n" +
+                                         $"Frames behind avg: {framesBehindSum_ / framesBehindCounter_:0.00}\n" +
                                          $"Reaction: {GetReactionTime(FirstKeypress, FirstReaction):0.00}\n" +
                                          $"Current TPS: {Client?.CurrentTps:0.00}\n" +
                                          $"Target TPS: {Client?.TargetTps:0.00}\n" +

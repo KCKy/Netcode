@@ -85,7 +85,7 @@ public class BasicSpeedController : ISpeedController
         }
     }
     
-    DelayStats<double> stats_ = new(5); // TODO: make this mutable
+    MinStats<double> stats_ = new(5); // TODO: make this mutable
 
     public double CurrentDelta
     {

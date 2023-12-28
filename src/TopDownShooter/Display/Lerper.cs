@@ -36,6 +36,32 @@ sealed class Lerper<T>
     // Seconds we spend drawing the current frame
     float currentFrameTime_ = 0f;
 
+    const double NewCountStrength = 10;
+
+    const double FrameCountTarget = 1.5;
+
+    double weightedFrameCountAverage_ = 0;
+
+    float MakeSmooth(float delta)
+    {
+        int frameCount = frames_.Count;
+
+        double weight = Math.Pow(NewCountStrength, delta);
+
+        double oldAverage = weightedFrameCountAverage_;
+
+        weightedFrameCountAverage_ = (oldAverage + frameCount * (weight - 1)) / weight; 
+        
+        double newSpeed = weightedFrameCountAverage_ / FrameCountTarget;
+
+        //logger_.Debug("P = {P}, X = {X}, D = {D}, f(P, X, D) = {f}, g(P, X, D) = {g}", oldAverage, frameCount, delta, weightedFrameCountAverage_, newSpeed);
+
+        return (float)(delta * newSpeed);
+    }
+
+    readonly ILogger logger_ = Log.ForContext<Lerper<T>>();
+
+
     /// <summary>
     /// Moves the lerper by given delta, switches to next frame if available.
     /// </summary>
@@ -48,10 +74,8 @@ sealed class Lerper<T>
             if (!frames_.TryPeek(out Frame targetFrame))
                 return (0, null);
 
-            if (frames_.Count <= 1)
-                delta *= 0.95f;
-
-            currentFrameTime_ += delta;
+            currentFrameTime_ += MakeSmooth(delta);
+            delta = 0;
             
             if (currentFrameTime_ < targetFrame.Length)
                 return (currentFrameTime_ / targetFrame.Length, targetFrame);

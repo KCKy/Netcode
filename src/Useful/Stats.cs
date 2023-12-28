@@ -2,12 +2,12 @@
 
 namespace Useful;
 
-public struct DelayStats<T> where T : struct, IComparisonOperators<T, T, bool>, IMinMaxValue<T>
+public struct MinStats<T> where T : struct, IComparisonOperators<T, T, bool>, IMinMaxValue<T>
 {
     readonly Queue<T> queue_;
     readonly int length_;
 
-    public DelayStats(int length)
+    public MinStats(int length)
     {
         if (length <= 0)
             throw new ArgumentOutOfRangeException(nameof(length), length, "The length of the window must be positive.");
@@ -25,4 +25,5 @@ public struct DelayStats<T> where T : struct, IComparisonOperators<T, T, bool>, 
         return queue_.Min();
     }
 }
+
 
