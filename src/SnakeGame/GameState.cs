@@ -18,7 +18,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     public const int LevelWidth = 30;
     public const int LevelHeight = 30;
-    public static double DesiredTickRate => 20;
+    public static double DesiredTickRate => 3;
 
     public static Vector2i SpawnPoint = new(0, 0);
 
@@ -69,8 +69,94 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         player.Position = newPos;
     }
 
+    int GetOccupation(int x, int y) =>
+        level_.At(x, y) switch
+        {
+            null => 0,
+            Cell cell => cell.State != Cell.CellState.Newborn ? 1 : 0,
+            _ => 1
+        };
+
+    int CountNeighbors(int x, int y)
+    {
+        int count = GetOccupation(x - 1, y);
+        count += GetOccupation(x + 1, y);
+        count += GetOccupation(x, y - 1);
+        count += GetOccupation(x, y + 1);
+        return count;
+    }
+
+    void UpdateGame()
+    {
+        int width = level_.Width;
+        int height = level_.Height;
+
+        for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
+        {
+            ref ILevelObject? obj = ref level_[x, y];
+
+            switch (obj)
+            {
+                case null:
+                {
+                    if (CountNeighbors(x, y) == 3)
+                        obj = new Cell();
+                    break;
+                }
+                case Cell cell:
+                {
+                    int neighbors = CountNeighbors(x, y);
+                    cell.State = neighbors switch
+                    {
+                        < 2 => Cell.CellState.Dying,
+                        > 3 => Cell.CellState.Dying,
+                        _ => Cell.CellState.Alive
+                    };
+                    break;
+                }
+            }
+        }
+
+        int size = level_.Size;
+
+        for (int i = 0; i < size; i++)
+        {
+            ref ILevelObject? obj = ref level_[i];
+
+            if (obj is not Cell cell)
+                continue;
+
+            if (cell.State == Cell.CellState.Dying)
+                obj = null;
+            cell.State = Cell.CellState.Alive;
+        }
+    }
+
+    void CheckRespawn(ServerInput serverInput)
+    {
+        if (serverInput.CellRespawnEventSeed == 0)
+            return;
+
+        Random random = new(serverInput.CellRespawnEventSeed);
+
+        int size = level_.Size;
+
+        for (int i = 0; i < size; i++)
+        {
+            ref ILevelObject? obj = ref level_[i];
+
+            if (obj is not Cell and not null)
+                continue;
+
+            obj = random.NextSingle() > 0.66 ? new Cell() { State = Cell.CellState.Alive } : null;
+        }
+    }
+
     public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs)
     {
+        UpdateGame();
+
         foreach ((long id, ClientInput input, bool disconnected) in updateInputs.ClientInput.Span)
         {
             if (disconnected)
@@ -98,6 +184,8 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
             TrySpawnPlayer(id, player);
         }
+
+        CheckRespawn(updateInputs.ServerInput);
 
         Frame++;
 

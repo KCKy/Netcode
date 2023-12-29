@@ -10,12 +10,12 @@ static class Program
         Displayer? displayer = null;
 
         Task game = IpGameLoader.Load<GameState, ClientInput, ServerInput>(args,
-            () => (null, null, null),
+            () => (null, new ServerInputProvider(), null),
             () =>
             {
                 displayer = new("Top Down Shooter Demo");
                 ClientInputProvider input = new(displayer.Window);
-                return (displayer, input, null, null);
+                return (displayer, input, null, new ServerInputPredictor());
             },
             c => { },
             s => { },

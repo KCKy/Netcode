@@ -166,6 +166,8 @@ public sealed class Client<TC, TS, TG>
             throw new InvalidOperationException("The auth state has diverged from the server.");
         }
 
+        Logger.Verbose( "State has a correct checksum.");
+
         ArrayPool<byte>.Shared.Return(serialized);
     }
 

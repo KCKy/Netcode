@@ -37,5 +37,5 @@ partial class ClientInput
 [MemoryPackable]
 partial class ServerInput
 {
-    
+    public int CellRespawnEventSeed = 0;
 }
