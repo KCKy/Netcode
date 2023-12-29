@@ -62,10 +62,12 @@ class Renderer
     public void DrawPlayer(long entityId, Vector2f position, Color color, long playerId)
     {
         const int radius = 32;
-        shape_.Origin = new(radius / 2, radius / 2);
+        
         shape_.Position = position - origin_;
+        shape_.Origin = new (radius, radius);
         shape_.FillColor = color;
         shape_.Radius = radius;
+
         shape_.FillColor = PlayerPalette[playerId * PlayerPaletteSpacing].ToColor();
         window_.Draw(shape_);
 

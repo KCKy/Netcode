@@ -6,7 +6,7 @@ using SFML.Window;
 using SfmlExtensions;
 using Useful;
 
-namespace TestGame;
+namespace SnakeGame;
 
 class Displayer : IDisplayer<GameState>
 {

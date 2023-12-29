@@ -2,7 +2,7 @@
 using MemoryPack;
 using SFML.System;
 
-namespace TestGame;
+namespace SnakeGame;
 
 [MemoryPackable]
 sealed partial class Player

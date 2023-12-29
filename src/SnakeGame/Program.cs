@@ -1,7 +1,7 @@
 ﻿using GameCommon;
 using Useful;
 
-namespace TestGame;
+namespace SnakeGame;
 
 static class Program
 {

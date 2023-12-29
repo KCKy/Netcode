@@ -1,7 +1,7 @@
 ﻿using MemoryPack;
 using SFML.System;
 
-namespace TestGame;
+namespace SnakeGame;
 
 
 static class DirectionExtensions

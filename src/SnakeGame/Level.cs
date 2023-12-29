@@ -2,7 +2,7 @@
 using SFML.Graphics;
 using SFML.System;
 
-namespace TestGame;
+namespace SnakeGame;
 
 [MemoryPackable]
 partial struct Level

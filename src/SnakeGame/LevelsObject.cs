@@ -2,7 +2,7 @@
 using SFML.Graphics;
 using SFML.System;
 
-namespace TestGame;
+namespace SnakeGame;
 
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(PlayerAvatar))]

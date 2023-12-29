@@ -1,11 +1,9 @@
 ﻿using MemoryPack;
 using SFML.Graphics;
 using SFML.System;
-using SFML.Window;
-using SFML;
 using SfmlExtensions;
 
-namespace TestGame;
+namespace SnakeGame;
 
 [MemoryPackable]
 sealed partial class PlayerAvatar : ILevelObject
