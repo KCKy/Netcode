@@ -1,11 +1,9 @@
 ﻿using System.Collections.Concurrent;
-using Core.Utility;
 using Serilog;
-using Useful;
 
-namespace TopDownShooter.Display;
+namespace Extra;
 
-sealed class Lerper<T>
+public sealed class Lerper<T>
 {
     record struct Frame(Dictionary<long, T> IdToEntity, float Length);
 

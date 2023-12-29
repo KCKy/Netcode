@@ -7,83 +7,22 @@ using Core.Client;
 using Core.Providers;
 using Core.Server;
 using DefaultTransport.Dispatcher;
+using GameCommon;
 using Useful;
 
 namespace MemoryTestGame;
 
 static class Program
 {
-    static Task Main()
+    static Task Main(string[] args)
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.Console().MinimumLevel.Verbose().CreateLogger();
-
-        Console.WriteLine("Transport Tester");
-
-        while (true) 
-        {
-            switch (Command.GetCommand("Set mode ([c]lient, [s]erver): "))
-            {
-                case 'c':
-                    return RunClientAsync();
-                case 's':
-                    return RunServerAsync();
-                default:
-                    Console.WriteLine("Unknown mode.");
-                    continue;
-            }
-        }
-    }
-
-    const int DefaultPort = 13675;
-
-    static async Task RunClientAsync()
-    {
-        IPEndPoint server = Command.GetEndPoint("Enter server IP address and port: ", new(IPAddress.Loopback, DefaultPort));
-        float delay = Command.GetFloat("Enter latency padding value (s): ", 0.03f);
-
-        IpClientTransport transport = new(server);
-
-        DefaultClientDispatcher dispatcher = new(transport);
-
-        Client<ClientInput, ServerInput, MockState> client = new(dispatcher, dispatcher, null, new InputProvider())
-        {
-            UseChecksum = true,
-            PredictDelayMargin = delay
-        };
-
-        client.RunAsync().AssureSuccess();
-
-        try
-        {
-            await transport.RunAsync();
-        }
-        finally
-        {
-            client.Terminate();
-        }
-    }
-
-    static async Task RunServerAsync()
-    {
-        IPEndPoint local = Command.GetEndPoint("Enter local IP address and port: ", new(IPAddress.Any, DefaultPort));
-        IpServerTransport transport = new(local);
-        DefaultServerDispatcher dispatcher = new(transport);
-
-        Server<ClientInput, ServerInput, MockState> server = new(dispatcher, dispatcher, serverProvider: new InputProvider())
-        {
-            SendChecksum = true
-        };
-
-        server.RunAsync().AssureSuccess();
-
-        try
-        {
-            await transport.RunAsync();
-        }
-        finally
-        {
-            server.Terminate();
-        }
+        return IpGameLoader.Load<MockState, ClientInput, ServerInput>(args, 
+            () => (null, new InputProvider(), null),
+            () => (null, new InputProvider(), null, null),
+            c => { },
+            s => { },
+            c => c.Terminate(),
+            s => s.Terminate());
     }
 }
 

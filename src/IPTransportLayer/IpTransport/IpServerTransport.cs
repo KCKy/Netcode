@@ -44,7 +44,7 @@ public class IpServerTransport : IServerTransport
 
     readonly QueueMessages<(Memory<byte>, long?)> tcpMessages_ = new();
 
-    readonly ILogger logger_ = Log.ForContext<IpServerTransport>();
+    readonly ILogger Logger = Log.ForContext<IpServerTransport>();
     
     void RemoveClient(long id)
     {
@@ -92,11 +92,11 @@ public class IpServerTransport : IServerTransport
         }
         catch (OtherSideEndedException)
         {
-            logger_.Verbose("Client with id {Id} disconnected from server.", id);
+            Logger.Verbose("Client with id {Id} disconnected from server.", id);
         }
         finally
-        {
-            logger_.Verbose("Client with id {Id} was removed.", id);
+        {   
+            Logger.Verbose("Client with id {Id} was removed.", id);
             RemoveClient(id);
             client.Dispose();
         }
@@ -115,7 +115,7 @@ public class IpServerTransport : IServerTransport
         {
             TcpClient client = await listener.AcceptTcpClientAsync(cancellation);
             RunClientAsync(client, id).AssureNoFault();
-            logger_.Verbose("Client connected to server with id {Id}.", id);
+            Logger.Verbose("Client connected to server with id {Id}.", id);
         }
     }
 
@@ -133,7 +133,7 @@ public class IpServerTransport : IServerTransport
 
         Port = endpoint.Port;
 
-        logger_.Information("Began server at {Local} -> {Transformed}.", local_, endpoint);
+        Logger.Information("Began server at {Local} -> {Transformed}.", local_, endpoint);
         
         UdpServerTransceiver udpTransceiver = new(udp, idToConnection_);
         TcpServerTransceiver tcpServerTransceiver = new(idToConnection_);

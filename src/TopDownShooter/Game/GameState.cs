@@ -1,8 +1,6 @@
 ﻿using Core;
-using Core.Utility;
 using MemoryPack;
 using Serilog;
-using Serilog.Core;
 using TopDownShooter.Display;
 using TopDownShooter.Input;
 using Useful;

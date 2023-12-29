@@ -9,7 +9,7 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id
 {
     readonly ConcurrentDictionary<long, ConnectedClient> idToConnection_;
 
-    readonly ILogger logger_ = Log.ForContext<TcpServerTransceiver>();
+    readonly ILogger Logger = Log.ForContext<TcpServerTransceiver>();
 
     public TcpServerTransceiver(ConcurrentDictionary<long, ConnectedClient> clients)
     {
@@ -26,7 +26,7 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id
         }
         catch (Exception ex)
         {
-            logger_.Error(ex, "Client {Id} failed to send.", client.Id);
+            Logger.Error(ex, "Client {Id} failed to send.", client.Id);
             client.Cancellation.Cancel();
         }
     }

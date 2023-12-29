@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using HashDepot;
-using MemoryPack;
+﻿using MemoryPack;
 using SFML.Graphics;
 using SFML.System;
 

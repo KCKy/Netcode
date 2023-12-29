@@ -8,12 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.1-dev-00947" />
     <PackageReference Include="SFML.Net" Version="2.5.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
-    <ProjectReference Include="..\GameCommon\GameCommon.csproj" />
     <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
     <ProjectReference Include="..\SfmlExtensions\SfmlExtensions.csproj" />
     <Content Include="LiberationMono-Regular.ttf">

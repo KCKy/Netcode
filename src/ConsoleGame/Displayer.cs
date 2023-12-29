@@ -3,6 +3,7 @@ using Core.Utility;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
+using SfmlExtensions;
 using Useful;
 
 namespace TestGame;

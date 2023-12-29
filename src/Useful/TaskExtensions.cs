@@ -23,12 +23,12 @@ public static class TaskExtensions
     public static void AssureNoFault(this Task task) => task.ContinueWith(TestTaskNoFault);
 
     /// <summary>
-    /// Called when an assured task fails although it should not.
+    /// Called when an assured task fails, although it should not.
     /// </summary>
     public static event FaultDelegate? OnFault;
 
     /// <summary>
-    /// Called when an assured task is canceled although it should not.
+    /// Called when an assured task is canceled, although it should not.
     /// </summary>
     public static event CanceledDelegate? OnCanceled;
 
@@ -50,7 +50,7 @@ public static class TaskExtensions
             case TaskStatus.Running:
             case TaskStatus.WaitingForChildrenToComplete:
             default:
-                Debug.Assert(false); // This should not happen as the this is a continuation of the task
+                Debug.Assert(false); // This should not happen as this is a continuation of the task
                 return;
         }
     }
@@ -71,7 +71,7 @@ public static class TaskExtensions
             case TaskStatus.Running:
             case TaskStatus.WaitingForChildrenToComplete:
             default:
-                Debug.Assert(false); // This should not happen as the this is a continuation of the task
+                Debug.Assert(false); // This should not happen as this is a continuation of the task
                 return;
         }
     }

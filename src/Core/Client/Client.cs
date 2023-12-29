@@ -15,7 +15,7 @@ public sealed class Client<TC, TS, TG>
     where TS : class, new()
 {
     readonly IStateHolder<TC, TS, TG> authStateHolder_;
-    readonly ILogger logger_ = Log.ForContext<Client<TC, TS, TG>>();
+    readonly ILogger Logger = Log.ForContext<Client<TC, TS, TG>>();
     readonly ISpeedController clock_;
     readonly IDisplayer<TG> displayer_;
     readonly IClientSender sender_;
@@ -70,7 +70,7 @@ public sealed class Client<TC, TS, TG>
         };
 
         PredictDelayMargin = 0.15f;
-        timer_ = new(logger_);
+        timer_ = new();
         SetHandlers();
     }
 
@@ -100,7 +100,7 @@ public sealed class Client<TC, TS, TG>
         authStateHolder_ = authStateHolder;
         predictManager_ = predictManager;
         PredictDelayMargin = 0.15f;
-        timer_ = new(logger_);
+        timer_ = new();
         SetHandlers();
     }
 
@@ -121,7 +121,7 @@ public sealed class Client<TC, TS, TG>
             started_ = true;
         }
 
-        logger_.Information("The client is starting.");
+        Logger.Information("The client is starting.");
 
         try
         {
@@ -137,7 +137,7 @@ public sealed class Client<TC, TS, TG>
             if (terminated_)
                 return;
 
-            logger_.Information("The client is being terminated.");
+            Logger.Information("The client is being terminated.");
 
             terminated_ = true;
 
@@ -162,7 +162,7 @@ public sealed class Client<TC, TS, TG>
         long actual = authStateHolder_.GetChecksum();
         if (actual != check)
         {
-            logger_.Fatal("Desync detected {ActualSum} != {ExpectedSum} - {State}.", actual, check, serialized);
+            Logger.Fatal("Desync detected {ActualSum} != {ExpectedSum} - {State}.", actual, check, serialized);
             throw new InvalidOperationException("The auth state has diverged from the server.");
         }
 
@@ -178,19 +178,19 @@ public sealed class Client<TC, TS, TG>
 
             if (frame < inputFrame)
             {
-                logger_.Warning("Given old undesired input of frame {Frame} for auth update {Index}. Skipping.", inputFrame, frame);
+                Logger.Warning("Given old undesired input of frame {Frame} for auth update {Index}. Skipping.", inputFrame, frame);
                 return;
             }
             
             if (frame > inputFrame)
             {
-                logger_.Fatal("Given newer input of frame {Frame} before receiving for auth update {Index}.", inputFrame, frame);
+                Logger.Fatal("Given newer input of frame {Frame} before receiving for auth update {Index}.", inputFrame, frame);
                 throw new ArgumentException("Given invalid frame for auth update.", nameof(inputFrame));
             }
 
             AssertChecksum(checksum);
             displayer_.AddAuthoritative(frame, authStateHolder_.State);
-            logger_.Verbose("Authorized frame {Frame}", frame);
+            Logger.Verbose("Authorized frame {Frame}", frame);
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
     }
@@ -218,7 +218,7 @@ public sealed class Client<TC, TS, TG>
             if (identified_ || terminated_ || !started_)
                 return;
 
-            logger_.Debug("Client received id {Id}", id);
+            Logger.Debug("Client received id {Id}", id);
 
             identified_ = true;
             Id = id;
@@ -248,11 +248,11 @@ public sealed class Client<TC, TS, TG>
             
             if (authState is null || predictState is null)
             {
-                logger_.Fatal("Received invalid init state {Serialized}.", serializedState);
+                Logger.Fatal("Received invalid init state {Serialized}.", serializedState);
                 throw new ArgumentException("Received invalid init state.", nameof(serializedState));
             }
 
-            logger_.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
+            Logger.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
 
             ArrayPool<byte>.Shared.Return(serializedState);
 
@@ -272,7 +272,7 @@ public sealed class Client<TC, TS, TG>
 
     void AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum)
     {
-        logger_.Verbose("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
+        Logger.Verbose("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
         Authorize(input, checksum, frame);
     }
 

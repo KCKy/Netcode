@@ -26,11 +26,11 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
 
 
     bool left_, right_, up_, down_, start_, shoot_;
-    int shootX, shootY;
+    int shootX_, shootY_;
 
     readonly object mutex_ = new();
 
-    static readonly ILogger logger = Log.ForContext<ClientInputProvider>();
+    readonly ILogger Logger = Log.ForContext<ClientInputProvider>();
 
     void KeyPressedHandler(object? sender, KeyEventArgs args)
     {
@@ -88,10 +88,10 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
                 Vector2i clickPoint = new(args.X, args.Y);
                 Vector2i shootVector = clickPoint - center;
                 shoot_ = true;
-                shootX = shootVector.X;
-                shootY = shootVector.Y;
+                shootX_ = shootVector.X;
+                shootY_ = shootVector.Y;
                 
-                logger.Information("Shooting in direction {Direction}", shootVector);
+                Logger.Information("Shooting in direction {Direction}", shootVector);
                 return;
         }
     }
@@ -113,14 +113,14 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
                 Horizontal = (sbyte)horizontal,
                 Start = start_,
                 Shoot = shoot_,
-                ShootX = shootX,
-                ShootY = shootY,
+                ShootX = shootX_,
+                ShootY = shootY_,
                 ShootFrameOffset = shoot_ ? 1 : 0
             };
 
             shoot_ = false;
-            shootX = 0;
-            shootY = 0;
+            shootX_ = 0;
+            shootY_ = 0;
 
             if ((horizontal != 0 || vertical != 0) && displayer_.FirstKeypress is null)
                 displayer_.FirstKeypress = Stopwatch.GetTimestamp();

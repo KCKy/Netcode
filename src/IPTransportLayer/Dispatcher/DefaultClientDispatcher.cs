@@ -14,7 +14,7 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
     readonly int unreliableHeader_;
     readonly int unreliableMaxMessage_;
 
-    readonly ILogger logger_ = Log.ForContext<DefaultClientDispatcher>();
+    readonly ILogger Logger = Log.ForContext<DefaultClientDispatcher>();
     PacketAggregator aggregator_ = new();
 
     public DefaultClientDispatcher(IClientTransport transport)
@@ -57,7 +57,7 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
                 return;
             case MessageType.ClientInput:
             default:
-                logger_.Error("Received invalid message from server: {Message} of type {Type}.", message, type);
+                Logger.Error("Received invalid message from server: {Message} of type {Type}.", message, type);
                 return;
         }
     }
@@ -131,7 +131,7 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
         Bits.Write(payloadLength, message.Span[sizeof(long)..]);
 
         if (fullLength > unreliableMaxMessage_)
-            logger_.Error("Client sends input message larger than assured to be deliverable: {Actual} > {Valid}", fullLength, unreliableMaxMessage_);
+            Logger.Error("Client sends input message larger than assured to be deliverable: {Actual} > {Valid}", fullLength, unreliableMaxMessage_);
 
         var messageAggregate = aggregator_.AddAndConstruct(message, frame, unreliableHeader_ + sizeof(byte), unreliableMaxMessage_);
         messageAggregate.Span[unreliableHeader_] = (byte)MessageType.ClientInput;

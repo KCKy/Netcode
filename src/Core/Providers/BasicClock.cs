@@ -18,7 +18,7 @@ public sealed class BasicClock : IClock
         set
         {
             targetPeriod_ = (int)(1 / value * Stopwatch.Frequency);
-            logger_.Verbose("New clock target period: {Period} ({Freq} tps)", targetPeriod_, Stopwatch.Frequency);
+            Logger.Verbose("New clock target period: {Period} ({Freq} tps)", targetPeriod_, Stopwatch.Frequency);
             targetTps_ = value;
         }
     }
@@ -31,7 +31,7 @@ public sealed class BasicClock : IClock
         TargetTPS = 1;
     }
 
-    readonly ILogger logger_ = Log.ForContext<BasicClock>();
+    readonly ILogger Logger = Log.ForContext<BasicClock>();
 
     void TimerThread(object? _cancelToken)
     {
@@ -48,6 +48,9 @@ public sealed class BasicClock : IClock
             long delta = current - last;
             long period = targetPeriod_;
 
+            if (cancelToken.IsCancellationRequested)
+                return;
+
             if (delta >= period)
             {
                 last = current - delta + period;
@@ -56,7 +59,7 @@ public sealed class BasicClock : IClock
                     double freq = Stopwatch.Frequency;
                     tickSum += delta;
                     tickCount++;
-                    logger_.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, tickSum / tickCount / freq);
+                    Logger.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, tickSum / tickCount / freq);
 
                     OnTick?.Invoke();
                 }
@@ -71,8 +74,10 @@ public sealed class BasicClock : IClock
     /// </inheritdoc>
     public async Task RunAsync(CancellationToken cancelToken = new())
     {
-        Thread thread = new(TimerThread);
-        thread.Priority = ThreadPriority.Highest;
+        Thread thread = new(TimerThread)
+        {
+            Priority = ThreadPriority.Highest
+        };
         thread.Start(cancelToken);
         await cancelToken;
         throw new OperationCanceledException();

@@ -15,7 +15,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 {
     readonly IStateHolder<TClientInput, TServerInput, TGameState> holder_;
     readonly IClientInputQueue<TClientInput> inputQueue_;
-    readonly ILogger logger_ = Log.ForContext<Server<TClientInput, TServerInput, TGameState>>();
+    readonly ILogger Logger = Log.ForContext<Server<TClientInput, TServerInput, TGameState>>();
     readonly IClock clock_;
     readonly CancellationTokenSource clockCancellation_ = new();
     readonly IServerInputProvider<TServerInput, TGameState> inputProvider_;
@@ -45,7 +45,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         holder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
         clock_ = new BasicClock();
         
-        timer_ = new(logger_);
+        timer_ = new();
         SetHandlers();
     }
 
@@ -65,7 +65,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         clock_ = clock;
         inputPredictor_ = inputPredictor;
 
-        timer_ = new(logger_);
+        timer_ = new();
         SetHandlers();
     }
 
@@ -148,7 +148,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 
         // Trace
         if (!trace.IsEmpty)
-            logger_.Verbose("Finished state update for {Frame} resulting with {State}", frame, trace);
+            Logger.Verbose("Finished state update for {Frame} resulting with {State}", frame, trace);
 
         // Kick?
         if (output.ClientsToTerminate is { Length: > 0 } toTerminate)
@@ -193,7 +193,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         {
             long frame = holder_.Frame;
             sender_.Initialize(id, frame, holder_.State);
-            logger_.Debug("Initialized {Id} for {Frame}.", id, frame);
+            Logger.Debug("Initialized {Id} for {Frame}.", id, frame);
         }
     }
 
@@ -203,7 +203,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 
         if (input is null)
         {
-            logger_.Debug("Got invalid input.");
+            Logger.Debug("Got invalid input.");
             return;
         }
 
@@ -212,7 +212,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 
     void FinishClient(long id)
     {
-        logger_.Debug("Client {Id} disconnected.", id);
+        Logger.Debug("Client {Id} disconnected.", id);
         inputQueue_.RemoveClient(id);
     }
 }

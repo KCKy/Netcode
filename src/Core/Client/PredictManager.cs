@@ -16,7 +16,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     where TC : class, new()
     where TS : class, new()
 {
-    readonly ILogger logger_ = Log.ForContext<PredictManager<TC, TS, TG>>();
+    readonly ILogger Logger = Log.ForContext<PredictManager<TC, TS, TG>>();
 
     /*
      * Mutex ordering to avoid deadlocks:
@@ -84,7 +84,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
 
         predictQueue_.Clear();
 
-        logger_.Debug("Initiated predict state.");
+        Logger.Debug("Initiated predict state.");
     }
 
     /// <inheritdoc/>
@@ -96,7 +96,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         if (predictedInput.Span.SequenceEqual(serializedInput))
             return;
 
-        logger_.Debug("Divergence appeared for frame {Frame}.", frame);
+        Logger.Debug("Divergence appeared for frame {Frame}.", frame);
 
         // We have a divergence, a new replacement is required.
 
@@ -128,7 +128,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     {
         await Task.Yield(); // RunAsync in a different thread
 
-        logger_.Debug("Began replacement for frame {Frame}.", frame);
+        Logger.Debug("Began replacement for frame {Frame}.", frame);
 
         // Wait for earlier replacements to finish
         lock (replacementState_)
@@ -177,20 +177,20 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
                         
                         Debug.Assert(frame == replacementState_.Frame);
 
-                        logger_.Debug("Successfully replaced predict at frame {Frame}.", frame);
+                        Logger.Debug("Successfully replaced predict at frame {Frame}.", frame);
                         return;
                     }
                 }
 
                 if (difference < 0)
                 {
-                    logger_.Error("Predict state is behind replacement state. This should not happen. {Replacement} {Predict}", replacementState_.Frame, predictState_.Frame);
+                    Logger.Error("Predict state is behind replacement state. This should not happen. {Replacement} {Predict}", replacementState_.Frame, predictState_.Frame);
                     return;
                 }
             
                 // Replacement state is behind predict we need to update
 
-                logger_.Debug("Need to catchup {Updates} updates.", difference);
+                Logger.Debug("Need to catchup {Updates} updates.", difference);
 
                 while (difference > 0)
                 {
@@ -238,7 +238,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         Sender.SendInput(frame, localInput);
 
         // Modify
-        logger_.Verbose("Updating predict at frame {frame}.", frame);
+        Logger.Verbose("Updating predict at frame {frame}.", frame);
             
         lock (predictState_)
         {

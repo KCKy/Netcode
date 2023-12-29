@@ -7,11 +7,11 @@ def is_source(filename: str) -> bool:
     
 def is_source_dir(dirname: str) -> bool:
     dirs = re.split('/|\\\\', dirname)
-    return 'bin' not in dirs and 'obj' not in dirs
+    return 'bin' not in dirs and 'obj' not in dirs and '.vs' not in dirs
 
 # -------------------------------------------------
 
-def human_readable(num, suffix="B"):
+def human_readable(num: str, suffix: str = "B") -> str:
     for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
         if abs(num) < 1024.0:
             return f"{num:3.1f} {unit}{suffix}"
@@ -21,28 +21,49 @@ def human_readable(num, suffix="B"):
 total_lines = 0
 total_size = 0
 
-def process_file(file: str, dir: str):
+def file_stats(file: str, dir: str) -> (int, int):
     global total_lines, total_size
 
     if not is_source(file):
-        return
+        return (None, None)
 
     path = os.path.join(dir, file)
 
-    print(path)
-
-    total_size += os.path.getsize(path)
+    size = os.path.getsize(path)
+    total_size += size
     
     with open(path, 'r') as f:
         lines = f.readlines()
-        total_lines += len(lines)
+        lines = len(lines)
+        
+        return (size, lines)
 
 for subdir, dirs, files in os.walk(ROOT):
-    if not is_source_dir(subdir):
+    if not is_source_dir(subdir) or len(files) == 0:
         continue
 
+    dir_lines = 0
+    dir_size = 0
+    
+    file_names = []
+
     for file in files:
-        process_file(file, subdir)
+        (size, lines) = file_stats(file, subdir)
+        if size is None or size <= 0:
+            continue
+
+        file_names.append(file)
+        dir_lines += lines
+        dir_size += size
+
+    total_lines += dir_lines
+    total_size += dir_size
+
+    if dir_lines > 0:
+        print(subdir)
+        print(f"    {", ".join(file_names)}")
+        print(f"    {dir_lines} lines")
+        print(f"    {human_readable(dir_size)}")
 
 print()
 print(f"{total_lines} lines")

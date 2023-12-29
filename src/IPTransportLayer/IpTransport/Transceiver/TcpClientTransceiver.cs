@@ -16,7 +16,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     
     readonly Memory<byte> readLengthBuffer_ = new byte[sizeof(int)];
 
-    readonly ILogger logger_ = Log.ForContext<TcpClientTransceiver>();
+    readonly ILogger Logger = Log.ForContext<TcpClientTransceiver>();
 
     public const int HeaderSize = 0;
 
@@ -49,7 +49,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         await ReadAsync(readLengthBuffer_, cancellation);
         int length = Bits.ReadInt(readLengthBuffer_.Span);
 
-        logger_.Verbose("Received reliable message of length {Length}.", length);
+        Logger.Verbose("Received reliable message of length {Length}.", length);
 
         if (length <= 0)
             return Memory<byte>.Empty;
@@ -68,7 +68,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     {
         int length = message.Length;
 
-        logger_.Verbose("Sending reliable message of length {Length}.", length);
+        Logger.Verbose("Sending reliable message of length {Length}.", length);
 
         Bits.Write(length, writeLengthBuffer_.Span);
 

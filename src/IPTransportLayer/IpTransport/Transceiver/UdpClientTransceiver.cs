@@ -17,7 +17,7 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     readonly IPEndPoint target_;
     readonly Memory<byte> id_;
 
-    readonly ILogger logger_ = Log.ForContext<UdpClientTransceiver>();
+    readonly ILogger Logger = Log.ForContext<UdpClientTransceiver>();
 
     public UdpClientTransceiver(Socket client, IPEndPoint target, long id)
     {
@@ -39,12 +39,12 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 
             int length = result.ReceivedBytes;
 
-            logger_.Verbose("Received unreliable message of length {Length}.", length);
+            Logger.Verbose("Received unreliable message of length {Length}.", length);
 
             if (result.RemoteEndPoint.Equals(target_))
                 return buffer[..length];
 
-            logger_.Debug("The unreliable message did not come from server.");
+            Logger.Debug("The unreliable message did not come from server.");
         } 
     }
 
@@ -52,6 +52,6 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     {
         id_.CopyTo(message); // Put id in header
         await client_.SendToAsync(message, target_, cancellation);
-        logger_.Verbose("Sent unreliable message to target {Target} with length {Length}.", target_, message.Length);
+        Logger.Verbose("Sent unreliable message to target {Target} with length {Length}.", target_, message.Length);
     }
 }

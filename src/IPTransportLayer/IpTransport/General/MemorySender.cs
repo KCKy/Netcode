@@ -10,7 +10,7 @@ struct Sender<TMessages, TMessage>
     readonly ISendProtocol<TMessage> protocol_;
     readonly TMessages messages_;
 
-    readonly ILogger logger_ = Log.ForContext<Sender<TMessages, TMessage>>();
+    readonly ILogger Logger = Log.ForContext<Sender<TMessages, TMessage>>();
 
     public Sender(ISendProtocol<TMessage> protocol, TMessages messages)
     {
@@ -25,18 +25,18 @@ struct Sender<TMessages, TMessage>
             while (true)
             {
                 TMessage message = await messages_.GetAsync(cancellation);
-                logger_.Verbose("Got message {Payload} to send to a remote.", message);
+                Logger.Verbose("Got message {Payload} to send to a remote.", message);
                 await protocol_.SendAsync(message, cancellation);
             }
         }
         catch (OperationCanceledException)
         {
-            logger_.Debug("Sender was canceled.");
+            Logger.Debug("Sender was canceled.");
             throw;
         }
         catch (Exception ex)
         {
-            logger_.Error(ex, "Sender failed.");
+            Logger.Error(ex, "Sender failed.");
             throw;
         }
     }
@@ -48,14 +48,14 @@ struct MemorySender<TMessages>
     readonly ISendProtocol<Memory<byte>> protocol_;
     readonly TMessages messages_;
 
-    readonly ILogger logger_ = Log.ForContext<MemorySender<TMessages>>();
+    readonly ILogger Logger = Log.ForContext<MemorySender<TMessages>>();
 
     public MemorySender(ISendProtocol<Memory<byte>> protocol, TMessages messages)
     {
         protocol_ = protocol;
         messages_ = messages;
     }
-
+    
     public async Task RunAsync(CancellationToken cancellation)
     {
         try
@@ -63,19 +63,19 @@ struct MemorySender<TMessages>
             while (true)
             {
                 var message = await messages_.GetAsync(cancellation);
-                logger_.Verbose("Got message {Payload} to send to a remote.", message);
+                Logger.Verbose("Got message {Payload} to send to a remote.", message);
                 await protocol_.SendAsync(message, cancellation);
                 ArrayPool<byte>.Shared.Return(message);
             }
         }
         catch (OperationCanceledException)
         {
-            logger_.Debug("Sender was canceled.");
+            Logger.Debug("Sender was canceled.");
             throw;
         }
         catch (Exception ex)
         {
-            logger_.Error(ex, "Sender failed.");
+            Logger.Error(ex, "Sender failed.");
             throw;
         }
     }

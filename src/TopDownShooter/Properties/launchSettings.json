@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Client": {
+      "commandName": "Project",
+      "commandLineArgs": "client.cfg\r\n"
+    },
+    "Server": {
+      "commandName": "Project",
+      "commandLineArgs": "server.cfg"
+    }
+  }
+}

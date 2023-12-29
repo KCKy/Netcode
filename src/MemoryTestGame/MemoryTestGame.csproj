@@ -8,11 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0-dev-00923" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\GameCommon\GameCommon.csproj" />
     <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
   </ItemGroup>
 

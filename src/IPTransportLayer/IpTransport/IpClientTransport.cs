@@ -9,7 +9,7 @@ namespace DefaultTransport.IpTransport;
 public sealed class IpClientTransport : IClientTransport
 {
     readonly IPEndPoint target_;
-    readonly ILogger logger_ = Log.ForContext<IpClientTransport>();
+    readonly ILogger Logger = Log.ForContext<IpClientTransport>();
 
     public int ConnectTimeoutMs { get; init; } = 2000;
 
@@ -30,7 +30,7 @@ public sealed class IpClientTransport : IClientTransport
         TcpClient tcp = new(AddressFamily.InterNetwork);
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
-        logger_.Information("Client trying to connect to {Target}.", target_);
+        Logger.Information("Client trying to connect to {Target}.", target_);
 
         await Task.WhenAny(connectTask, Task.Delay(ConnectTimeoutMs, cancellation));
 
@@ -49,7 +49,7 @@ public sealed class IpClientTransport : IClientTransport
         IPEndPoint anyPoint = new(IPAddress.Any, 0);
         udp.Bind(anyPoint);
 
-        logger_.Information("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
+        Logger.Information("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
 
         NetworkStream stream = tcp.GetStream();
 

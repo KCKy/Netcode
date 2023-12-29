@@ -1,8 +1,8 @@
 ﻿using SFML.System;
 
-namespace TestGame;
+namespace SfmlExtensions;
 
-readonly record struct Palette(Vector3f A, Vector3f B, Vector3f C, Vector3f D)
+public readonly record struct Palette(Vector3f A, Vector3f B, Vector3f C, Vector3f D)
 {
     static float Formula(float a, float b, float c, float d, float t) => a + b * MathF.Cos(MathF.Tau * (c * t + d));
 

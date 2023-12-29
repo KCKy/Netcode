@@ -21,8 +21,6 @@ class Renderer
 
     public long Id { get; set; }
 
-    static readonly ILogger Logger = Log.ForContext<Displayer>();
-
     Vector2f origin_ = new();
     Vector2f nextCenter_ = new();
 
@@ -84,7 +82,7 @@ class Displayer : IDisplayer<GameState>
     readonly Lerper<IEntity> lerper_ = new();
     
     readonly Text debugText_;
-    readonly Font Font = new("LiberationMono-Regular.ttf");
+    static readonly Font Font = new("LiberationMono-Regular.ttf");
     public Client<ClientInput, ServerInput, GameState>? Client { get; set; }
 
     public Displayer(string name)
@@ -131,7 +129,7 @@ class Displayer : IDisplayer<GameState>
         lerper_.NextFrame(lastLength);
     }
 
-    static readonly ILogger logger = Log.ForContext<Displayer>();
+    readonly ILogger Logger = Log.ForContext<Displayer>();
 
     readonly Clock clock_ = new();
 
@@ -151,7 +149,6 @@ class Displayer : IDisplayer<GameState>
     double framesBehindSum_ = 0;
     double framesBehindCounter_ = 0;
     float framesBehindDelay_ = 1;
-
 
     public bool Update()
     {

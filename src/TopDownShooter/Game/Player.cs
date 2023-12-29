@@ -1,12 +1,11 @@
 ﻿using MemoryPack;
 using Serilog;
-using Serilog.Core;
 using SFML.Graphics;
 using SFML.System;
 using TopDownShooter.Display;
-using TopDownShooter.Extensions;
 using TopDownShooter.Input;
 using Useful;
+using SfmlExtensions;
 
 namespace TopDownShooter.Game;
 
@@ -77,7 +76,7 @@ partial class Player : IEntity
 
     static readonly Fixed Friction = new(1L << 31);
 
-    static readonly ILogger logger = Log.ForContext<Player>();
+    static readonly ILogger Logger = Log.ForContext<Player>();
 
     public void Update(ClientInput input)
     {
@@ -109,8 +108,6 @@ partial class Player : IEntity
         return diff.Dot(diff) <= ColliderRadiusSquared;
     }
 
-    static readonly ILogger logger_ = Log.ForContext<Player>();
-
     public ref Vec2<Fixed> Position => ref position_.Current;
 
     public Vec2<Fixed>? GetPositionHistory(int index) => position_.GetHistory(index);
@@ -140,7 +137,7 @@ partial class Player : IEntity
     {
         if (to as Player is not { EntityId: var otherID } target || otherID != entityId_)
         {
-            logger_.Error("Invalid lerp target for player.");
+            Logger.Error("Invalid lerp target for player.");
             return;
         }
             

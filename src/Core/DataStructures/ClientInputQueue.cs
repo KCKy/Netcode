@@ -116,7 +116,7 @@ where TClientInput : class, new()
 
     long frame_ = -1;
 
-    readonly ILogger logger_ = Log.ForContext<ClientInputQueue<TClientInput>>();
+    readonly ILogger Logger = Log.ForContext<ClientInputQueue<TClientInput>>();
 
     /// <inheritdoc/>
     public void AddClient(long id)
@@ -125,11 +125,11 @@ where TClientInput : class, new()
         {
             if (!idToInputs_.TryAdd(id, new(predictor_)))
             {
-                logger_.Fatal("To add duplicate client {Id}", id);
+                Logger.Fatal("To add duplicate client {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));
             }
 
-            logger_.Verbose("Added client {Id}.", id);
+            Logger.Verbose("Added client {Id}.", id);
         }
     }
 
@@ -141,13 +141,13 @@ where TClientInput : class, new()
 
             if (!idToInputs_.Remove(id))
             {
-                logger_.Fatal("To remove non-contained {Id}", id);
+                Logger.Fatal("To remove non-contained {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));
             }
 
             removedClients_.Add(id);
 
-            logger_.Verbose("Removed client {Id}.", id);
+            Logger.Verbose("Removed client {Id}.", id);
         }
     }
 
@@ -160,7 +160,7 @@ where TClientInput : class, new()
 
             if (!idToInputs_.TryGetValue(id, out var clientInfo))
             {
-                logger_.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
+                Logger.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
@@ -178,17 +178,17 @@ where TClientInput : class, new()
                 TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_) - framePart;
                 OnInputAuthored?.Invoke(id, frame, difference);
 
-                logger_.Debug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
+                Logger.Debug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
                 return;
             }
             
             if (!clientInfo.TryAdd(frame, input, timestamp))
             {
-                //logger_.Verbose("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
+                //Logger.Verbose("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
-            logger_.Verbose("Got input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
+            Logger.Verbose("Got input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
         }
     }
 
@@ -221,7 +221,7 @@ where TClientInput : class, new()
                     TimeSpan difference = Stopwatch.GetElapsedTime(value, lastFrameUpdate_);
                     OnInputAuthored?.Invoke(id, nextFrame, difference);
 
-                    logger_.Verbose("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
+                    Logger.Verbose("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
                 }
                 
                 i++;
@@ -233,7 +233,7 @@ where TClientInput : class, new()
             frame_ = nextFrame;
             removedClients_.Clear();
 
-            logger_.Verbose("Constructed authoritative frame for {FrameIndex}.", nextFrame);
+            Logger.Verbose("Constructed authoritative frame for {FrameIndex}.", nextFrame);
 
             return frame;
         }

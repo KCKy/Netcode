@@ -34,22 +34,8 @@ partial class ClientInput
     public bool Start = false;
 }
 
-struct FoodSpawnEvent
-{
-    public int X;
-    public int Y;
-    public FoodType Type;
-
-    public FoodSpawnEvent()
-    {
-        X = 0;
-        Y = 0;
-        Type = default;
-    }
-}
-
 [MemoryPackable]
 partial class ServerInput
 {
-    public FoodSpawnEvent? FoodSpawnEvent = null;
+    
 }

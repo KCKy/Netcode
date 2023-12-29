@@ -13,7 +13,7 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
 
     readonly int unreliableHeader_;
     readonly int reliableHeader_;
-    readonly ILogger logger_ = Log.ForContext<DefaultServerDispatcher>();
+    readonly ILogger Logger = Log.ForContext<DefaultServerDispatcher>();
 
     public DefaultServerDispatcher(IServerTransport transport)
     {
@@ -66,7 +66,7 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
                 HandleClientInput(id, message);
                 return;
             default:
-                logger_.Error("Received invalid message from client {Id}: {Message} of type {Type}.", id, message, type);
+                Logger.Error("Received invalid message from client {Id}: {Message} of type {Type}.", id, message, type);
                 return;
         }
     }

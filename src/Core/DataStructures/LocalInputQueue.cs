@@ -38,7 +38,7 @@ where TInput : class
 {
     readonly object mutex_ = new();
     readonly Dictionary<long, TInput> frameToInput_ = new();
-    readonly ILogger logger_ = Log.ForContext<LocalInputQueue<TInput>>();
+    readonly ILogger Logger = Log.ForContext<LocalInputQueue<TInput>>();
 
     long firstFrame_ = 0;
     long lastFrame_ = -1;
@@ -53,7 +53,7 @@ where TInput : class
                 if (frame >= firstFrame_ && frame <= lastFrame_)
                     return frameToInput_[frame];
                 
-                logger_.Debug("To access non-contained ([{First}, {Last}]) {index}.", firstFrame_, lastFrame_, frame);
+                Logger.Debug("To access non-contained ([{First}, {Last}]) {index}.", firstFrame_, lastFrame_, frame);
                 return null;
             }
         }
@@ -71,7 +71,7 @@ where TInput : class
                 throw new ArgumentOutOfRangeException(nameof(frame), frame, "Frame must be consecutive.");
 
             lastFrame_++;
-            logger_.Verbose("Adding local client input for frame {Frame}.", lastFrame_);
+            Logger.Verbose("Adding local client input for frame {Frame}.", lastFrame_);
             frameToInput_.Add(lastFrame_, input);
         }
     }

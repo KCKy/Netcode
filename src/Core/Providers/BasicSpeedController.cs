@@ -22,7 +22,7 @@ public class BasicSpeedController : ISpeedController
 
     public double SmoothingTime { get; init; } = 1;
 
-    readonly ILogger logger_ = Log.ForContext<BasicSpeedController>();
+    readonly ILogger Logger = Log.ForContext<BasicSpeedController>();
     readonly object mutex_ = new();
 
     void Update()
@@ -38,7 +38,7 @@ public class BasicSpeedController : ISpeedController
 
         clock_.TargetTPS = CurrentTPS;
 
-        logger_.Verbose("Setting new period to {currentPeriod_} s. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
+        Logger.Verbose("Setting new period to {currentPeriod_} s. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
     }
 
     public double TargetTPS
@@ -52,7 +52,7 @@ public class BasicSpeedController : ISpeedController
         {
             if (!double.IsPositive(value))
             {
-                logger_.Fatal("Got non-positive {TPS}.", value);
+                Logger.Fatal("Got non-positive {TPS}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, "TPS must be a positive number.");
             }
 
@@ -73,7 +73,7 @@ public class BasicSpeedController : ISpeedController
         {
             if (!double.IsRealNumber(value))
             {
-                logger_.Fatal("Got non-real {TargetDelta}.", value);
+                Logger.Fatal("Got non-real {TargetDelta}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
             }
 
@@ -94,14 +94,14 @@ public class BasicSpeedController : ISpeedController
         {
             if (!double.IsRealNumber(value))
             {
-                logger_.Fatal("Got non-real {CurrentDelta}.", value);
+                Logger.Fatal("Got non-real {CurrentDelta}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
             }
 
             lock (mutex_)
             {
                 currentDelta_ = stats_.Add(value);
-                logger_.Verbose("Updated delta to {Delta}", currentDelta_);
+                Logger.Verbose("Updated delta to {Delta}", currentDelta_);
                 Update();
             }
         }

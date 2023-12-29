@@ -1,9 +1,9 @@
 ﻿using SFML.Graphics;
 using SFML.System;
 
-namespace TestGame;
+namespace SfmlExtensions;
 
-struct Grid
+public struct Grid
 {
     readonly RectangleShape gridShape_ = new()
     {

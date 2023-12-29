@@ -27,21 +27,6 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     public Level level_ = new(LevelWidth, LevelHeight);
 
-    void HandleFoodEvent(in FoodSpawnEvent foodEvent)
-    {
-        ref ILevelObject? place = ref level_[foodEvent.X, foodEvent.Y];
-
-        if (place is not null)
-            return;
-        
-        Food food = new()
-        {
-            FoodType = foodEvent.Type
-        };
-
-        place = food;
-    }
-
     bool TrySpawnPlayer(long id, Player player)
     {
         ref ILevelObject? spawn = ref level_[SpawnPoint];
@@ -115,9 +100,6 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         }
 
         Frame++;
-
-        if (updateInputs.ServerInput.FoodSpawnEvent is { } foodEvent)
-            HandleFoodEvent(foodEvent);
 
         return UpdateOutput.Empty;
     }
