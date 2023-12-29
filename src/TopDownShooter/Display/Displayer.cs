@@ -7,6 +7,7 @@ using Useful;
 using System.Diagnostics;
 using Core.Client;
 using Serilog;
+using SfmlExtensions;
 using TopDownShooter.Input;
 
 namespace TopDownShooter.Display;
@@ -48,6 +49,16 @@ class Renderer
         DrawBackground();
     }
 
+    static readonly Palette PlayerPalette = new()
+    {
+        A = new(.5f, .5f, .5f),
+        B = new(.5f, .5f, .5f),
+        C = new(1, 1, 1),
+        D = new(.8f, .9f, .3f)
+    };
+
+    const float PlayerPaletteSpacing = 0.3f;
+
     public void DrawPlayer(long entityId, Vector2f position, Color color, long playerId)
     {
         const int radius = 32;
@@ -55,6 +66,7 @@ class Renderer
         shape_.Position = position - origin_;
         shape_.FillColor = color;
         shape_.Radius = radius;
+        shape_.FillColor = PlayerPalette[playerId * PlayerPaletteSpacing].ToColor();
         window_.Draw(shape_);
 
         if (playerId == Id)
