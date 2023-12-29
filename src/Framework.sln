@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "CoreTests\Core
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DefaultTransportTests", "DefaultTransportTests\DefaultTransportTests.csproj", "{02AEA535-06E6-4879-9AA5-FFFD02AE8484}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestGame", "ConsoleGame\TestGame.csproj", "{7F88E835-D011-4F25-8EA0-2FE668A87A55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SnakeGame", "ConsoleGame\SnakeGame.csproj", "{7F88E835-D011-4F25-8EA0-2FE668A87A55}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Useful", "Useful\Useful.csproj", "{5CEBB6A6-0203-4C86-8B3A-D703CD737E3D}"
 EndProject
@@ -19,9 +19,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MemoryTestGame", "MemoryTes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopDownShooter", "TopDownShooter\TopDownShooter.csproj", "{5EEDC652-F64D-4084-9AD9-614737B2AE00}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SfmlExtensions", "SfmlExtensions\SfmlExtensions.csproj", "{9539496B-5C80-43D8-AAFC-32D63FC58AD8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SfmlExtensions", "SfmlExtensions\SfmlExtensions.csproj", "{9539496B-5C80-43D8-AAFC-32D63FC58AD8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameCommon", "GameCommon\GameCommon.csproj", "{3496DCAD-3A99-478F-9F94-3AA9C162051E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameCommon", "GameCommon\GameCommon.csproj", "{3496DCAD-3A99-478F-9F94-3AA9C162051E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
