@@ -162,7 +162,7 @@ class Displayer : IDisplayer<GameState>
 
     double framesBehindSum_ = 0;
     double framesBehindCounter_ = 0;
-    float framesBehindDelay_ = 1;
+    const float FramesBehindResetTime = 10;
 
     public bool Update()
     {
@@ -177,15 +177,14 @@ class Displayer : IDisplayer<GameState>
         renderer_.StartDraw();
         lerper_.Draw(delta);
 
-        if (framesBehindDelay_ > 10)
+        if (framesBehindCounter_ > FramesBehindResetTime)
         {
-            framesBehindDelay_ += delta;
             framesBehindSum_ = 0;
             framesBehindCounter_ = 0;
         }
 
         framesBehindSum_ += (double)lerper_.FramesBehind * delta;
-        framesBehindCounter_ += delta; 
+        framesBehindCounter_ += delta;
 
         if (debug_)
         {

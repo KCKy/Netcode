@@ -33,14 +33,14 @@ public sealed class Lerper<T>
     // Seconds we spend drawing the current frame
     float currentFrameTime_ = 0f;
 
-    const double NewCountStrength = 10;
+    double NewCountStrength { get; init; } = 100000;
 
-    const double FrameCountTarget = 1.5;
+    double FrameCountTarget { get; init; } = 1.5;
 
     double weightedFrameCountAverage_ = 0;
 
     float MakeSmooth(float delta)
-    {
+    { 
         int frameCount = frames_.Count;
 
         double weight = Math.Pow(NewCountStrength, delta);
@@ -51,7 +51,7 @@ public sealed class Lerper<T>
         
         double newSpeed = weightedFrameCountAverage_ / FrameCountTarget;
 
-        //Logger.Debug("P = {P}, X = {X}, D = {D}, f(P, X, D) = {f}, g(P, X, D) = {g}", oldAverage, frameCount, delta, weightedFrameCountAverage_, newSpeed);
+        //Log.Debug("P = {P}, X = {X}, D = {D}, f(P, X, D) = {f}, g(P, X, D) = {g}", oldAverage, frameCount, delta, weightedFrameCountAverage_, newSpeed);
 
         return (float)(delta * newSpeed);
     }
@@ -63,13 +63,12 @@ public sealed class Lerper<T>
     /// <returns>The lerp amount between the current frame and the next frame.</returns>
     (float t, Frame? targetFrame) UpdateFrameOffset(float delta)
     {
+        currentFrameTime_ += MakeSmooth(delta);
+
         while (true)
         {
             if (!frames_.TryPeek(out Frame targetFrame))
                 return (0, null);
-
-            currentFrameTime_ += MakeSmooth(delta);
-            delta = 0;
             
             if (currentFrameTime_ < targetFrame.Length)
                 return (currentFrameTime_ / targetFrame.Length, targetFrame);
