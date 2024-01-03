@@ -8,7 +8,7 @@ namespace SnakeGame
         {
             ServerInput ret = new();
 
-            if (info.Frame % 50 == 0)
+            if (info.Frame == 50)
                 ret.CellRespawnEventSeed = new Random().Next() + 1;
 
             return ret;

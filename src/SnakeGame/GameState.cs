@@ -1,6 +1,7 @@
 ﻿using Core;
 using MemoryPack;
 using SFML.System;
+using System.Linq;
 
 namespace SnakeGame;
 
@@ -77,14 +78,11 @@ partial class GameState : IGameState<ClientInput, ServerInput>
             _ => 1
         };
 
-    int CountNeighbors(int x, int y)
-    {
-        int count = GetOccupation(x - 1, y);
-        count += GetOccupation(x + 1, y);
-        count += GetOccupation(x, y - 1);
-        count += GetOccupation(x, y + 1);
-        return count;
-    }
+    int CountNeighbors(int ox, int oy) =>
+        (from x in Enumerable.Range(-1, 3)
+            from y in Enumerable.Range(-1, 3)
+            where (x != 0 || y != 0)
+            select GetOccupation(ox + x, oy + y)).Sum();
 
     void UpdateGame()
     {

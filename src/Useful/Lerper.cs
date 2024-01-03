@@ -39,9 +39,12 @@ public sealed class Lerper<T>
 
     double weightedFrameCountAverage_ = 0;
 
+    int nextFrameCount_ = 0;
+
     float MakeSmooth(float delta)
-    { 
-        int frameCount = frames_.Count;
+    {
+        int frameCount = nextFrameCount_;
+        nextFrameCount_ = frames_.Count;
 
         double weight = Math.Pow(NewCountStrength, delta);
 
