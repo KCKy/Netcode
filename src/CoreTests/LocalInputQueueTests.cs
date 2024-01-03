@@ -1,0 +1,77 @@
+﻿using Core.DataStructures;
+
+namespace CoreTests;
+
+public class LocalInputQueueTests
+{
+    record MockData(int Value);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(42)]
+    public void Empty(int startValue)
+    {
+        LocalInputQueue<MockData> queue = new();
+
+        queue.Set(startValue);
+
+        // Queue is empty
+        Assert.Null(queue[0]);
+        Assert.Null(queue[1]);
+        Assert.Null(queue[-1]);
+        Assert.Null(queue[long.MaxValue]);
+        Assert.Null(queue[long.MinValue]);
+        Assert.Null(queue[42]);
+        Assert.Null(queue[-42]);
+    }
+
+    [Theory]
+    [InlineData(0, 50)]
+    [InlineData(2, 50)]
+    [InlineData(42, 50)]
+    public void Add(int startValue, int count)
+    {
+        LocalInputQueue<MockData> queue = new();
+
+        queue.Set(startValue - 1);
+
+        foreach (MockData data in from x in Enumerable.Range(startValue, count) select new MockData(x))
+        {
+            queue.Add(data, data.Value);
+
+            for (int i = startValue; i <= data.Value; i++)
+                Assert.Equal(i, queue[i]?.Value);
+
+            Assert.Null(queue[startValue - 1]);
+            Assert.Null(queue[data.Value + 1]);
+        }
+    }
+
+    [Theory]
+    [InlineData(0, 50)]
+    [InlineData(2, 50)]
+    [InlineData(42, 50)]
+    public void Pop(int startValue, int count)
+    {
+        LocalInputQueue<MockData> queue = new();
+
+        queue.Set(startValue - 1);
+
+        foreach (MockData data in from x in Enumerable.Range(startValue, count) select new MockData(x))
+            queue.Add(data, data.Value);
+
+        int end = startValue + count;
+
+        for (int i = startValue; i < end; i++)
+        {
+            queue.Pop(i);
+
+            for (int j = i + 1; j < end; j++)
+                Assert.Equal(j, queue[j]?.Value);
+
+            Assert.Null(queue[i]);
+            Assert.Null(queue[end]);
+        }
+    }
+}

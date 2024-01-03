@@ -9,6 +9,7 @@ using Core.Client;
 using Serilog;
 using SfmlExtensions;
 using TopDownShooter.Input;
+using Clock = SFML.System.Clock;
 
 namespace TopDownShooter.Display;
 

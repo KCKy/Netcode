@@ -3,9 +3,9 @@ using Useful;
 
 namespace Core.Providers;
 
-public class BasicSpeedController : ISpeedController
+public class SpeedController : ISpeedController
 {
-    readonly BasicClock clock_ = new();
+    readonly Clock clock_ = new();
 
     public Task RunAsync(CancellationToken cancelToken = new()) => clock_.RunAsync(cancelToken);
 
@@ -22,7 +22,7 @@ public class BasicSpeedController : ISpeedController
 
     public double SmoothingTime { get; init; } = 1;
 
-    readonly ILogger Logger = Log.ForContext<BasicSpeedController>();
+    readonly ILogger Logger = Log.ForContext<SpeedController>();
     readonly object mutex_ = new();
 
     void Update()

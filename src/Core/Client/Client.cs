@@ -51,7 +51,7 @@ public sealed class Client<TC, TS, TG>
         sender_ = sender;
         receiver_ = receiver;
         displayer_ = displayer ?? new DefaultDisplayer<TG>();
-        clock_ = new BasicSpeedController()
+        clock_ = new SpeedController()
         {
             TargetTPS = TG.DesiredTickRate
         };

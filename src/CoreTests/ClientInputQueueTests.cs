@@ -12,11 +12,11 @@ public class ClientInputQueueTests
     [InlineData(42L)]
     [InlineData(long.MaxValue)]
     [InlineData(long.MinValue)]
-    public void BasicTest(long id)
+    public void Basic(long id)
     {
-        ClientInputQueue<MockInput> queue = new(1, new DefaultClientInputPredictor<MockInput>());
+        ClientInputQueue<MockStructure> queue = new(1, new DefaultClientInputPredictor<MockStructure>());
         
-        MockInput thirdInput = new(1, 1, 1, 1);
+        MockStructure thirdStructure = new(1, 1, 1, 1);
 
         // -1
         Assert.Equal(-1, queue.Frame);
@@ -30,7 +30,7 @@ public class ClientInputQueueTests
         queue.AddClient(id);
         frame = queue.ConstructAuthoritativeFrame();
         queue.AddInput(id, 0, new());
-        queue.AddInput(id, 2, thirdInput);
+        queue.AddInput(id, 2, thirdStructure);
 
         Assert.Equal(1, queue.Frame);
         Assert.Equal(1, frame.Length);
@@ -41,7 +41,7 @@ public class ClientInputQueueTests
         
         Assert.Equal(2, queue.Frame);
         Assert.Equal(1, frame.Length);
-        frame.Span[0].Assert(id, thirdInput, false);
+        frame.Span[0].Assert(id, thirdStructure, false);
 
         // 3
         queue.RemoveClient(id);
@@ -56,6 +56,72 @@ public class ClientInputQueueTests
 
         Assert.Equal(4, queue.Frame);
         Assert.True(frame.IsEmpty);
+    }
 
+    class InputAuthCapturer
+    {
+        public long? IdCapture = null;
+        public long? FrameCapture = null;
+        public TimeSpan? DifferenceCapture = null;
+
+        public void Capture(long id, long frame, TimeSpan difference)
+        {
+            IdCapture = id;
+            FrameCapture = frame;
+            DifferenceCapture = difference;
+        }
+
+        public void AssertValid(long id, long frame, TimeSpan min, TimeSpan max)
+        {
+            Assert.Equal(id, IdCapture);
+            Assert.Equal(frame, FrameCapture);
+            Assert.NotNull(DifferenceCapture);
+            Assert.InRange(DifferenceCapture.Value, min, max);
+        }
+    }
+
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(-1L)]
+    [InlineData(1L)]
+    [InlineData(42L)]
+    [InlineData(long.MaxValue)]
+    [InlineData(long.MinValue)]
+    public void InputAuthorLate(long id)
+    {
+        ClientInputQueue<MockStructure> queue = new(1, new DefaultClientInputPredictor<MockStructure>());
+        InputAuthCapturer capturer = new();
+
+        queue.OnInputAuthored += capturer.Capture;
+
+        queue.AddClient(id);
+
+        queue.ConstructAuthoritativeFrame(); // Failed to send frame in time
+
+        queue.AddInput(id, 0, new()); // Send late input
+
+        capturer.AssertValid(id, 0, TimeSpan.MinValue, TimeSpan.Zero);
+    }
+
+    [Theory]
+    [InlineData(0L, 1)]
+    [InlineData(-1L, 42)]
+    [InlineData(1L, 1)]
+    [InlineData(42L, 42)]
+    [InlineData(long.MaxValue, 1)]
+    [InlineData(long.MinValue, 42)]
+    public void InputAuthorInTime(long id, int tps)
+    {
+        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>());
+        InputAuthCapturer capturer = new();
+        queue.OnInputAuthored += capturer.Capture;
+
+        queue.AddClient(id);
+
+        queue.AddInput(id, 0, new()); // Send in time input
+
+        queue.ConstructAuthoritativeFrame();
+
+        capturer.AssertValid(id, 0, TimeSpan.Zero, TimeSpan.MaxValue);
     }
 }

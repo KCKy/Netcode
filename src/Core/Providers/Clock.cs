@@ -4,7 +4,7 @@ using Useful;
 
 namespace Core.Providers;
 
-public sealed class BasicClock : IClock
+public sealed class Clock : IClock
 {
     /// </inheritdoc>
     public event Action? OnTick;
@@ -18,12 +18,12 @@ public sealed class BasicClock : IClock
         set
         {
             targetPeriod_ = (int)(1 / value * Stopwatch.Frequency);
-            Logger.Verbose("New clock target period: {Period} ({Freq} tps)", targetPeriod_, Stopwatch.Frequency);
+            logger_.Verbose("New clock target period: {Period} ({Freq} tps)", targetPeriod_, Stopwatch.Frequency);
             targetTps_ = value;
         }
     }
 
-    public BasicClock()
+    public Clock()
     {
         if (!Stopwatch.IsHighResolution)
             throw new PlatformNotSupportedException("Platform does not support precision timing.");
@@ -31,7 +31,7 @@ public sealed class BasicClock : IClock
         TargetTPS = 1;
     }
 
-    readonly ILogger Logger = Log.ForContext<BasicClock>();
+    readonly ILogger logger_ = Log.ForContext<Clock>();
 
     void TimerThread(object? _cancelToken)
     {
@@ -59,7 +59,7 @@ public sealed class BasicClock : IClock
                     double freq = Stopwatch.Frequency;
                     tickSum += delta;
                     tickCount++;
-                    Logger.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, tickSum / tickCount / freq);
+                    logger_.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, (double)tickSum / tickCount / freq);
 
                     OnTick?.Invoke();
                 }

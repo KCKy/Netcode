@@ -43,7 +43,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         inputPredictor_ = inputPredictor ?? new DefaultClientInputPredictor<TClientInput>();
         inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate, inputPredictor_);
         holder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
-        clock_ = new BasicClock();
+        clock_ = new Clock();
         
         timer_ = new();
         SetHandlers();
