@@ -3,7 +3,6 @@ using System.Xml.Serialization;
 
 namespace Useful;
 
-
 /// <summary>
 /// Collection of methods for working with setting files.
 /// </summary>

@@ -25,5 +25,3 @@ public struct MinStats<T> where T : struct, IComparisonOperators<T, T, bool>, IM
         return queue_.Min();
     }
 }
-
-

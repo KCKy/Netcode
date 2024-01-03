@@ -22,7 +22,7 @@ public static class ArrayPoolExtensions
     /// Return the array to an array pool.
     /// </summary>
     /// <remarks>
-    /// The array is cleared if it contain references in some way.
+    /// The array is cleared if it contains references in some way.
     /// </remarks>
     /// <param name="pool"></param>
     /// <param name="memory"></param>

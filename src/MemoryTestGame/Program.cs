@@ -1,14 +1,7 @@
-﻿using DefaultTransport.IpTransport;
-using MemoryPack;
-using Serilog;
-using System.Net;
+﻿using MemoryPack;
 using Core;
-using Core.Client;
 using Core.Providers;
-using Core.Server;
-using DefaultTransport.Dispatcher;
 using GameCommon;
-using Useful;
 
 namespace MemoryTestGame;
 

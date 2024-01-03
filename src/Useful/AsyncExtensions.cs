@@ -30,8 +30,8 @@ public static class AsyncExtensions
         {
             if (IsCompleted)
                 throw new OperationCanceledException();
-            else
-                throw new InvalidOperationException();
+            
+            throw new InvalidOperationException();
         }
 
         public readonly bool IsCompleted => CancellationToken.IsCancellationRequested;
