@@ -215,7 +215,7 @@ where TClientInput : class, new()
                 long? timestamp = queue.WriteUpdateInfo(nextFrame, ref span[i]);
                 span[i].Id = id;
 
-                if (timestamp is {} value)
+                if (timestamp is { } value)
                 {
                     queue.LastAuthorizedInput = nextFrame;
                     TimeSpan difference = Stopwatch.GetElapsedTime(value, lastFrameUpdate_);
@@ -228,8 +228,11 @@ where TClientInput : class, new()
             }
 
             foreach (long id in removedClients_)
+            {
                 span[i] = new(id, new(), true);
-
+                i++;
+            }
+            
             frame_ = nextFrame;
             removedClients_.Clear();
 

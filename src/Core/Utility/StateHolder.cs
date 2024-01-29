@@ -1,4 +1,5 @@
 ﻿using HashDepot;
+using Serilog;
 using Useful;
 
 namespace Core.Utility;
@@ -23,6 +24,7 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
     Memory<byte>? serialized_ = null;
     long? checksum_ = null;
     TG state_ = new();
+    readonly ILogger logger_ = Log.ForContext<StateHolder<TC, TS, TG>>();
 
     readonly PooledBufferWriter<byte> writer_ = new();
 
@@ -58,6 +60,15 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
         Frame++;
         checksum_ = null;
         serialized_ = null;
-        return State.Update(input);
+        try
+        {
+            return State.Update(input);
+        }
+        catch (Exception ex)
+        {
+            logger_.Error(ex, "State update failed with exception!");
+        }
+
+        return UpdateOutput.Empty;
     }
 }

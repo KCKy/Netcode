@@ -133,6 +133,11 @@ public class IpGameLoader
                 {
                     await transport.RunAsync();
                 }
+                catch (Exception ex)
+                {
+                    logger.Information("Client transport stopped with exception {Exception}.", ex);
+                    throw;
+                }
                 finally
                 {
                     clientTransportEndCallback(client);
@@ -155,10 +160,15 @@ public class IpGameLoader
                 serverStartCallback(server);
                 logger.Information("Starting server on {local}", local);
                 server.RunAsync().AssureSuccess();
-                
+
                 try
                 {
                     await transport.RunAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.Information("Server transport stopped with exception {Exception}.", ex);
+                    throw;
                 }
                 finally
                 {
