@@ -9,10 +9,28 @@ using Useful;
 
 namespace Core.Client;
 
-public sealed class Client<TC, TS, TG>
+public interface IClient
+{
+    double CurrentTps { get; }
+    double CurrentDelta { get; }
+    double TargetDelta { get; }
+    double TargetTps { get; }
+    double PredictDelayMargin { get; set; }
+    long Id { get; }
+    bool TraceState { get; set; }
+    bool UseChecksum { get; set; }
+    bool TraceFrameTime { get; init; }
+    long AuthFrame { get; }
+    long PredictFrame { get; }
+    Task RunAsync();
+    void Terminate();
+}
+
+public sealed class Client<TC, TS, TG> : IClient
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
+
 {
     readonly IStateHolder<TC, TS, TG> authStateHolder_;
     readonly ILogger Logger = Log.ForContext<Client<TC, TS, TG>>();
@@ -110,6 +128,17 @@ public sealed class Client<TC, TS, TG>
     public bool UseChecksum { get; set; }
 
     public bool TraceFrameTime { get; init; }
+
+    public long AuthFrame
+    {
+        get
+        {
+            lock (authStateHolder_)
+                return authStateHolder_.Frame;
+        }
+    }
+
+    public long PredictFrame => predictManager_.Frame;
 
     public async Task RunAsync()
     {

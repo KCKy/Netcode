@@ -87,6 +87,15 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         Logger.Debug("Initiated predict state.");
     }
 
+    public long Frame
+    {
+        get
+        {
+            lock (predictState_)
+                return predictState_.Frame;
+        }
+    }
+
     /// <inheritdoc/>
     public void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TC, TS> input)
     {

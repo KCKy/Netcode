@@ -24,7 +24,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
     public static Vector2i SpawnPoint = new(0, 0);
 
     [MemoryPackInclude]
-    public Dictionary<long, Player> IdToPlayer = new();
+    public SortedDictionary<long, Player> IdToPlayer = new();
 
     public Level level_ = new(LevelWidth, LevelHeight);
 

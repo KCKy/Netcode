@@ -49,4 +49,9 @@ interface IPredictManager<TC, TS, TG>
     /// This shall be set exactly once before <see cref="InformAuthInput"/> or <see cref="Tick"/> is called.
     /// </remarks>
     long LocalId { set; }
+
+    /// <summary>
+    /// The current frame of predict simulation.
+    /// </summary>
+    long Frame { get; }
 }

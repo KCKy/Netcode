@@ -10,7 +10,7 @@ namespace TopDownShooter.Game;
 [MemoryPackable]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
-    [MemoryPackInclude] Dictionary<long, ClientInfo> idToClient_ = new();
+    [MemoryPackInclude] SortedDictionary<long, ClientInfo> idToClient_ = new();
     [MemoryPackInclude] long lastConnected_ = long.MinValue;
     [MemoryPackInclude] long entityCounter_ = 0;
 

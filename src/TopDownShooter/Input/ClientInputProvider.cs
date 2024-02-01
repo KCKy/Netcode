@@ -122,9 +122,6 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
             shootX_ = 0;
             shootY_ = 0;
 
-            if ((horizontal != 0 || vertical != 0) && displayer_.FirstKeypress is null)
-                displayer_.FirstKeypress = Stopwatch.GetTimestamp();
-
             return input;
         }
     }

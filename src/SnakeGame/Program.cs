@@ -17,7 +17,7 @@ static class Program
                 ClientInputProvider input = new(displayer.Window);
                 return (displayer, input, null, new ServerInputPredictor());
             },
-            c => { },
+            c => displayer!.Client = c,
             s => { },
             c => c.Terminate(),
             s => s.Terminate());
@@ -26,7 +26,8 @@ static class Program
             return game;
         
         game.AssureSuccess();
-        while (true)
-            displayer.Update();
+        while (displayer.Update()) { }
+
+        return Task.CompletedTask;
     }
 }

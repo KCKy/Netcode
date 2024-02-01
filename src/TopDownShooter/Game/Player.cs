@@ -74,7 +74,7 @@ partial class Player : IEntity
     static readonly Fixed MovementSpeed = 10;
     static readonly Fixed ColliderRadiusSquared = 32 * 32;
 
-    static readonly Fixed Friction = new(1L << 31);
+    static readonly Fixed Friction = ((Fixed)2).Reciprocal;
 
     static readonly ILogger Logger = Log.ForContext<Player>();
 
@@ -119,9 +119,6 @@ partial class Player : IEntity
 
         foreach (Player player in avatars)
         {
-            if (ReferenceEquals(player, this))
-                continue;
-
             if (player.GetPositionHistory(histIndex) is not { } targetPos)
                 continue;
 
