@@ -60,7 +60,8 @@ public class ClockTests
     [Theory]
     [InlineData(5d, 0.01, 0.001, 0.0005)]
     [InlineData(5d, 0.05, 0.001, 0.0005)]
-    [InlineData(15d, 0.5, 0.001, 0.0005)]
+    [InlineData(5d, 0.025, 0.001, 0.0005)]
+    [InlineData(10d, 0.5, 0.001, 0.0005)]
     public async Task Basic(double time, double expectedMean, double meanError, double deviationError)
     {
         Clock clock = new()

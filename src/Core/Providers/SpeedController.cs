@@ -85,7 +85,7 @@ public class SpeedController : ISpeedController
         }
     }
     
-    MinStats<double> stats_ = new(5); // TODO: make this mutable
+    MinStatsWindow<double> statsWindow_ = new(50); // TODO: make this mutable
 
     public double CurrentDelta
     {
@@ -100,7 +100,7 @@ public class SpeedController : ISpeedController
 
             lock (mutex_)
             {
-                currentDelta_ = stats_.Add(value);
+                currentDelta_ = statsWindow_.Add(value);
                 Logger.Verbose("Updated delta to {Delta}", currentDelta_);
                 Update();
             }

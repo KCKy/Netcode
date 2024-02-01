@@ -11,6 +11,14 @@ public sealed class Clock : IClock
     
     volatile int targetPeriod_;
     double targetTps_;
+    static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
+    readonly long clockQuantumTicks_ = TicksPerMs * 15;
+
+    public TimeSpan ClockQuantumSecs
+    {
+        get => TimeSpan.FromSeconds(clockQuantumTicks_ / (double)Stopwatch.Frequency);
+        init => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
+    }
 
     public double TargetTPS
     {
@@ -51,9 +59,11 @@ public sealed class Clock : IClock
             if (cancelToken.IsCancellationRequested)
                 return;
 
-            if (delta >= period)
+            long remaining = period - delta;
+
+            if (remaining <= 0)
             {
-                last = current - delta + period;
+                last = current + remaining;
 
                 {
                     double freq = Stopwatch.Frequency;
@@ -67,7 +77,8 @@ public sealed class Clock : IClock
                 continue;
             }
 
-            Thread.Yield();
+            long wait = Math.Max(0, remaining - clockQuantumTicks_);
+            Thread.Sleep((int)(wait / TicksPerMs));
         }
     }
 
