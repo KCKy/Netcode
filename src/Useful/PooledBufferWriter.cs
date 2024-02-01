@@ -3,8 +3,14 @@ using System.Numerics;
 
 namespace Useful;
 
-// Modified version of ArrayPoolBufferWriter{T}.cs from https://github.com/CommunityToolkit/dotnet
-
+/// <summary>
+/// Implementation of <see cref="IBufferWriter"></see> which uses <see cref="ArrayPool.Shared"></see> to allocate new buffers.
+/// Also provides ways to take ownership to extract a written buffer.
+/// </summary>
+/// <remarks>
+/// This a modified version of ArrayPoolBufferWriter{T}.cs from https://github.com/CommunityToolkit/dotnet.
+/// </remarks>
+/// <typeparam name="T">The type if the written element.</typeparam>
 public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
 {
     const int DefaultInitialBufferSize = 256;
@@ -15,14 +21,34 @@ public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
 
     int index_ = 0;
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="initialCapacity">The initial capacity of the writing buffer.</param>
     public PooledBufferWriter(int initialCapacity = DefaultInitialBufferSize)
     {
         array_ = pool_.Rent(initialCapacity);
     }
 
+    /// <summary>
+    /// Access the written data.
+    /// </summary>
     public ReadOnlyMemory<T> WrittenMemory => array_.AsMemory(0, index_);
+    
+    /// <summary>
+    /// Access the written data.
+    /// </summary>
     public ReadOnlySpan<T> WrittenSpan => array_.AsSpan(0, index_);
 
+    /// <summary>
+    /// Take ownership of the written data. The writer is going to write to a new buffer as if just created.
+    /// </summary>
+    /// <returns>
+    /// The memory spanning the written data.
+    /// </returns>
+    /// <remarks>
+    /// The memory is backed by an array from the array pool. It is the caller's responsibility to return it to the pool.
+    /// </remarks>
     public Memory<T> Extract()
     {
         var old = array_.AsMemory(0, index_);
@@ -33,11 +59,23 @@ public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
         return old;
     }
 
+    /// <summary>
+    /// Throw away the currently written data.
+    /// </summary>
     public void Reset()
     {
         index_ = 0;
     }
 
+    /// <summary>
+    /// Does the same as <see cref="Extract"></see> but additionally reserves a new buffer of the same size.
+    /// </summary>
+    /// <returns>
+    /// The memory spanning the written data.
+    /// </returns>
+    /// <remarks>
+    /// The memory is backed by an array from the array pool. It is the caller's responsibility to return it to the pool.
+    /// </remarks>
     public Memory<T> ExtractAndReplace()
     {
         var old = array_.AsMemory(0, index_);
@@ -48,6 +86,9 @@ public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
         return old;
     }
 
+    /// <summary>
+    /// Throw away the currently written data and return the backing buffer to the pool.
+    /// </summary>
     public void Empty()
     {
         var array = array_;
@@ -58,6 +99,7 @@ public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
         array_ = Array.Empty<T>();
     }
 
+    /// <inheritdoc/>
     public void Advance(int count)
     {
         var array = array_;
@@ -71,12 +113,14 @@ public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
         index_ += count;
     }
 
+    /// <inheritdoc/>
     public Memory<T> GetMemory(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
         return array_.AsMemory(index_);
     }
 
+    /// <inheritdoc/>
     public Span<T> GetSpan(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
@@ -143,5 +187,8 @@ public sealed class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
         array = newArray;
     }
     
+    /// <summary>
+    /// Returns the backing buffer to the pool.
+    /// </summary>
     public void Dispose() => Empty();
 }

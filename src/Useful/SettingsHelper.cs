@@ -55,13 +55,13 @@ public static class SettingsHelper
     public static Result<TextReader> HandleSettingsOpen(string path, Action<TextWriter> createDefaultCallback)
     {
         var open = OpenRead(path);
-        if (open.Value is TextReader reader)
+        if (open.Value is { } reader)
             return reader;
 
         string firstPart = $"Settings file {path} could not be open:\n{open.Error}";
 
         var write = OpenWrite(path);
-        if (write.Value is not TextWriter writer)
+        if (write.Value is not { } writer)
         {
             return Result<TextReader>.FromFailure(firstPart + write.Error);
         }
@@ -72,7 +72,7 @@ public static class SettingsHelper
         }
         catch (Exception ex)
         {
-            return Result<TextReader>.FromFailure($"{firstPart}The module crashed. Default config could be not created.\n{ex}.");
+            return Result<TextReader>.FromFailure($"{firstPart} Default config could be not created due to an exception: {ex}.");
         }
 
         return Result<TextReader>.FromFailure(firstPart + "Default config created. Please set it up.");

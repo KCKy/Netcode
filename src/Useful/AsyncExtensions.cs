@@ -3,21 +3,32 @@ using System.Runtime.CompilerServices;
 
 namespace Useful;
 
-// SOURCE: https://medium.com/@cilliemalan/how-to-await-a-cancellation-token-in-c-cbfc88f28fa2
 
+/// <summary>
+/// Extensions which provide awaitability to CancellationTokens.
+/// </summary>
+/// <example>
+/// <code>
+/// CancellationToken token = ...;
+/// await token; // Wait until token is cancelled.
+/// </code>
+/// </example>
+/// <remarks>
+/// This was adapted from https://medium.com/@cilliemalan/how-to-await-a-cancellation-token-in-c-cbfc88f28fa2.
+/// </remarks>
 public static class AsyncExtensions
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static CancellationTokenAwaiter GetAwaiter(this CancellationToken ct)
     {
-        return new CancellationTokenAwaiter
+        return new()
         {
             CancellationToken = ct
         };
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public struct CancellationTokenAwaiter : INotifyCompletion, ICriticalNotifyCompletion
+    public struct CancellationTokenAwaiter : ICriticalNotifyCompletion
     {
         public CancellationTokenAwaiter(CancellationToken cancellationToken)
         {

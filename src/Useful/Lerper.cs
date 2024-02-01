@@ -2,13 +2,20 @@
 
 namespace Useful;
 
-public sealed class Lerper<T>
+public interface ILerper
+{
+    void NextFrame(float length);
+    void Draw(float delta);
+    int FramesBehind { get; }
+}
+
+public sealed class Lerper<T> : ILerper
 {
     record struct Frame(Dictionary<long, T> IdToEntity, float Length);
 
     readonly ConcurrentQueue<Frame> frames_ = new();
 
-    Frame collectedFrame_ = new(new(), 0); // Frame which is correctly being constructed.
+    Frame collectedFrame_ = new(new(), 0); // Frame which is currently being constructed.
 
     Frame currentFrame_ = new(new(), 0); // The current frame we are lerping from.
 
@@ -54,8 +61,6 @@ public sealed class Lerper<T>
         
         double newSpeed = weightedFrameCountAverage_ / FrameCountTarget;
 
-        //Log.Debug("P = {P}, X = {X}, D = {D}, f(P, X, D) = {f}, g(P, X, D) = {g}", oldAverage, frameCount, delta, weightedFrameCountAverage_, newSpeed);
-
         return (float)(delta * newSpeed);
     }
 
@@ -95,10 +100,8 @@ public sealed class Lerper<T>
 
     void DrawImproper(float t, EntityDraw onEntityDraw)
     {
-        foreach ((long id, T from) in currentFrame_.IdToEntity)
-        {
+        foreach ((_, T from) in currentFrame_.IdToEntity)
             onEntityDraw(from, from, t);
-        }
     }
 
     public void Draw(float delta)

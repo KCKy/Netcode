@@ -15,17 +15,17 @@ public static class ArrayPoolExtensions
     /// <param name="pool">The pool to rent from.</param>
     /// <param name="size">The required size of the array.</param>
     /// <returns>Memory of exactly <see cref="size"/>.</returns>
-    /// <remarks>The backing array may be a bit larger.</remarks>
+    /// <remarks>The backing array may be larger than the memory.</remarks>
     public static Memory<T> RentMemory<T>(this ArrayPool<T> pool, int size) => pool.Rent(size).AsMemory(0, size);
 
     /// <summary>
-    /// Return the array to an array pool.
+    /// Return the backing array of a memory to an array pool.
     /// </summary>
     /// <remarks>
     /// The array is cleared if it contains references in some way.
     /// </remarks>
-    /// <param name="pool"></param>
-    /// <param name="memory"></param>
+    /// <param name="pool">The pool to return to.</param>
+    /// <param name="memory">The memory which is backed by a pooled array.</param>
     public static void Return(this ArrayPool<byte> pool, Memory<byte> memory)
     {
         // SOURCE: https://github.com/Cysharp/MemoryPack#deserialize-array-pooling

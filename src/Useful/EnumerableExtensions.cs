@@ -1,13 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Useful;
 
-namespace Useful;
-
+/// <summary>
+/// Extensions for <see cref="IEnumerable{T}"/>.
+/// </summary>
 public static class EnumerableExtensions
 {
+    /// <summary>
+    /// Transforms an enumerable to provide positional indexes with the elements.
+    /// </summary>
+    /// <typeparam name="T">Type of the enumerated elements.</typeparam>
+    /// <param name="self">The enumerable to transforms.</param>
+    /// <returns>Enumerable over tuples of positional indexes and values.</returns>
     public static IEnumerable<(int index, T value)> WithIndexes<T>(this IEnumerable<T> self)
     {
         int i = 0;
