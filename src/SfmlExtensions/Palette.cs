@@ -2,10 +2,26 @@
 
 namespace SfmlExtensions;
 
+/// <summary>
+/// A procedural cosine palette.
+/// </summary>
+/// <remarks>
+/// Used formula: <code>A+B*cos(tau*(C*t+D))</code>.
+/// Adapted from https://iquilezles.org/articles/palettes/.
+/// </remarks>
+/// <param name="A">A</param>
+/// <param name="B">B</param>
+/// <param name="C">C</param>
+/// <param name="D">D</param>
 public readonly record struct Palette(Vector3f A, Vector3f B, Vector3f C, Vector3f D)
 {
     static float Formula(float a, float b, float c, float d, float t) => a + b * MathF.Cos(MathF.Tau * (c * t + d));
 
+    /// <summary>
+    /// Sample the palette.
+    /// </summary>
+    /// <param name="t">The point to sample.</param>
+    /// <returns>A vector of RGB values.</returns>
     public Vector3f this[float t]
     {
         get

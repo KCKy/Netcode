@@ -6,7 +6,7 @@ namespace Core.Providers;
 
 public sealed class Clock : IClock
 {
-    /// </inheritdoc>
+    /// <inheritdoc/>
     public event Action? OnTick;
     
     volatile int targetPeriod_;
@@ -82,7 +82,7 @@ public sealed class Clock : IClock
         }
     }
 
-    /// </inheritdoc>
+    /// <inheritdoc/>
     public async Task RunAsync(CancellationToken cancelToken = new())
     {
         Thread thread = new(TimerThread)

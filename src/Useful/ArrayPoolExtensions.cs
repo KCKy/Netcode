@@ -14,7 +14,7 @@ public static class ArrayPoolExtensions
     /// <typeparam name="T">Type of the array.</typeparam>
     /// <param name="pool">The pool to rent from.</param>
     /// <param name="size">The required size of the array.</param>
-    /// <returns>Memory of exactly <see cref="size"/>.</returns>
+    /// <returns>Memory exactly <paramref name="size"/> long.</returns>
     /// <remarks>The backing array may be larger than the memory.</remarks>
     public static Memory<T> RentMemory<T>(this ArrayPool<T> pool, int size) => pool.Rent(size).AsMemory(0, size);
 

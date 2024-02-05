@@ -24,7 +24,7 @@ public interface ILocalInputQueue<TInput>
     void Add(TInput input, long frame);
 
     /// <summary>
-    /// Resets the queue like <see cref="Pop"/> but additionally all inputs lesser or equal than <see cref="frame"/> are skipped (they shall not be added
+    /// Resets the queue like <see cref="Pop"/> but additionally all inputs lesser or equal than <paramref name="frame"/> are skipped (they shall not be added
     /// via <see cref="Add"/>).
     /// </summary>
     /// <param name="frame">A non-negative value to reset the queue to.</param>
@@ -33,7 +33,7 @@ public interface ILocalInputQueue<TInput>
     /// <summary>
     /// Marks all elements lesser than or equal to given index (even those yet to be added) to be deleted.
     /// </summary>
-    /// /// <param name="frame">A non-negative value to reset the queue to.</param>
+    /// <param name="frame">A non-negative value to reset the queue to.</param>
     void Pop(long frame);
 }
 

@@ -7,6 +7,15 @@ using Useful;
 
 namespace DefaultTransport.Dispatcher;
 
+/// <summary>
+/// Implementation for the client-side part of the default transport protocol (<see cref="IClientSender"/>, <see cref="IClientReceiver"/>)
+/// over a <see cref="IClientTransport"/>.
+/// </summary>
+/// <remarks>
+/// For the server side check <see cref="DefaultServerDispatcher"/>.
+/// As specified in the protocol the dispatcher keeps all user inputs for states which have not yet been authored and aggregates
+/// them in a single message. 
+/// </remarks>
 public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
 {
     readonly IClientTransport outTransport_;
@@ -14,9 +23,13 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
     readonly int unreliableHeader_;
     readonly int unreliableMaxMessage_;
 
-    readonly ILogger Logger = Log.ForContext<DefaultClientDispatcher>();
-    PacketAggregator aggregator_ = new();
+    readonly ILogger logger_ = Log.ForContext<DefaultClientDispatcher>();
+    readonly PacketAggregator aggregator_ = new();
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="transport">The transport which shall be used to send and receive packets.</param>
     public DefaultClientDispatcher(IClientTransport transport)
     {
         outTransport_ = transport;
@@ -28,15 +41,23 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
         transport.OnReliableMessage += HandleMessage;
     }
 
+    /// <inheritdoc/>
     public event StartDelegate? OnStart;
+    
+    /// <inheritdoc/>
     public event InitializeDelegate? OnInitialize;
+    
+    /// <inheritdoc/>
     public event AddAuthInputDelegate? OnAddAuthInput;
+    
+    /// <inheritdoc/>
     public event SetDelayDelegate? OnSetDelay;
 
     void HandleMessage(Memory<byte> message)
     {
         if (message.IsEmpty)
         {
+            logger_.Error("Received invalid empty message.");
             ArrayPool<byte>.Shared.Return(message);
             return;
         }
@@ -57,85 +78,135 @@ public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
                 return;
             case MessageType.ClientInput:
             default:
-                Logger.Error("Received invalid message from server: {Message} of type {Type}.", message, type);
+                logger_.Error("Received invalid message from server: {Message} of type {Type}.", message, type);
+                ArrayPool<byte>.Shared.Return(message);
                 return;
         }
     }
 
-    void HandleServerInitialize(Memory<byte> binary)
+    void HandleServerInitialize(Memory<byte> message)
     {
-        const int length = DefaultServerDispatcher.InputAuthoredHeader;
+        const int headerLength = DefaultServerDispatcher.InitializeHeader;
 
-        if (binary.Length < length)
+        if (message.Length < headerLength)
+        {
+            logger_.Error("Received invalid initialization message: {Message}.", message);
+            ArrayPool<byte>.Shared.Return(message);
             return;
+        }
 
-        var header = binary.Span[..length];
+        var header = message.Span[..headerLength];
         
         long id = header.ReadLong();
         long frame = header.ReadLong();
-        var state = binary[length..];
+
+        var state = message[headerLength..];
         
         OnStart?.Invoke(id);
-        OnInitialize?.Invoke(frame, state);
+        OnInitialize?.Invoke(frame, state); // Transfer memory ownership to the client
     }
 
-    void HandleServerAuthorize(Memory<byte> binary)
+    void HandleServerAuthorize(Memory<byte> message)
     {
-        const int length = DefaultServerDispatcher.InputAuthoredHeader;
+        const int headerLength = DefaultServerDispatcher.InputAuthoredHeader;
 
-        if (binary.Length >= length)
+        if (message.Length < headerLength)
         {
-            var header = binary.Span[..length];
-        
-            long frame = header.ReadLong();
-            long differenceRaw = header.ReadLong();
-        
-            double difference = BitConverter.Int64BitsToDouble(differenceRaw);
-            OnSetDelay?.Invoke(difference);
-            aggregator_.Pop(frame);
+            logger_.Error("Received invalid authorize message: {Message}.", message);
+            ArrayPool<byte>.Shared.Return(message);
+            return; // Return owned memory to the pool
         }
 
-        ArrayPool<byte>.Shared.Return(binary);
+        var header = message.Span[..headerLength];
+        
+        long frame = header.ReadLong();
+        long differenceRaw = header.ReadLong();
+        
+        double difference = BitConverter.Int64BitsToDouble(differenceRaw);
+
+        if (double.IsRealNumber(difference))
+        {
+            OnSetDelay?.Invoke(difference);
+
+            lock (aggregator_)
+                aggregator_.Pop(frame);
+        }
+        else
+        {
+            logger_.Error("Authorize message has invalid time difference: {Message} -> {Difference}.", message, difference);
+        }
+
+        ArrayPool<byte>.Shared.Return(message); // Return owned memory to the pool
     }
 
-    void HandleServerAuthInput(Memory<byte> binary)
+    void HandleServerAuthInput(Memory<byte> message)
     {
-        const int length = DefaultServerDispatcher.AuthoritativeInputHeader;
+        const int headerLength = DefaultServerDispatcher.AuthoritativeInputHeader;
 
-        if (binary.Length < length)
-            return;
+        if (message.Length < headerLength)
+        {
+            logger_.Error("Received invalid auth input message: {Message}.", message);
+            ArrayPool<byte>.Shared.Return(message);
+            return; // Return owned memory to the pool
+        }
 
-        var header = binary.Span[..length];
+        var header = message.Span[..headerLength];
         long frame = header.ReadLong();
         long? checksum = header.ReadNullableLong();
-        var input = binary[length..];
+        var input = message[headerLength..];
 
-        OnAddAuthInput?.Invoke(frame, input, checksum);
-        aggregator_.Pop(frame);
+        OnAddAuthInput?.Invoke(frame, input, checksum); // Transfer memory ownership to the client
+        
+        lock (aggregator_)
+            aggregator_.Pop(frame);
     }
 
+    /// <inheritdoc/>
     public void Disconnect() => outTransport_.Terminate();
     
     readonly PooledBufferWriter<byte> inputBuffer_ = new();
-    internal const int InputHeader = sizeof(long) + sizeof(int);
-    public void SendInput<TInputPayload>(long frame, TInputPayload payload)
+    internal const int InputStructHeader = sizeof(long) + sizeof(int);
+
+    Memory<byte> ConstructInput<TInputPayload>(long frame, TInputPayload payload)
     {
+        /*
+         * Input struct format:
+         * [ Frame: long ] [ Payload Length: int ] [ SerializedPayload byte[] ]
+         */
+
         inputBuffer_.Write(frame);
         inputBuffer_.Skip(sizeof(int));
         MemoryPackSerializer.Serialize(inputBuffer_, payload);
         var message = inputBuffer_.ExtractAndReplace();
         
         int fullLength = message.Length;
-        int payloadLength = fullLength - sizeof(long) - sizeof(int);
+        int payloadLength = fullLength - InputStructHeader;
 
         Bits.Write(payloadLength, message.Span[sizeof(long)..]);
+        return message;
+    }
+
+    /// <inheritdoc/>
+    public void SendInput<TInputPayload>(long frame, TInputPayload payload)
+    {
+        var input = ConstructInput(frame, payload);
+        int fullLength = input.Length;
 
         if (fullLength > unreliableMaxMessage_)
-            Logger.Error("Client sends input message larger than assured to be deliverable: {Actual} > {Valid}", fullLength, unreliableMaxMessage_);
+            logger_.Error("Client sends input message larger than assured to be deliverable: {Actual} > {Valid}", fullLength, unreliableMaxMessage_);
 
-        var messageAggregate = aggregator_.AddAndConstruct(message, frame, unreliableHeader_ + sizeof(byte), unreliableMaxMessage_);
-        messageAggregate.Span[unreliableHeader_] = (byte)MessageType.ClientInput;
+        /*
+         * Packet format:
+         * [ Unreliable Message Header ] [ Message Type: byte ] [ Input struct 1 ] ... [ Input struct N ]
+         */
 
-        outTransport_.SendUnreliable(messageAggregate);
+        Memory<byte> packet;
+
+        lock (aggregator_)
+            packet = aggregator_.AddAndConstruct(input, frame, unreliableHeader_ + sizeof(byte), unreliableMaxMessage_);
+        
+        packet.Span[unreliableHeader_] = (byte)MessageType.ClientInput;
+
+        outTransport_.SendUnreliable(packet);
     }
 }

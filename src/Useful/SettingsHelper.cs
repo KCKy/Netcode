@@ -9,11 +9,6 @@ namespace Useful;
 public static class SettingsHelper
 {
     /// <summary>
-    /// The name of the root node of xml settings files.
-    /// </summary>
-    public const string SettingsRoot = "Settings";
-
-    /// <summary>
     /// Tries to open given path as a reading text stream.
     /// </summary>
     /// <param name="path">Path to open.</param>
@@ -85,13 +80,8 @@ public static class SettingsHelper
 /// <typeparam name="TSettings">The type which shall serialize into the settings.</typeparam>
 public static class SettingsHelper<TSettings> where TSettings : notnull
 {
-    static readonly XmlSerializer Serializer;
+    static readonly XmlSerializer Serializer = new(typeof(TSettings));
     
-    static SettingsHelper()
-    {
-        Serializer = new XmlSerializer(typeof(TSettings));
-    }
-
     /// <summary>
     /// Serialize settings into a writer.
     /// </summary>

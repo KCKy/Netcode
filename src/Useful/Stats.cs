@@ -5,8 +5,8 @@ namespace Useful;
 /// <summary>
 /// Used for calculating the minimum of last <see cref="Length"/> entries in a series.
 /// </summary>
-/// <typeparam name="T">The value to keep track of.</typeparam>
-public struct MinStatsWindow<T> where T : struct, IComparisonOperators<T, T, bool>, IMinMaxValue<T>
+/// <typeparam name="T">The type of value, which will be kept track of.</typeparam>
+public struct MinimumWindowed<T> where T : struct, IComparisonOperators<T, T, bool>, IMinMaxValue<T>
 {
     readonly Queue<T> queue_;
 
@@ -19,8 +19,8 @@ public struct MinStatsWindow<T> where T : struct, IComparisonOperators<T, T, boo
     /// Constructor.
     /// </summary>
     /// <param name="length">The length of the window to calculate minimum from.</param>
-    /// <exception cref="ArgumentOutOfRangeException">If <see cref="length"/> is non-positive.</exception>
-    public MinStatsWindow(int length)
+    /// <exception cref="ArgumentOutOfRangeException">If <paramref name="length"/> is non-positive.</exception>
+    public MinimumWindowed(int length)
     {
         if (length <= 0)
             throw new ArgumentOutOfRangeException(nameof(length), length, "The length of the window must be positive.");
@@ -44,21 +44,37 @@ public struct MinStatsWindow<T> where T : struct, IComparisonOperators<T, T, boo
     }
 }
 
-public struct AvgIntegrateStatsResetting
+/// <summary>
+/// Calculates a time weighted average (integrated) for a value over a repeating period of time.
+/// </summary>
+public struct WeightedAverage
 {
     double last_ = float.NaN;
     double sum_ = 0;
     double weight_ = 0;
 
-    public AvgIntegrateStatsResetting() { }
-    public double ResetTimeSeconds { get; init; } = 1;
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    public WeightedAverage() { }
 
+    /// <summary>
+    /// The length of the averaged period.
+    /// </summary>
+    public double ResetTime { get; init; } = 1;
+
+    /// <summary>
+    /// Update the average.
+    /// </summary>
+    /// <param name="delta">Time passed since the last update.</param>
+    /// <param name="amount">The amount to be recorded for this update.</param>
+    /// <returns>Average of the last completed period.</returns>
     public double Update(double delta, double amount)
     {
         sum_ += amount * delta;
         weight_ += delta;
 
-        if (weight_ > ResetTimeSeconds)
+        if (weight_ > ResetTime)
         {
             last_ = sum_ / weight_;
             sum_ = 0;
@@ -69,16 +85,32 @@ public struct AvgIntegrateStatsResetting
     }
 }
 
-public struct AvgCountStatsResetting
+/// <summary>
+/// Calculates an average for a value over a repeating period of time.
+/// </summary>
+public struct Average
 {
     double last_ = float.NaN;
     double sum_ = 0;
     double weight_ = 0;
     long count_ = 0;
 
-    public AvgCountStatsResetting() { }
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    public Average() { }
+
+    /// <summary>
+    /// The length of the averaged period.
+    /// </summary>
     public double ResetTimeSeconds { get; init; } = 1;
 
+    /// <summary>
+    /// Update the average.
+    /// </summary>
+    /// <param name="delta">Time passed since the last update.</param>
+    /// <param name="amount">The amount to be recorded for this update.</param>
+    /// <returns>Average of the last completed period.</returns>
     public double Update(double delta, double amount)
     {
         sum_ += amount;

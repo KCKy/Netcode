@@ -95,7 +95,7 @@ public struct Vec2<T> :
     /// Project a vector into a one-dimensional subspace.
     /// </summary>
     /// <param name="subspace">A vector generating desired subspace.</param>
-    /// <remarks><see cref="subspace"/> shall not be zero.</remarks>
+    /// <remarks><paramref name="subspace"/> shall not be zero.</remarks>
     /// <returns>Vector projected onto the subspace.</returns>
     public readonly Vec2<T> Project(Vec2<T> subspace) => Dot(subspace) / subspace.SquaredMagnitude * subspace;
 }

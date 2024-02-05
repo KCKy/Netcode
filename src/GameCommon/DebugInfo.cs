@@ -8,36 +8,35 @@ namespace GameCommon;
 
 public sealed class DebugInfo
 {
-    AvgIntegrateStatsResetting lerperFrames_ = new()
+    WeightedAverage lerperFrames_ = new()
+    {
+        ResetTime = 10
+    };
+
+    Average drawDelta_ = new()
     {
         ResetTimeSeconds = 10
     };
 
-    AvgCountStatsResetting drawDelta_ = new()
+    WeightedAverage frameDiff_ = new()
     {
-        ResetTimeSeconds = 10
+        ResetTime = 10
     };
 
-    AvgIntegrateStatsResetting frameDiff_ = new()
-    {
-        ResetTimeSeconds = 10
-    };
-
-    public ILerper? Lerper { get; set; }
+    public ILerperInfo? Lerper { get; set; }
     public IClient? Client { get; set; }
-    public float FramesBehindResetTime { get; set; } = 10;
 
     public string Update(float delta)
     {
-        long authFrame_ = Client?.AuthFrame ?? 0;
+        long authFrame = Client?.AuthFrame ?? 0;
         long predictFrame = Client?.PredictFrame ?? 0;
 
-        double frameDiff = frameDiff_.Update(delta, predictFrame - authFrame_);
+        double frameDiff = frameDiff_.Update(delta, predictFrame - authFrame);
         double lerperFrames = lerperFrames_.Update(delta, Lerper?.FramesBehind ?? 0);
         double fps = 1 / drawDelta_.Update(delta, delta);
 
         return $"Draw FPS: {fps:0.00}\n" +
-               $"Auth Frame: {authFrame_}\n" +
+               $"Auth Frame: {authFrame}\n" +
                $"Predict Frame: {predictFrame}\n" +
                $"Avg frame diff: {frameDiff:0.00}\n" +
                $"Lerper frames behind: {lerperFrames:0.00}\n" +

@@ -9,6 +9,11 @@ public class SpeedController : ISpeedController
 
     public Task RunAsync(CancellationToken cancelToken = new()) => clock_.RunAsync(cancelToken);
 
+    public SpeedController()
+    {
+        FrameMemory = 20;
+    }
+
     public event Action? OnTick
     {
         add => clock_.OnTick += value;
@@ -22,7 +27,7 @@ public class SpeedController : ISpeedController
 
     public double SmoothingTime { get; init; } = 1;
 
-    readonly ILogger Logger = Log.ForContext<SpeedController>();
+    readonly ILogger logger_ = Log.ForContext<SpeedController>();
     readonly object mutex_ = new();
 
     void Update()
@@ -38,7 +43,7 @@ public class SpeedController : ISpeedController
 
         clock_.TargetTPS = CurrentTPS;
 
-        Logger.Verbose("Setting new period to {currentPeriod_} s. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
+        logger_.Verbose("Setting new period to {currentPeriod_} s. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
     }
 
     public double TargetTPS
@@ -52,7 +57,7 @@ public class SpeedController : ISpeedController
         {
             if (!double.IsPositive(value))
             {
-                Logger.Fatal("Got non-positive {TPS}.", value);
+                logger_.Fatal("Got non-positive {TPS}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, "TPS must be a positive number.");
             }
 
@@ -73,7 +78,7 @@ public class SpeedController : ISpeedController
         {
             if (!double.IsRealNumber(value))
             {
-                Logger.Fatal("Got non-real {TargetDelta}.", value);
+                logger_.Fatal("Got non-real {TargetDelta}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
             }
 
@@ -84,8 +89,19 @@ public class SpeedController : ISpeedController
             }
         }
     }
-    
-    MinStatsWindow<double> statsWindow_ = new(50); // TODO: make this mutable
+
+    public int FrameMemory
+    {
+        get => statsWindowed_.Length;
+        init
+        {
+            if (value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Memory must have positive size.");
+            statsWindowed_ = new(value);
+        }
+    }
+
+    MinimumWindowed<double> statsWindowed_;
 
     public double CurrentDelta
     {
@@ -94,14 +110,14 @@ public class SpeedController : ISpeedController
         {
             if (!double.IsRealNumber(value))
             {
-                Logger.Fatal("Got non-real {CurrentDelta}.", value);
+                logger_.Fatal("Got non-real {CurrentDelta}.", value);
                 throw new ArgumentOutOfRangeException(nameof(value), value, DeltaMustBeReal);
             }
 
             lock (mutex_)
             {
-                currentDelta_ = statsWindow_.Add(value);
-                Logger.Verbose("Updated delta to {Delta}", currentDelta_);
+                currentDelta_ = statsWindowed_.Add(value);
+                logger_.Verbose("Updated delta to {Delta}", currentDelta_);
                 Update();
             }
         }

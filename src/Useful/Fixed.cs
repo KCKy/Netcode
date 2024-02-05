@@ -18,7 +18,7 @@ public readonly struct Fixed :
     IMultiplicativeIdentity<Fixed, Fixed>,
     IAdditiveIdentity<Fixed, Fixed>,
     IMinMaxValue<Fixed>,
-    IComparisonOperators<Fixed,Fixed,bool>
+    IComparisonOperators<Fixed, Fixed, bool>
 {
     /// <inheritdoc/>
     public override string ToString() => ((float)this).ToString();
@@ -128,14 +128,9 @@ public readonly struct Fixed :
     /// <remarks>
     /// For value close to zero like 2^-32, where the reciprocal cannot be represented, an incorrect value may be returned or an <see cref="OverflowException"/> may be thrown.
     /// </remarks>
-    public Fixed Reciprocal
-    {
-        get
-        {
-            // SOURCE: http://www.sunshine2k.de/articles/coding/fp/sunfp.html#ch54
-            return new(((1L << 63) / -value_) << 1);
-        }
-    }
+    public Fixed Reciprocal =>
+        // SOURCE: http://www.sunshine2k.de/articles/coding/fp/sunfp.html#ch54
+        new(((1L << 63) / -value_) << 1);
 
     /// <inheritdoc/>
     public static Fixed operator /(Fixed left, Fixed right) => left * right.Reciprocal;
@@ -150,7 +145,7 @@ public readonly struct Fixed :
     /// The absolute value.
     /// </summary>
     /// <param name="value">A fixed point value.</param>
-    /// <returns>The absolute value of <see cref="value"/>.</returns>
+    /// <returns>The absolute value of <paramref name="value"/>.</returns>
     public static Fixed Abs(Fixed value) => new(Math.Abs(value.value_));
 
     /// <inheritdoc/>

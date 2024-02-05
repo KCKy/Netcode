@@ -4,7 +4,7 @@ using System.Numerics;
 namespace Useful;
 
 /// <summary>
-/// Implementation of <see cref="IBufferWriter"></see> which uses <see cref="ArrayPool.Shared"></see> to allocate new buffers.
+/// Implementation of <see cref="IBufferWriter{T}"></see> which uses <see cref="ArrayPool{T}.Shared"></see> to allocate new buffers.
 /// Also provides ways to take ownership to extract a written buffer.
 /// </summary>
 /// <remarks>

@@ -5,7 +5,7 @@ namespace Useful;
 
 
 /// <summary>
-/// Extensions which provide awaitability to CancellationTokens.
+/// Extensions which provide awaitability to <see cref="CancellationToken"/>.
 /// </summary>
 /// <example>
 /// <code>

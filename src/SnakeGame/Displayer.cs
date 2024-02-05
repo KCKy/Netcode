@@ -1,5 +1,6 @@
 ﻿using Core.Utility;
 using GameCommon;
+using SFML.Graphics;
 using SFML.System;
 using SfmlExtensions;
 using Useful;
@@ -11,7 +12,13 @@ class Displayer : SfmlDisplayer<GameState>
     Grid grid_ = new()
     {
         Height = GameState.LevelHeight,
-        Width = GameState.LevelWidth
+        Width = GameState.LevelWidth,
+        Cell = new()
+        {
+            OutlineColor = new(150, 150, 150),
+            OutlineThickness = 1f,
+            FillColor = Color.Transparent
+        }
     };
 
     Level level_ = new();
@@ -24,7 +31,7 @@ class Displayer : SfmlDisplayer<GameState>
         Vector2f offset = new Vector2f(grid_.Width, grid_.Height) / 2 * Unit;
         Vector2f center = size / 2;
         Origin = center - offset;
-        grid_.Unit = Unit;
+        grid_.Cell.Size = new(Unit, Unit);
     }
 
     protected override void Draw(float delta)

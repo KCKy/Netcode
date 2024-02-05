@@ -9,6 +9,7 @@ namespace TopDownShooter.Display;
 class Displayer : SfmlDisplayer<GameState>
 {
     readonly Renderer renderer_;
+
     readonly Lerper<IEntity> lerper_ = new();
     
     public Displayer(string name) : base(name)

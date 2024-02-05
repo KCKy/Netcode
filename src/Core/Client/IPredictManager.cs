@@ -33,7 +33,7 @@ interface IPredictManager<TC, TS, TG>
     /// This method is thread safe.
     /// </remarks>
     void Stop();
-    
+
     /// <summary>
     /// Update the predict state once.
     /// </summary>

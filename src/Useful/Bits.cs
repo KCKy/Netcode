@@ -40,7 +40,7 @@ public static class Bits
     /// <summary>
     /// Size of the binary nullable <see cref="int"/> representation this class uses.
     /// </summary>
-    public const int NullableIntSize = sizeof(long) + 1;
+    public const int NullableIntSize = sizeof(int) + 1;
 
     /// <summary>
     /// Writes given nullable <see cref="int"/> into the start of a span in little endian binary representation. 
@@ -64,7 +64,7 @@ public static class Bits
     }
 
     /// <summary>
-    /// Size of the binary nullable <see cref="int"/> representation this class uses.
+    /// Size of the binary nullable <see cref="long"/> representation this class uses.
     /// </summary>
     public const int NullableLongSize = sizeof(long) + 1;
 
@@ -113,7 +113,7 @@ public static class Bits
 
         
     /// <summary>
-    /// Reads an <see cref="long"/> in little endian binary representation from given span.
+    /// Reads a <see cref="long"/> in little endian binary representation from given span.
     /// </summary>
     /// <remarks>
     /// Extra bytes in the span are ignored.
@@ -138,7 +138,7 @@ public static class Bits
     /// Reads a nullable <see cref="int"/> in little endian binary representation from given span.
     /// </summary>
     /// <remarks>
-    /// This an inverse function of <see cref="o:Write"/> for nullable <see cref="int"/>.
+    /// This an inverse function of <see cref="Write(int?,Span{byte})"/> for nullable <see cref="int"/>.
     /// Extra bytes in the span are ignored.
     /// </remarks>
     /// <param name="input">Span to read from.</param>
@@ -159,7 +159,7 @@ public static class Bits
     /// Reads a nullable <see cref="long"/> in little endian binary representation from given span.
     /// </summary>
     /// <remarks>
-    /// This an inverse function of <see cref="o:Write"/> for nullable <see cref="long"/>.
+    /// This an inverse function of <see cref="Write(long?,Span{byte})"/> for nullable <see cref="long"/>.
     /// Extra bytes in the span are ignored.
     /// </remarks>
     /// <param name="input">Span to read from.</param>
