@@ -25,5 +25,8 @@ public struct UpdateOutput
         ShallStop = false;
     }
 
+    /// <summary>
+    /// Empty output, signals no special behaviour.
+    /// </summary>
     public static readonly UpdateOutput Empty = new();
 }

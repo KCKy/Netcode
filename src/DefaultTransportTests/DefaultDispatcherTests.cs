@@ -1,14 +1,25 @@
 ﻿using System.Buffers;
 using DefaultTransport.Dispatcher;
 using MemoryPack;
-using System.Diagnostics;
 using Useful;
-using System.Runtime.InteropServices;
 
 namespace DefaultTransportTests;
 
-public class DefaultDispatcherTests
+/// <summary>
+/// Tests for <see cref="DefaultServerDispatcher"/> and <see cref="DefaultClientDispatcher"/>.
+/// </summary>
+/// <remarks>
+/// These tests test whether the two corresponding classes work together.
+/// </remarks>
+public sealed class DefaultDispatcherTests
 {
+    /// <summary>
+    /// Test sending from client to server.
+    /// </summary>
+    /// <param name="id">The id of the client.</param>
+    /// <param name="startFrame">The first frame to send.</param>
+    /// <param name="frameCount">The last frame to send.</param>
+    /// <param name="respond">Whether the server should ping back.</param>
     [Theory]
     [InlineData(1, 1, 10, false)]
     [InlineData(1, 1, 10, true)]
@@ -79,9 +90,15 @@ public class DefaultDispatcherTests
         Assert.Equal(startFrame + frameCount, nextFrame);
     }
 
+    /// <summary>
+    /// Test messages from server to client.
+    /// </summary>
+    /// <param name="id">The id of the client.</param>
+    /// <param name="startFrame">The first frame to send.</param>
+    /// <param name="frameCount">The last frame to send.</param>
     [Theory]
     [InlineData(1, 1, 10)]
-    public void ClientReceiveTest(long id, long firstFrame, int frameCount)
+    public void ClientReceiveTest(long id, long startFrame, int frameCount)
     {
         MockClientTransport clientTransport = new(id);
 
@@ -125,12 +142,12 @@ public class DefaultDispatcherTests
             ArrayPool<byte>.Shared.Return(raw);
 
             Assert.Equal(frame, data);
-            Assert.Equal(frame, firstFrame);
+            Assert.Equal(frame, startFrame);
             
             lock (mutex) initialized++;
         };
 
-        long currentFrame = firstFrame + 1;
+        long currentFrame = startFrame + 1;
 
         client.OnAddAuthInput += (frame, input, checksum) =>
         {
@@ -160,11 +177,11 @@ public class DefaultDispatcherTests
 
         clientTransport.Start();
 
-        server.Initialize(id, firstFrame, firstFrame);
+        server.Initialize(id, startFrame, startFrame);
 
         for (int i = 1; i < frameCount; i++)
         {
-            long cur = firstFrame + i;
+            long cur = startFrame + i;
             server.SendAuthoritativeInput(cur, cur, cur);
             server.InputAuthored(id, cur, TimeSpan.Zero);
         }
@@ -175,14 +192,17 @@ public class DefaultDispatcherTests
         Assert.Equal(1, add);
         Assert.Equal(delay, frameCount - 1);
         Assert.Equal(1, initialized);
-        Assert.Equal(firstFrame + frameCount, currentFrame);
+        Assert.Equal(startFrame + frameCount, currentFrame);
     }
 
+    /// <summary>
+    /// Test whether receiving empty messages does not break the client.
+    /// </summary>
     [Fact]
     public void TestClientEmptyMessages()
     {
         SingleClientMockTransport transport = new();
-        DefaultClientDispatcher client = new(transport);
+        DefaultClientDispatcher _ = new(transport);
 
         var a = ArrayPool<byte>.Shared.RentMemory(0);
         transport.InvokeReliable(a);
@@ -191,11 +211,14 @@ public class DefaultDispatcherTests
         transport.InvokeUnreliable(b);
     }
 
+    /// <summary>
+    /// Test whether receiving empty messages does not break the server.
+    /// </summary>
     [Fact]
     public void TestServerEmptyMessages()
     {
         SingleServerMockTransport transport = new();
-        DefaultServerDispatcher server = new(transport);
+        DefaultServerDispatcher _ = new(transport);
         
         var a = ArrayPool<byte>.Shared.RentMemory(0);
         transport.InvokeReliable(42, a);
@@ -204,6 +227,11 @@ public class DefaultDispatcherTests
         transport.InvokeUnreliable(42, b);
     }
 
+    /// <summary>
+    /// Test whether invalid client input does not break the server.
+    /// </summary>
+    /// <param name="givenLength">The fake length in the packet.</param>
+    /// <param name="actual">The actual length of the packet.</param>
     [Theory]
     [InlineData(-456, 0)]
     [InlineData(0, 0)]
@@ -213,7 +241,7 @@ public class DefaultDispatcherTests
     public void TestInvalidClientInput(int givenLength, int actual)
     {
         SingleServerMockTransport transport = new();
-        DefaultServerDispatcher server = new(transport);
+        DefaultServerDispatcher _ = new(transport);
 
         var message = ArrayPool<byte>.Shared.RentMemory(actual + sizeof(int) + sizeof(long) + 1);
         var span = message.Span;

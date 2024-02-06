@@ -17,6 +17,7 @@ namespace Useful;
 /// </remarks>
 public static class AsyncExtensions
 {
+#pragma warning disable CS1591
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static CancellationTokenAwaiter GetAwaiter(this CancellationToken ct)
     {
@@ -49,4 +50,5 @@ public static class AsyncExtensions
         public readonly void OnCompleted(Action continuation) => CancellationToken.Register(continuation);
         public readonly void UnsafeOnCompleted(Action continuation) => CancellationToken.Register(continuation);
     }
+#pragma warning restore CS1591
 }

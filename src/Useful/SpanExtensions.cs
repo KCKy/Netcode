@@ -1,7 +1,7 @@
 ﻿namespace Useful;
 
 /// <summary>
-/// Extension methods for <see cref="Span{byte}"/>.
+/// Extension methods for <see cref="T:Span{byte}"/>.
 /// </summary>
 public static class SpanExtensions
 {

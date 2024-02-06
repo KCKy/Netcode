@@ -7,6 +7,9 @@ namespace Useful;
 /// </summary>
 public interface ILerperInfo
 { 
+    /// <summary>
+    /// Amount of frames currently in the lerper queue. See <see cref="Lerper{T}"/> for details.
+    /// </summary>
     int FramesBehind { get; }
 }
 
@@ -202,6 +205,7 @@ public sealed class Lerper<T> : ILerperInfo
             DrawImproper(result.t, onEntityDraw);
     }
 
+    /// <inheritdoc/>
     public int FramesBehind => frames_.Count;
 
     /// <summary>

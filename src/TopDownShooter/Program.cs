@@ -30,7 +30,7 @@ static class Program
 
         run.AssureSuccess();
 
-        while (displayer.Run()) { }
+        while (displayer.Update()) { }
 
         return Task.CompletedTask;
     }

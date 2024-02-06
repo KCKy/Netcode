@@ -11,7 +11,7 @@ public partial struct UpdateClientInfo<TClientInput>
     where TClientInput : class, new()
 {
     /// <summary>
-    /// Id of the client.
+    /// ID of the client.
     /// </summary>
     public long Id;
 
@@ -25,7 +25,13 @@ public partial struct UpdateClientInfo<TClientInput>
     /// </summary>
     public bool Terminated;
 
-    public void Deconstruct(out long id, out TClientInput input, out bool terminated)
+    /// <summary>
+    /// Deconstructor.
+    /// </summary>
+    /// <param name="id">ID of the client.</param>
+    /// <param name="input">The input the client.</param>
+    /// <param name="terminated">Whether client disconnected at the end of the frame update.</param>
+    public readonly void Deconstruct(out long id, out TClientInput input, out bool terminated)
     {
         id = Id;
         input = Input;
@@ -35,7 +41,7 @@ public partial struct UpdateClientInfo<TClientInput>
     /// <summary>
     /// Constructor.
     /// </summary>
-    /// <param name="id">Id of the client.</param>
+    /// <param name="id">ID of the client.</param>
     /// <param name="input">The input the client.</param>
     /// <param name="terminated">Whether client disconnected at the end of the frame update.</param>
     public UpdateClientInfo(long id, TClientInput input, bool terminated)

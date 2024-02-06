@@ -23,7 +23,7 @@ interface IPredictManager<TC, TS, TG>
     /// </remarks>
     /// <param name="serializedInput">Serialized authoritative input, only borrowed.</param>
     /// <param name="frame">Index of the frame the input belongs to.</param>
-    /// <param name="input"><see cref="serializedInput"/> deserialized, ownership given.</param>
+    /// <param name="input">Move of input corresponding to <paramref name="serializedInput"/>.</param>
     void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TC, TS> input);
     
     /// <summary>

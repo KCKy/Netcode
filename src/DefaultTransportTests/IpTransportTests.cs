@@ -8,6 +8,15 @@ using Useful;
 
 namespace DefaultTransportTests;
 
+/// <summary>
+/// Tests for <see cref="IpClientTransport"/> and <see cref="IpServerTransport"/>.
+/// </summary>
+/// <remarks>
+/// These tests test whether the two corresponding classes work together.
+///
+/// These tests are not unit test as their outcome is undeterministic and dependent on external factors. Nonetheless, it is useful to assure functionality of transport layer.
+/// They are prone to fail when run back-to-back or currently as the OS does not provide the necessary sockets.
+/// </remarks>
 public class IpTransportTests
 {
     static IEnumerable<IpClientTransport> ConstructClients(IPEndPoint endPoint, int count) =>
@@ -22,11 +31,20 @@ public class IpTransportTests
             client.Terminate();
     }
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="output">Output for logging.</param>
     public IpTransportTests(ITestOutputHelper output)
     {
         Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Debug().CreateLogger();
     }
     
+    /// <summary>
+    /// Test whether clients connecting work.
+    /// </summary>
+    /// <param name="clientCount">The number of clients to join.</param>
+    /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -102,6 +120,11 @@ public class IpTransportTests
         await Task.Delay(100);
     }
 
+    /// <summary>
+    /// Test whether kicking clients work.
+    /// </summary>
+    /// <param name="clientCount">Number of clients to join and then kick.</param>
+    /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -168,6 +191,12 @@ public class IpTransportTests
     }
 
 
+    /// <summary>
+    /// Test whether reliable messages from client to server work.
+    /// </summary>
+    /// <param name="count">The number of message each client sends.</param>
+    /// <param name="clientCount">The number of clients.</param>
+    /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(1, 1)]
     [InlineData(2, 1)]
@@ -245,6 +274,12 @@ public class IpTransportTests
         await Task.Delay(100);
     }
 
+    /// <summary>
+    /// Test whether reliable broadcast from server to client work.
+    /// </summary>
+    /// <param name="count">The number of messages to send.</param>
+    /// <param name="clientCount">The number of clients.</param>
+    /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(1, 1)]
     [InlineData(2, 1)]
@@ -322,6 +357,12 @@ public class IpTransportTests
         await Task.Delay(100);
     }
 
+    /// <summary>
+    /// Test whether reliable unicast from server to client work.
+    /// </summary>
+    /// <param name="count">The number of messages each client should receive.</param>
+    /// <param name="clientCount">The number of clients.</param>
+    /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(1, 1)]
     [InlineData(2, 1)]
@@ -415,6 +456,12 @@ public class IpTransportTests
         await Task.Delay(100);
     }
 
+    /// <summary>
+    /// Test unreliable messages by an echo server with unicast responses.
+    /// </summary>
+    /// <param name="pingCount">The number of pings each client makes.</param>
+    /// <param name="clientCount">The number of clients.</param>
+    /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(1, 1)]
     [InlineData(2, 1)]
@@ -502,6 +549,12 @@ public class IpTransportTests
         await Task.Delay(100);
     }
 
+    /// <summary>
+    /// Test unreliable broadcasts from server by making clients echo back.
+    /// </summary>
+    /// <param name="pingCount">The number of broadcast pings the server makes.</param>
+    /// <param name="clientCount">The number of clients.</param>
+    /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(10, 1)]
     [InlineData(20, 1)]

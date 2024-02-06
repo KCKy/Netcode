@@ -114,6 +114,22 @@ public delegate
 /// </summary>
 public static class IpGameLoader
 {
+    /// <summary>
+    /// Construct the game as specified by a config file.
+    /// Tries to load a settings file as specified in <see cref="GameSettings"/>. If not, creates a default. Sets up the logging framework.
+    /// Constructs client/server (depends on settings). Starts the transport and the client/server.
+    /// </summary>
+    /// <typeparam name="TGameState">The type of game state used by the game.</typeparam>
+    /// <typeparam name="TClientInput">The type of client input used by the game.</typeparam>
+    /// <typeparam name="TServerInput">The type of server input used by the game.</typeparam>
+    /// <param name="args">Command line arguments. Checks first argument for a config file.</param>
+    /// <param name="serverConstructor">Provider of dependencies to server.</param>
+    /// <param name="clientConstructor">Provider of dependencies of client.</param>
+    /// <param name="clientStartCallback">Callback which is called when the client is started.</param>
+    /// <param name="serverStartCallback">Callback which is called when the server is started.</param>
+    /// <param name="clientTransportEndCallback">Callback called when the underlying client transport ends. (The client should probably be stopped.)</param>
+    /// <param name="serverTransportEndCallback">Callback called when the underlying server transport ends. (The server should probably be stopped.)</param>
+    /// <returns>A task representing the execution of the underlying transport layer.</returns>
     public static async Task Load<TGameState, TClientInput, TServerInput>
         (string[] args,
             ServerConstruction<TGameState, TClientInput, TServerInput> serverConstructor,

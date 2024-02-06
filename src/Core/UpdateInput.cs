@@ -22,6 +22,11 @@ public partial struct UpdateInput<TClientInput, TServerInput>
     /// </summary>
     public Memory<UpdateClientInfo<TClientInput>> ClientInput;
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="clientInput">Move of the collection of client inputs.</param>
+    /// <param name="serverInput">Move of the server input.</param>
     [MemoryPackConstructor]
     public UpdateInput(Memory<UpdateClientInfo<TClientInput>> clientInput, TServerInput serverInput)
     {
@@ -29,11 +34,17 @@ public partial struct UpdateInput<TClientInput, TServerInput>
         ClientInput = clientInput;
     }
 
+    /// <summary>
+    /// Constructor. Creates a default empty input.
+    /// </summary>
     public UpdateInput()
     {
         ServerInput = new();
         ClientInput = Memory<UpdateClientInfo<TClientInput>>.Empty;
     }
 
+    /// <summary>
+    /// Default empty input.
+    /// </summary>
     public static UpdateInput<TClientInput, TServerInput> Empty => new();
 }

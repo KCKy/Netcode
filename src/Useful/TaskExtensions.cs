@@ -10,13 +10,14 @@ public static class TaskExtensions
     /// <summary>
     /// Method called when a task given to <see cref="AssureSuccess"/> or <see cref="AssureNoFault"/> has been cancelled.
     /// </summary>
-    /// <param name="task"></param>
+    /// <param name="task">The task which faulted.</param>
+    /// <param name="exception">The exception causing the fault.</param>
     public delegate void FaultDelegate(Task task, Exception exception);
 
     /// <summary>
     /// Method called when a task given to <see cref="AssureSuccess"/> has been cancelled.
     /// </summary>
-    /// <param name="task"></param>
+    /// <param name="task">The task which was cancelled.</param>
     public delegate void CanceledDelegate(Task task);
     
     /// <summary>
