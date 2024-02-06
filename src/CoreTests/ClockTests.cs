@@ -76,10 +76,10 @@ public sealed class ClockTests
     /// This is not a unit test as it's outcome is undeterministic and dependent on external factors. Nonetheless, it is useful to assure functionality of the clock.
     /// </remarks>
     [Theory]
-    [InlineData(5d, 0.01, 0.001, 0.0005)]
-    [InlineData(5d, 0.05, 0.001, 0.0005)]
-    [InlineData(5d, 0.025, 0.001, 0.0005)]
-    [InlineData(10d, 0.5, 0.001, 0.0005)]
+    [InlineData(5d, 100, 0.001, 0.0005)]
+    [InlineData(5d, 20, 0.001, 0.0005)]
+    [InlineData(5d, 40, 0.001, 0.0005)]
+    [InlineData(10d, 2, 0.001, 0.0005)]
     public async Task Basic(double time, double tps, double meanError, double deviationError)
     {
         Clock clock = new()
