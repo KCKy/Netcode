@@ -4,7 +4,7 @@ using MemoryPack;
 namespace CoreTests;
 
 [MemoryPackable]
-partial class MockStructure
+sealed partial class MockStructure
 {
     public int A;
     public byte B;

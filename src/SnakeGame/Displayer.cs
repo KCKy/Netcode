@@ -24,21 +24,24 @@ class Displayer : SfmlDisplayer<GameState>
     Level level_ = new();
     Level authLevel_ = new();
 
+    readonly float unit_;
+    readonly Vector2f origin_;
+
     public Displayer(string name) : base(name)
     {
         var size = (Vector2f)Window.Size;
-        Unit = MathF.Min(size.X / grid_.Width, size.Y / grid_.Height);
-        Vector2f offset = new Vector2f(grid_.Width, grid_.Height) / 2 * Unit;
+        unit_ = MathF.Min(size.X / grid_.Width, size.Y / grid_.Height);
+        Vector2f offset = new Vector2f(grid_.Width, grid_.Height) / 2 * unit_;
         Vector2f center = size / 2;
-        Origin = center - offset;
-        grid_.Cell.Size = new(Unit, Unit);
+        origin_ = center - offset;
+        grid_.Cell.Size = new(unit_, unit_);
     }
 
     protected override void Draw(float delta)
     {
-        grid_.Draw(Window, Origin);
-        authLevel_.DrawAuth(Window, Unit, Origin);
-        level_.Draw(Window, Unit, Origin);
+        grid_.Draw(Window, origin_);
+        authLevel_.DrawAuth(Window, unit_, origin_);
+        level_.Draw(Window, unit_, origin_);
     }
 
     void CheckState(long frame, GameState state)

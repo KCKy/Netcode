@@ -26,7 +26,7 @@ static class Program
             return game;
         
         game.AssureSuccess();
-        while (displayer.Update()) { }
+        while (displayer.Run()) { }
 
         return Task.CompletedTask;
     }

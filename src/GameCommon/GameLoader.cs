@@ -10,25 +10,60 @@ using Useful;
 
 namespace GameCommon;
 
+/// <summary>
+/// Possible modes the game can run in.
+/// </summary>
 public enum GameMode
 {
+    /// <summary>
+    /// Client mode.
+    /// </summary>
     Client,
+    /// <summary>
+    /// Server mode.
+    /// </summary>
     Server
 }
 
+/// <summary>
+/// A pair of option and its value for Serilog settings.
+/// </summary>
+/// <param name="Name">The name of the option.</param>
+/// <param name="Value">The value of the option.</param>
 public record struct SerilogOption(string Name, string Value)
 {
+    /// <summary>
+    /// Empty constructor.
+    /// </summary>
     public SerilogOption() : this("", "") { }
 }
 
+/// <summary>
+/// Struct representing the XML schema for game settings files.
+/// </summary>
+/// <param name="Mode">Which mode the game should be run in.</param>
+/// <param name="LocalAddress">The address the local socket should bind to.</param>
+/// <param name="TargetAddress">The address of the target server.</param>
+/// <param name="DoCheckSum">Whether to do checksums of game states.</param>
+/// <param name="TraceFrameTime">Whether to trace time took to update each frame in the log.</param>
+/// <param name="TraceState">Whether to log all states in the log.</param>
+/// <param name="LatencyPadding">Amount of time in seconds specifying how much early inputs should be received by the server. Recommended value for standard connections are 5 - 10 ms.</param>
+/// <param name="ConnectionTimeoutMs">Time in seconds, the timeout of a new client connection. </param>
+/// <param name="SerilogSettings">Settings for the Serilog logging framework.</param>
 public record GameSettings
     (GameMode Mode, string LocalAddress, string TargetAddress, 
         bool DoCheckSum, bool TraceFrameTime, bool TraceState, float LatencyPadding, int ConnectionTimeoutMs,
         List<SerilogOption> SerilogSettings)
 {
+    /// <summary>
+    /// Empty constructor.
+    /// </summary>
     public GameSettings() : this(GameMode.Client, "", "", false, false, false, 0, 0, 
         new()) { }
 
+    /// <summary>
+    /// An example settings file used when a config file does not exist yet.
+    /// </summary>
     public static GameSettings Example => new(GameMode.Client, "0.0.0.0:17893", "127.0.0.1:17893", false, false, false, 0.001f, 200,
         new (){
             new("write-to:File.path", "client.log"),
@@ -39,6 +74,13 @@ public record GameSettings
         });
 }
 
+/// <summary>
+/// Provides the optional dependencies <see cref="Core.Client"/> may be constructed with.
+/// </summary>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <returns>Tuple of optional dependencies to be used for the client construction.</returns>
 public delegate
     (IDisplayer<TGameState>? displayer,
     IClientInputProvider<TClientInput>? input,
@@ -50,6 +92,13 @@ public delegate
     where TServerInput : class, new()
     where TGameState : class, IGameState<TClientInput, TServerInput>, new();
 
+/// <summary>
+/// Provides the optional dependencies <see cref="Core.Server"/> may be constructed with.
+/// </summary>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <returns>Tuple of optional dependencies to be used for the server construction.</returns>
 public delegate
     (IDisplayer<TGameState>? displayer,
     IServerInputProvider<TServerInput, TGameState>? input,
@@ -60,7 +109,10 @@ public delegate
     where TServerInput : class, new()
     where TGameState : class, IGameState<TClientInput, TServerInput>, new();
 
-public class IpGameLoader
+/// <summary>
+/// Used to streamline loading games over the <see cref="DefaultTransport"/> layers.
+/// </summary>
+public static class IpGameLoader
 {
     public static async Task Load<TGameState, TClientInput, TServerInput>
         (string[] args,
@@ -100,7 +152,7 @@ public class IpGameLoader
             .ReadFrom.KeyValuePairs(from p in config.SerilogSettings select new KeyValuePair<string, string>(p.Name, p.Value))
                 .CreateLogger();
 
-        ILogger logger = Log.ForContext<IpGameLoader>();
+        ILogger logger = Log.ForContext(typeof(IpGameLoader));
 
         Useful.TaskExtensions.OnFault += (task, exc) => logger.Error("Task faulted: {Task} with exception: \n{Exception}", task, exc);
         Useful.TaskExtensions.OnCanceled += task => logger.Error("Task was wrongly cancelled: {Task}", task);

@@ -2,10 +2,17 @@
 
 namespace CoreTests;
 
-public class LocalInputQueueTests
+/// <summary>
+/// Test class for <see cref="LocalInputQueue{TInput}"/>
+/// </summary>
+public sealed class LocalInputQueueTests
 {
     record MockData(int Value);
 
+    /// <summary>
+    /// Test whether an empty queue behaves correctly.
+    /// </summary>
+    /// <param name="startValue">The reset value of the queue.</param>
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
@@ -26,6 +33,11 @@ public class LocalInputQueueTests
         Assert.Null(queue[-42]);
     }
 
+    /// <summary>
+    /// Test whether adding elements works.
+    /// </summary>
+    /// <param name="startValue">The reset value of the queue.</param>
+    /// <param name="count">The count of added elements.</param>
     [Theory]
     [InlineData(0, 50)]
     [InlineData(2, 50)]
@@ -48,6 +60,11 @@ public class LocalInputQueueTests
         }
     }
 
+    /// <summary>
+    /// Test whether removing elements works.
+    /// </summary>
+    /// <param name="startValue">The reset value of the queue.</param>
+    /// <param name="count">The count of added elements.</param>
     [Theory]
     [InlineData(0, 50)]
     [InlineData(2, 50)]

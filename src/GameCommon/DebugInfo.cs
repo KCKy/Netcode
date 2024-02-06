@@ -1,31 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Core.Client;
+﻿using Core.Client;
 using Useful;
 
 namespace GameCommon;
 
+/// <summary>
+/// General debug info collection for clients.
+/// </summary>
 public sealed class DebugInfo
 {
-    WeightedAverage lerperFrames_ = new()
+    TimeWeightedAverage lerperFrames_ = new()
     {
         ResetTime = 10
     };
 
     Average drawDelta_ = new()
     {
-        ResetTimeSeconds = 10
+        ResetTime = 10
     };
 
-    WeightedAverage frameDiff_ = new()
+    TimeWeightedAverage frameDiff_ = new()
     {
         ResetTime = 10
     };
 
+    /// <summary>
+    /// Optional reference a to a lerper.
+    /// If provided, statistics about the lerper's function are provided.
+    /// </summary>
     public ILerperInfo? Lerper { get; set; }
+    
+    /// <summary>
+    /// Optional reference to the main client object.
+    /// If provided, statistics about the client's function are provided.
+    /// </summary>
     public IClient? Client { get; set; }
 
+    /// <summary>
+    /// Run the debug info, shall be called every draw call (if debug mode is active)
+    /// </summary>
+    /// <param name="delta">The delta of this draw call.</param>
+    /// <returns>String value to be debug displayed of measured statistics.</returns>
     public string Update(float delta)
     {
         long authFrame = Client?.AuthFrame ?? 0;

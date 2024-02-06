@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Security.Cryptography;
 
 namespace Useful;
 
@@ -52,13 +51,16 @@ public interface ILerperInfo
 /// </code>
 /// </example>
 /// <remarks>
+/// <pare>
 /// <see cref="Lerper{T}"/> works by keeping a frame queue (queue of frames which were not yet displayed by drawing),
 /// and modifying playback speed to keep the queue non-empty. For this it keeps a weighted average of the queue size over time.
 /// Needed speed coefficient is deduced from this average. To disregard old information an exponential weight function is used for calculating
 /// the average. To change the weight function distribution see <see cref="Lerper{T}.WindowFunctionMedian"/>. To change the target average queue size see <see cref="Lerper{T}.FrameCountTarget"/>.
-///
+/// </pare>
+/// <pare>
 /// Threading model: it is safe to call <see cref="AddEntity"/> and <see cref="NextFrame"/> in a single thread and <see cref="Draw"/> concurrently in a different thread.
 /// There can be a single synchronized producer of data to draw, and a single synchronized consumer which draws the produced data, i.e. a simulation thread and a draw thread.
+/// </pare>
 /// </remarks>
 /// <typeparam name="T">The type of the state to be interpolated.</typeparam>
 public sealed class Lerper<T> : ILerperInfo
@@ -144,13 +146,10 @@ public sealed class Lerper<T> : ILerperInfo
 
     float GetSpeed(float delta) => GetAverage(delta) / FrameCountTarget;
 
-    /// <summary>
-    /// Moves the lerper by given delta, switches to next frame if available.
-    /// </summary>
-    /// <param name="delta">The amount of time which has passed.</param>
-    /// <returns>The lerp amount between the current frame and the next frame.</returns>
     (float t, Frame? targetFrame) UpdateFrameOffset(float delta)
     {
+        // Moves the lerper by given delta, switches to next frame if available.
+
         currentFrameTime_ += delta * GetSpeed(delta);
 
         while (true)

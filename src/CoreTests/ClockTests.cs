@@ -5,9 +5,12 @@ using Xunit.Abstractions;
 
 namespace CoreTests;
 
-public class ClockTests
+/// <summary>
+/// Tests for <see cref="Clock"/>
+/// </summary>
+public sealed class ClockTests
 {
-    class ClockStats
+    sealed class ClockStats
     {
         readonly object mutex_ = new();
 
@@ -52,22 +55,39 @@ public class ClockTests
         }
     }
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="output">Output for logging.</param>
     public ClockTests(ITestOutputHelper output)
     {
         Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Debug().CreateLogger();
     }
 
+    /// <summary>
+    /// Statistically test the clocks performance metrics (mean period, mean deviation of the period).
+    /// </summary>
+    /// <param name="time">The length of time to run the test for.</param>
+    /// <param name="tps">The target ticks per second of the clock.</param>
+    /// <param name="meanError">Allowed error in the mean clock period in seconds.</param>
+    /// <param name="deviationError">Allowed error in the deviation of the clock period in seconds.</param>
+    /// <returns>Task of the test.</returns>
+    /// <remarks>
+    /// This is not a unit test as it's outcome is undeterministic and dependent on external factors. Nonetheless, it is useful to assure functionality of the clock.
+    /// </remarks>
     [Theory]
     [InlineData(5d, 0.01, 0.001, 0.0005)]
     [InlineData(5d, 0.05, 0.001, 0.0005)]
     [InlineData(5d, 0.025, 0.001, 0.0005)]
     [InlineData(10d, 0.5, 0.001, 0.0005)]
-    public async Task Basic(double time, double expectedMean, double meanError, double deviationError)
+    public async Task Basic(double time, double tps, double meanError, double deviationError)
     {
         Clock clock = new()
         {
-            TargetTPS = 1 / expectedMean
+            TargetTPS = tps
         };
+
+        double period = 1 / tps;
 
         ClockStats stats = new();
 
@@ -94,7 +114,7 @@ public class ClockTests
 
         (double meanDelta, double deltaDeviation) = stats.GetStats();
 
-        Assert.InRange(meanDelta, expectedMean - meanError, expectedMean + meanError);
+        Assert.InRange(meanDelta, period - meanError, period + meanError);
         Assert.InRange(deltaDeviation, -deviationError, deviationError);
 
         Log.Information("Mean: {Mean} Deviation: {Deviation}", meanDelta, deltaDeviation);

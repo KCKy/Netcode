@@ -16,7 +16,7 @@ class Displayer : SfmlDisplayer<GameState>
     {
         renderer_ = new(this);
         lerper_.OnEntityDraw += DrawHandler;
-        debugInfo_.Lerper = lerper_;
+        DebugInfo.Lerper = lerper_;
     }
     
     protected override void OnInit()

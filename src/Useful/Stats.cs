@@ -45,9 +45,10 @@ public struct MinimumWindowed<T> where T : struct, IComparisonOperators<T, T, bo
 }
 
 /// <summary>
-/// Calculates a time weighted average (integrated) for a value over a repeating period of time.
+/// Calculates time weighted average of a value.
+/// It is calculated over a period of length <see cref="ResetTime"/> after that the collection is reset and a new average starts being calculated.
 /// </summary>
-public struct WeightedAverage
+public struct TimeWeightedAverage
 {
     double last_ = float.NaN;
     double sum_ = 0;
@@ -56,7 +57,7 @@ public struct WeightedAverage
     /// <summary>
     /// Constructor.
     /// </summary>
-    public WeightedAverage() { }
+    public TimeWeightedAverage() { }
 
     /// <summary>
     /// The length of the averaged period.
@@ -64,11 +65,11 @@ public struct WeightedAverage
     public double ResetTime { get; init; } = 1;
 
     /// <summary>
-    /// Update the average.
+    /// Update the average calculation.
     /// </summary>
     /// <param name="delta">Time passed since the last update.</param>
     /// <param name="amount">The amount to be recorded for this update.</param>
-    /// <returns>Average of the last completed period.</returns>
+    /// <returns>Time weighted average of the last completed period.</returns>
     public double Update(double delta, double amount)
     {
         sum_ += amount * delta;
@@ -86,7 +87,8 @@ public struct WeightedAverage
 }
 
 /// <summary>
-/// Calculates an average for a value over a repeating period of time.
+/// Calculates an average for a value.
+/// It is calculated over a period of length <see cref="ResetTime"/> after that the collection is reset and a new average starts being calculated.
 /// </summary>
 public struct Average
 {
@@ -103,10 +105,10 @@ public struct Average
     /// <summary>
     /// The length of the averaged period.
     /// </summary>
-    public double ResetTimeSeconds { get; init; } = 1;
+    public double ResetTime { get; init; } = 1;
 
     /// <summary>
-    /// Update the average.
+    /// Update the average calculation.
     /// </summary>
     /// <param name="delta">Time passed since the last update.</param>
     /// <param name="amount">The amount to be recorded for this update.</param>
@@ -117,7 +119,7 @@ public struct Average
         count_++;
         weight_ += delta;
 
-        if (weight_ > ResetTimeSeconds)
+        if (weight_ > ResetTime)
         {
             last_ = sum_ / count_;
             sum_ = 0;

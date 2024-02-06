@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 
 namespace Useful;
 
-
 /// <summary>
 /// Extensions which provide awaitability to <see cref="CancellationToken"/>.
 /// </summary>

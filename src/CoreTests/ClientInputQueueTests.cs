@@ -3,8 +3,15 @@ using Core.Providers;
 
 namespace CoreTests;
 
-public class ClientInputQueueTests
+/// <summary>
+/// Tests for <see cref="ClientInputQueue{TClientInput}"/>.
+/// </summary>
+public sealed class ClientInputQueueTests
 {
+    /// <summary>
+    /// Check whether the queue works in a simple use case. 
+    /// </summary>
+    /// <param name="id">The id of the fake client.</param>
     [Theory]
     [InlineData(0L)]
     [InlineData(-1L)]
@@ -58,7 +65,7 @@ public class ClientInputQueueTests
         Assert.True(frame.IsEmpty);
     }
 
-    class InputAuthCapturer
+    sealed class InputAuthCapturer
     {
         public long? IdCapture = null;
         public long? FrameCapture = null;
@@ -80,16 +87,21 @@ public class ClientInputQueueTests
         }
     }
 
+    /// <summary>
+    /// Check whether the queue notifies about late inputs.
+    /// </summary>
+    /// <param name="id">The id of the fake client.</param>
+    /// <param name="tps">The tps of the fake server.</param>
     [Theory]
-    [InlineData(0L)]
-    [InlineData(-1L)]
-    [InlineData(1L)]
-    [InlineData(42L)]
-    [InlineData(long.MaxValue)]
-    [InlineData(long.MinValue)]
-    public void InputAuthorLate(long id)
+    [InlineData(0L, 1)]
+    [InlineData(-1L, 42)]
+    [InlineData(1L, 1)]
+    [InlineData(42L, 42)]
+    [InlineData(long.MaxValue, 1)]
+    [InlineData(long.MinValue, 42)]
+    public void InputAuthorLate(long id, int tps)
     {
-        ClientInputQueue<MockStructure> queue = new(1, new DefaultClientInputPredictor<MockStructure>());
+        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>());
         InputAuthCapturer capturer = new();
 
         queue.OnInputAuthored += capturer.Capture;
@@ -103,6 +115,11 @@ public class ClientInputQueueTests
         capturer.AssertValid(id, 0, TimeSpan.MinValue, TimeSpan.Zero);
     }
 
+    /// <summary>
+    /// Check whether the queue notifies inputs which are provided in time.
+    /// </summary>
+    /// <param name="id">The id of the fake client.</param>
+    /// <param name="tps">The tps of the fake server.</param>
     [Theory]
     [InlineData(0L, 1)]
     [InlineData(-1L, 42)]
