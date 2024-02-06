@@ -1,4 +1,5 @@
-﻿using DefaultTransport.Dispatcher;
+﻿using System.Buffers;
+using DefaultTransport.Dispatcher;
 using Useful;
 
 namespace DefaultTransportTests;
@@ -10,7 +11,7 @@ public sealed class PacketAggregatorTests
 {
     static Memory<byte> GetMemory(long value)
     {
-        Memory<byte> mem = new byte[sizeof(long)];
+        var mem = ArrayPool<byte>.Shared.RentMemory(sizeof(long));
         Bits.Write(value, mem.Span);
         return mem;
     }

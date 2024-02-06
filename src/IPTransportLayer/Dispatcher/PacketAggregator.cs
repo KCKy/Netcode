@@ -62,11 +62,11 @@ public sealed class PacketAggregator
     /// <summary>
     /// Add information of a given frame and construct a packet out of currently aggregated information.
     /// </summary>
-    /// <param name="memory">Move of the most current information.</param>
+    /// <param name="memory">Move of the most current information (must be from <see cref="T:ArrayPool{byte}.Shared"/>).</param>
     /// <param name="frame">The frame this information belongs to.</param>
     /// <param name="header">Number of bytes which shall be padded before the packet and left undefined for the caller to write. </param>
     /// <param name="maxSize">Maximum size the packet may have.</param>
-    /// <returns>An aggregated packet.</returns>
+    /// <returns>Move of an aggregated packet (from <see cref="T:ArrayPool{byte}.Shared"/>).</returns>
     /// <remarks>
     /// The aggregated packet has the following format:
     /// <c> [ header: unused area ] [ Data of frame n ] ... [ Data of frame 'frame' ] </c>

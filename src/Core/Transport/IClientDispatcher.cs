@@ -40,7 +40,7 @@ public delegate void StartDelegate(long id);
 /// This way a late-joining client does not have to receive all inputs since the state for frame 0.
 /// </summary>
 /// <param name="frame">The frame id of the state.</param>
-/// <param name="state">Move of the serialized state (pooled).</param>
+/// <param name="state">Move of the serialized state (pooled from <see cref="T:ArrayPool{byte}.Shared"/>).</param>
 public delegate void InitializeDelegate(long frame, Memory<byte> state);
 
 /// <summary>
@@ -51,7 +51,7 @@ public delegate void InitializeDelegate(long frame, Memory<byte> state);
 /// The client may at start receive message which precede the initialization message and thus may be safely ignored.
 /// </remarks>
 /// <param name="frame">The frame of the resulting state update i.e. the state id produced by using this input on previous state.</param>
-/// <param name="input">Move of the serialized auth input structure (pooled).</param>
+/// <param name="input">Move of the serialized auth input structure (pooled from <see cref="T:ArrayPool{byte}.Shared"/>).</param>
 /// <param name="checksum">Optional checksum for the resulting state.</param>
 public delegate void AddAuthInputDelegate(long frame, Memory<byte> input, long? checksum);
 
