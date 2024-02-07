@@ -2,34 +2,31 @@
 using Useful;
 using System.Diagnostics;
 using GameCommon;
-using Serilog;
+using SFML.System;
 
 namespace TopDownShooter.Display;
 
 class Displayer : SfmlDisplayer<GameState>
 {
-    readonly Renderer renderer_;
-
     readonly Lerper<IEntity> lerper_ = new();
     
     public Displayer(string name) : base(name)
     {
-        renderer_ = new(this);
         lerper_.OnEntityDraw += DrawHandler;
         DebugInfo.Lerper = lerper_;
     }
-    
+
     protected override void OnInit()
     {
-        renderer_.Id = Id;
         frameStart_ = Stopwatch.GetTimestamp();
     }
-
-    public override void AddAuthoritative(long frame, GameState gameState) { }
-
+    
     readonly PooledBufferWriter<byte> predictWriter_ = new();
+    
     long latestPredict_ = long.MinValue;
     long frameStart_;
+
+    public int GetFrameOffset() => lerper_.FramesBehind + (int)Math.Round(lerper_.CurrentFrameProgression);
     
     public override void AddPredict(long frame, GameState gameState)
     {
@@ -41,19 +38,25 @@ class Displayer : SfmlDisplayer<GameState>
         latestPredict_ = frame;
 
         foreach ((long id, IEntity entity) in gameState.GetEntities(predictWriter_))
-        {
             lerper_.AddEntity(id, entity);
-        }
+
         lerper_.NextFrame(lastLength);
     }
 
-    readonly ILogger logger_ = Log.ForContext<Displayer>();
-    
+    Vector2f origin_ = new();
+    public Vector2f Center { get; set; }
+
+    readonly TiledBackground background_ = new(new("tile.png"));
+
     protected override void Draw(float delta)
     {
-        renderer_.StartDraw();
+        origin_ = Center - (Vector2f)Window.Size * .5f;
+        background_.Draw(Window, origin_);
         lerper_.Draw(delta);
     }
 
-    void DrawHandler(IEntity from, IEntity to, float t) => from.DrawSelf(renderer_, to, t);
+    void DrawHandler(IEntity from, IEntity to, float t)
+    {
+        from.DrawLerped(this, origin_, to, t);
+    }
 }

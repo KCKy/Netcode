@@ -20,7 +20,7 @@ public abstract class SfmlDisplayer<T> : IDisplayer<T>
     /// <summary>
     /// The ID of this client, populated before <see cref="OnInit"/> is invoked.
     /// </summary>
-    protected long Id = long.MinValue;
+    public long Id = long.MinValue;
 
     IClient? client_;
 
@@ -107,8 +107,8 @@ public abstract class SfmlDisplayer<T> : IDisplayer<T>
     protected virtual void OnInit() { }
 
     /// <inheritdoc/>
-    public abstract void AddAuthoritative(long frame, T gameState);
+    public virtual void AddAuthoritative(long frame, T gameState) { }
 
     /// <inheritdoc/>
-    public abstract void AddPredict(long frame, T gameState);
+    public virtual void AddPredict(long frame, T gameState) { }
 }

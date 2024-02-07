@@ -48,7 +48,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
         if (client.Avatar is not { } avatar)
         {
-            Logger.Information("Created player avatar for: {Id}", id);
+            Log.Information("Created player avatar for: {Id}", id);
             avatar = new(entityCounter_++, id);
             client.Avatar = avatar;
         }
@@ -70,10 +70,8 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         if (client.Avatar is not { } avatar)
             return;
 
-        avatar.Shoot(new(input.ShootX, input.ShootY), avatars, input.ShootFrameOffset - 1);
+        avatar.Shoot(new(input.ShootX, input.ShootY), avatars, -input.ShootFrameOffset);
     }
-
-    static readonly ILogger Logger = Log.ForContext<GameState>();
 
     readonly List<Player> tempAvatarList_ = new(); // Not part of state
 

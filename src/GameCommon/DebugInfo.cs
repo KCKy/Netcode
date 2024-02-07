@@ -53,6 +53,7 @@ public sealed class DebugInfo
                $"Auth Frame: {authFrame}\n" +
                $"Predict Frame: {predictFrame}\n" +
                $"Avg frame diff: {frameDiff:0.00}\n" +
+               $"Frame progression: {Lerper?.CurrentFrameProgression:0.00}\n" +
                $"Lerper frames behind: {lerperFrames:0.00}\n" +
                $"Client ID: {Client?.Id}\n" +
                $"Current TPS: {Client?.CurrentTps:0.00}\n" +

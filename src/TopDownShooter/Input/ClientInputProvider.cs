@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Core.Providers;
+﻿using Core.Providers;
 using Serilog;
 using SFML.Graphics;
 using SFML.System;
@@ -24,13 +23,12 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
         window.MouseMoved += MouseMovedHandler;
     }
 
-
     bool left_, right_, up_, down_, start_, shoot_;
     int shootX_, shootY_;
 
     readonly object mutex_ = new();
 
-    readonly ILogger Logger = Log.ForContext<ClientInputProvider>();
+    readonly ILogger logger_ = Log.ForContext<ClientInputProvider>();
 
     void KeyPressedHandler(object? sender, KeyEventArgs args)
     {
@@ -91,7 +89,7 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
                 shootX_ = shootVector.X;
                 shootY_ = shootVector.Y;
                 
-                Logger.Information("Shooting in direction {Direction}", shootVector);
+                logger_.Information("Shooting at pos {Position}", shootVector);
                 return;
         }
     }
@@ -115,7 +113,7 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
                 Shoot = shoot_,
                 ShootX = shootX_,
                 ShootY = shootY_,
-                ShootFrameOffset = shoot_ ? 1 : 0
+                ShootFrameOffset = shoot_ ? displayer_.GetFrameOffset() : 0
             };
 
             shoot_ = false;

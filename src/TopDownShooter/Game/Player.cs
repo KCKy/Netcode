@@ -1,5 +1,7 @@
-﻿using MemoryPack;
+﻿using System.Reflection;
+using MemoryPack;
 using Serilog;
+using Serilog.Core;
 using SFML.Graphics;
 using SFML.System;
 using TopDownShooter.Display;
@@ -40,7 +42,7 @@ partial struct Position
 }
 
 [MemoryPackable]
-partial class Player : IEntity
+sealed partial class Player : IEntity
 {
     [MemoryPackInclude]
     long id_;
@@ -73,10 +75,7 @@ partial class Player : IEntity
 
     static readonly Fixed MovementSpeed = 10;
     static readonly Fixed ColliderRadiusSquared = 32 * 32;
-
     static readonly Fixed Friction = ((Fixed)2).Reciprocal;
-
-    static readonly ILogger Logger = Log.ForContext<Player>();
 
     public void Update(ClientInput input)
     {
@@ -94,17 +93,7 @@ partial class Player : IEntity
 
     public static bool CheckHit(Vec2<Fixed> origin, Vec2<Fixed> ray, Vec2<Fixed> targetPosition)
     {
-        /*
-        var relativePos = targetPosition - origin;
-        var projection = relativePos.Project(ray);
-        var delta = relativePos - projection;
-
-        return delta.Dot(delta) <= ColliderRadiusSquared
-               && projection.X > 0 ? relativePos.X > 0 : relativePos.X <= 0
-        */
-
         var diff = origin + ray - targetPosition;
-
         return diff.Dot(diff) <= ColliderRadiusSquared;
     }
 
@@ -114,6 +103,8 @@ partial class Player : IEntity
 
     public void Shoot(Vec2<Fixed> direction, List<Player> avatars, int histIndex)
     {
+        Log.Information("Shooting with hist index: {HistIndex}.", histIndex);
+
         if (position_.GetHistory(histIndex) is not { } position)
             return;
 
@@ -130,22 +121,46 @@ partial class Player : IEntity
         }
     }
 
-    public void DrawSelf(Renderer renderer, IEntity to, float t)
+    const int Radius = 32;
+    static readonly CircleShape PlayerShape = new()
     {
-        if (to as Player is not { EntityId: var otherID } target || otherID != entityId_)
-        {
-            Logger.Error("Invalid lerp target for player.");
-            return;
-        }
-            
-        ref var pos = ref Position;
-        ref var tpos = ref target.Position;
+        Origin = new(Radius, Radius),
+        Radius = Radius
+    };
 
-        Vector2f fromPos = new(pos.X, pos.Y);
-        Vector2f toPos = new(tpos.X, tpos.Y);
-        Vector2f lerpedPos = fromPos.Lerp(toPos, t);
+    static readonly Palette PlayerPalette = new()
+    {
+        A = new(.5f, .5f, .5f),
+        B = new(.5f, .5f, .5f),
+        C = new(1, 1, 1),
+        D = new(.8f, .9f, .3f)
+    };
 
-        renderer.DrawPlayer(entityId_, lerpedPos, Color.Blue, playerId_);
+    const float PlayerPaletteSpacing = 0.3f;
+
+    void Draw(RenderTarget renderTarget, Vector2f position)
+    {
+        PlayerShape.Position = position;
+        PlayerShape.FillColor = PlayerPalette[playerId_ * PlayerPaletteSpacing].ToColor();
+        renderTarget.Draw(PlayerShape);
+    }
+
+    public void DrawLerped(Displayer displayer, Vector2f origin, IEntity to, float t)
+    {
+        if (to as Player is not { EntityId: var otherId } target || otherId != entityId_)
+            throw new ArgumentException("Invalid target entity.", nameof(to));
+
+        ref var rawSourcePosition = ref Position;
+        ref var rawTargetPosition = ref target.Position;
+
+        Vector2f sourcePosition = new(rawSourcePosition.X, rawSourcePosition.Y);
+        Vector2f targetPosition = new(rawTargetPosition.X, rawTargetPosition.Y);
+        Vector2f position = sourcePosition.Lerp(targetPosition, t);
+
+        if (displayer.Id == playerId_)
+            displayer.Center = position;
+
+        Draw(displayer.Window, position - origin);
     }
 
     public long EntityId => entityId_;

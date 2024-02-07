@@ -6,13 +6,8 @@ namespace SfmlExtensions;
 /// <summary>
 /// A rectangular grid of given size for rendering.
 /// </summary>
-public struct Grid
+public sealed class Grid
 {
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    public Grid() { }
-
     /// <summary>
     /// The shape used for rendering the grid.
     /// <remarks>

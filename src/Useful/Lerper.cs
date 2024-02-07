@@ -11,6 +11,11 @@ public interface ILerperInfo
     /// Amount of frames currently in the lerper queue. See <see cref="Lerper{T}"/> for details.
     /// </summary>
     int FramesBehind { get; }
+
+    /// <summary>
+    /// Normalized time [0, 1] of the transition from the current frame to the next.
+    /// </summary>
+    public float CurrentFrameProgression { get; }
 }
 
 /// <summary>
@@ -99,6 +104,9 @@ public sealed class Lerper<T> : ILerperInfo
     // Seconds we spend drawing the current frame
     float currentFrameTime_ = 0f;
 
+    /// <inheritdoc/>
+    public float CurrentFrameProgression { get; private set; }
+
     /// <summary>
     /// Constructor.
     /// </summary>
@@ -158,11 +166,18 @@ public sealed class Lerper<T> : ILerperInfo
         while (true)
         {
             if (!frames_.TryPeek(out Frame targetFrame))
+            {
+                CurrentFrameProgression = 0;
                 return (0, null);
+            }
             
             if (currentFrameTime_ < targetFrame.Length)
-                return (currentFrameTime_ / targetFrame.Length, targetFrame);
-
+            {
+                float progression = currentFrameTime_ / targetFrame.Length;
+                CurrentFrameProgression = progression;
+                return (progression, targetFrame);
+            }
+            
             currentFrameTime_ -= targetFrame.Length;
             
             currentFrame_.IdToEntity.Clear();

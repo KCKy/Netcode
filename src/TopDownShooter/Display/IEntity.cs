@@ -1,6 +1,9 @@
-﻿namespace TopDownShooter.Display;
+﻿using SFML.Graphics;
+using SFML.System;
+
+namespace TopDownShooter.Display;
 
 interface IEntity
 {
-   void DrawSelf(Renderer displayer, IEntity to, float t);
+   void DrawLerped(Displayer displayer, Vector2f origin, IEntity to, float t);
 }
