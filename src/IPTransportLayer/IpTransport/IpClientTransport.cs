@@ -6,11 +6,21 @@ using Useful;
 
 namespace DefaultTransport.IpTransport;
 
+/// <summary>
+/// Implementation of the client transport over TCP/UDP. The client for <see cref="IpServerTransport"/>.
+/// </summary>
+/// <remarks>
+/// The transport is unencrypted and prone to spoofing attacks.
+/// The transport creates a TCP and UDP socket (not some available ports) and tries to establish the connection.
+/// </remarks>
 public sealed class IpClientTransport : IClientTransport
 {
     readonly IPEndPoint target_;
-    readonly ILogger Logger = Log.ForContext<IpClientTransport>();
+    readonly ILogger logger_ = Log.ForContext<IpClientTransport>();
 
+    /// <summary>
+    /// Connection timeout in milliseconds.
+    /// </summary>
     public int ConnectTimeoutMs { get; init; } = 2000;
 
     readonly QueueMessages<Memory<byte>> tcpMessages_ = new();
@@ -18,19 +28,26 @@ public sealed class IpClientTransport : IClientTransport
 
     readonly CancellationTokenSource cancellationSource_ = new();
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="target">The target address to connect to.</param>
     public IpClientTransport(IPEndPoint target)
     {
         target_ = target;
     }
 
+    /// <inheritdoc/>
     public void Terminate() => cancellationSource_.Cancel();
+
+    int hasStarted_ = 0;
 
     async ValueTask<(TcpClient, Socket, TcpClientTransceiver, UdpClientTransceiver)> ConnectAsync(CancellationToken cancellation)
     {
         TcpClient tcp = new(AddressFamily.InterNetwork);
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
-        Logger.Information("Client trying to connect to {Target}.", target_);
+        logger_.Information("Client trying to connect to {Target}.", target_);
 
         await Task.WhenAny(connectTask, Task.Delay(ConnectTimeoutMs, cancellation));
 
@@ -49,9 +66,16 @@ public sealed class IpClientTransport : IClientTransport
         IPEndPoint anyPoint = new(IPAddress.Any, 0);
         udp.Bind(anyPoint);
 
-        Logger.Information("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
+        logger_.Information("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
 
         NetworkStream stream = tcp.GetStream();
+
+        // We expect the server to send us our transport ID.
+        // This is going to be used in UDP messages to identify us.
+        // This identification method is prone to spoofing, the attacker just needs to get a hold of the ID,
+        // then they may send any unreliable messages to the server and even steal the unreliable traffic.
+        // TODO: to remedy this packet signing should be employed (e.g. some secret hashing function of the packet id or so)
+        // but for purposes of demonstration this method works.
 
         Memory<byte> idRaw = new byte[sizeof(long)];
         await stream.ReadExactlyAsync(idRaw, cancellation);
@@ -60,16 +84,29 @@ public sealed class IpClientTransport : IClientTransport
         return (tcp, udp, new(stream), new(udp, target_, id));
     }
 
+    /// <summary>
+    /// Start the connection.
+    /// </summary>
+    /// <remarks>
+    /// This method is not thread safe and is expected to be run once.
+    /// The task will return cancelled, if the connection was terminated client side, successfully, if the connection was ended by the other side,
+    /// with a <see cref="TimeoutException"/> if the connecting client timed out, or a different exception if the underlying network socket fails.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">If the client has already started once.</exception>
+    /// <returns>Task representing the connection lifetime.</returns>
     public async Task RunAsync()
     {
+        if (Interlocked.CompareExchange(ref hasStarted_, 1, 0) != 0)
+            throw new InvalidOperationException("The client has already started.");
+
         CancellationToken cancellation = cancellationSource_.Token;
 
         (TcpClient tcpClient, Socket udpClient, TcpClientTransceiver tcp, UdpClientTransceiver udp) = await ConnectAsync(cancellation);
         
-        MemorySender<QueueMessages<Memory<byte>>> tcpMemorySender = new(tcp,  tcpMessages_);
+        Sender<QueueMessages<Memory<byte>>, Memory<byte>> tcpMemorySender = new(tcp,  tcpMessages_);
         Receiver<Memory<byte>> tcpReceiver = new(tcp);
 
-        MemorySender<BagMessages<Memory<byte>>> udpMemorySender = new(udp, udpMessages_);
+        Sender<BagMessages<Memory<byte>>, Memory<byte>> udpMemorySender = new(udp, udpMessages_);
         Receiver<Memory<byte>> udpReceiver = new(udp);
 
         tcpReceiver.OnMessage += InvokeReliableMessage;
@@ -96,16 +133,28 @@ public sealed class IpClientTransport : IClientTransport
         }
     }
 
+    /// <inheritdoc/>
     public int UnreliableMessageMaxLength => 1500;
 
+    /// <inheritdoc/>
     public int ReliableMessageHeader => TcpClientTransceiver.HeaderSize;
+
+    /// <inheritdoc/>
     public void SendReliable(Memory<byte> message) => tcpMessages_.Post(message);
+
+    /// <inheritdoc/>
     public int UnreliableMessageHeader => UdpClientTransceiver.HeaderSize;
+    
+    /// <inheritdoc/>
     public void SendUnreliable(Memory<byte> message) => udpMessages_.Post(message);
 
     void InvokeReliableMessage(Memory<byte> message) => OnReliableMessage?.Invoke(message);
-    public event Action<Memory<byte>>? OnReliableMessage;
+    
+    /// <inheritdoc/>
+    public event ClientMessageEvent? OnReliableMessage;
 
     void InvokeUnreliableMessage(Memory<byte> message) => OnUnreliableMessage?.Invoke(message);
-    public event Action<Memory<byte>>? OnUnreliableMessage;
+    
+    /// <inheritdoc/>
+    public event ClientMessageEvent? OnUnreliableMessage;
 }

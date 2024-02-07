@@ -2,15 +2,14 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using Core.Transport;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using Useful;
 
 namespace DefaultTransportTests;
 
 sealed class MockClientTransport : IClientTransport
 {
-    public event Action<Memory<byte>>? OnReliableMessage;
-    public event Action<Memory<byte>>? OnUnreliableMessage;
+    public event ClientMessageEvent? OnReliableMessage;
+    public event ClientMessageEvent? OnUnreliableMessage;
 
     internal void InvokeReliable(Memory<byte> message) => OnReliableMessage?.Invoke(message[ReliableMessageHeader..]);
     internal void InvokeUnreliable(Memory<byte> message) => OnUnreliableMessage?.Invoke(message[UnreliableMessageHeader..]);
@@ -115,7 +114,8 @@ sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTrans
     }
 
     public void Terminate(long id) => InvokeFinish(id);
-    
+    public void Terminate() => throw new InvalidOperationException();
+
     public IEnumerator<MockClientTransport> GetEnumerator() => (from p in idToClient_ select p.Value).GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -123,8 +123,8 @@ sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTrans
 
 sealed class SingleClientMockTransport : IClientTransport
 {
-    public event Action<Memory<byte>>? OnReliableMessage;
-    public event Action<Memory<byte>>? OnUnreliableMessage;
+    public event ClientMessageEvent? OnReliableMessage;
+    public event ClientMessageEvent? OnUnreliableMessage;
     public void InvokeReliable(Memory<byte> message) => OnReliableMessage?.Invoke(message);
     public void InvokeUnreliable(Memory<byte> message) => OnUnreliableMessage?.Invoke(message);
     public void Terminate()  => throw new InvalidOperationException();
@@ -154,4 +154,5 @@ sealed class SingleServerMockTransport : IServerTransport
     public void SendUnreliable(Memory<byte> message) => throw new InvalidOperationException();
     public void SendUnreliable(Memory<byte> message, long id) => throw new InvalidOperationException();
     public void Terminate(long id) => throw new InvalidOperationException();
+    public void Terminate() => throw new InvalidOperationException();
 }

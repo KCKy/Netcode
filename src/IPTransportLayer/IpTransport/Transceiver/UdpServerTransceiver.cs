@@ -7,12 +7,16 @@ using Useful;
 
 namespace DefaultTransport.IpTransport;
 
+/// <summary>
+/// Implements sending and receiving messages over a UDP socket for the server.
+/// Designed to work with <see cref="IPendingMessages{T}"/> and <see cref="Receiver{T}"/>.
+/// </summary>
 sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (Memory<byte> payload, long? id)>
 {
     readonly Socket client_;
     readonly IPEndPoint ipPoint_ = new(IPAddress.Loopback, 0);
     readonly ConcurrentDictionary<long, ConnectedClient> idToConnection_;
-    readonly ILogger Logger = Log.ForContext<UdpServerTransceiver>();
+    readonly ILogger logger_ = Log.ForContext<UdpServerTransceiver>();
 
     public UdpServerTransceiver(Socket client, ConcurrentDictionary<long, ConnectedClient> idToConnection)
     {
@@ -29,7 +33,6 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
         var buffer = ArrayPool<byte>.Shared.RentMemory(Udp.MaxDatagramSize);
         const int headerSize = sizeof(long);
 
-
         while (true)
         {
             SocketReceiveFromResult result;
@@ -42,9 +45,9 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
             {
                 if (ex.ErrorCode == ConnectionResetByPeer)
                 {
-                    // This error seems to make no sense, its not the servers fault the other side closed.
+                    // This error seems to make no sense, it's not the servers fault the other side closed.
                     // SOURCE: https://stackoverflow.com/questions/34242622/windows-udp-sockets-recvfrom-fails-with-error-10054
-                    Logger.Warning("Received error " + ex.ErrorCode + "on UDP receive.");
+                    logger_.Warning("Received error " + ex.ErrorCode + "on UDP receive.");
                     continue;
                 }
                 
@@ -53,40 +56,46 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
 
             int length = result.ReceivedBytes;
 
-            Logger.Verbose("Received unreliable message of length {Length}.", length);
+            logger_.Verbose("Received unreliable message of length {Length}.", length);
 
             if (length < headerSize)
             {
-                Logger.Verbose("The message is too short.");
+                logger_.Verbose("The message is too short.");
                 continue;
             }
 
             if (result.RemoteEndPoint is not IPEndPoint sender)
             {
-                Logger.Verbose("It is from invalid endpoint.");
+                logger_.Verbose("It is from invalid endpoint.");
                 continue;
             }
 
-            Logger.Verbose("It came from {MemorySender}.", sender);
+            logger_.Verbose("It came from {MemorySender}.", sender);
 
             long id = Bits.ReadLong(buffer[..headerSize].Span);
 
             if (!idToConnection_.TryGetValue(id, out ConnectedClient? client))
             {
-                Logger.Verbose("It has invalid id {Id}", id);
+                logger_.Verbose("It has invalid id {Id}", id);
                 continue;
             }
 
-            Logger.Verbose("It has id {Id}.", id);
+            logger_.Verbose("It has id {Id}.", id);
 
             IPEndPoint current = client.UdpTarget;
 
             IPAddress address = current.Address;
             if (!address.Equals(sender.Address))
             {
-                Logger.Verbose("It comes from different address {Used} != {Valid}.", id, address, sender.Address);
+                logger_.Verbose("It comes from different address {Used} != {Valid}.", id, address, sender.Address);
                 continue; // Address does not match
             }
+
+            /*
+             * Nowadays, most clients are going to be behind a masquerade NAT. The socket of the UDP connection may be changed during the connection
+             * (because UDP is stateless). To make this work we check only the IP address and change the target port when it seems to have changed.
+             * TCP does not have the same problem as the state of a TCP connection is tracked by the router.
+             */
 
             int senderPort = sender.Port;
             int currentPort = current.Port;
@@ -94,7 +103,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
             {
                 // Client seems to have changed port
                 client.UdpTarget = new(address, senderPort);
-                Logger.Verbose("Different port with unreliable was used : {Used} != {Valid}. Updating.", currentPort, senderPort);
+                logger_.Verbose("Different port with unreliable was used : {Used} != {Valid}. Updating.", currentPort, senderPort);
             }
             
             return (buffer[headerSize..length], id);
@@ -104,7 +113,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
     ValueTask<int> SendToTargetAsync(IPEndPoint target, Memory<byte> payload, CancellationToken cancellation)
     {
         var task = client_.SendToAsync(payload, target, cancellation);
-        Logger.Verbose("Sent unreliable message to target {Target} with length {Length}.", target, payload.Length);
+        logger_.Verbose("Sent unreliable message to target {Target} with length {Length}.", target, payload.Length);
         return task;
     }
 
@@ -128,7 +137,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
             }
 
             if (!sent)
-                Logger.Verbose("Got no target to send unreliable broadcast to.");
+                logger_.Verbose("Got no target to send unreliable broadcast to.");
         }
 
         ArrayPool<byte>.Shared.Return(value.payload);

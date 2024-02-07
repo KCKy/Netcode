@@ -6,7 +6,7 @@ namespace DefaultTransport.IpTransport
     struct Receiver<TIn>
     {
         readonly IReceiveProtocol<TIn> protocol_;
-        readonly ILogger Logger = Log.ForContext<Receiver<TIn>>();
+        readonly ILogger logger_ = Log.ForContext<Receiver<TIn>>();
 
         public Receiver(IReceiveProtocol<TIn> protocol)
         {
@@ -27,12 +27,12 @@ namespace DefaultTransport.IpTransport
             }
             catch (OperationCanceledException)
             {
-                Logger.Debug("Receiver was canceled.");
+                logger_.Debug("Receiver was canceled.");
                 throw;
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Receiver failed.");
+                logger_.Error(ex, "Receiver failed.");
                 throw;
             }
         }

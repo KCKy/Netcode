@@ -5,6 +5,10 @@ using Useful;
 
 namespace DefaultTransport.IpTransport;
 
+/// <summary>
+/// Implements sending and receiving messages over a TCP network stream.
+/// Designed to work with <see cref="IPendingMessages{T}"/> and <see cref="Receiver{T}"/>.
+/// </summary>
 sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 {
     public TcpClientTransceiver(NetworkStream stream)
@@ -16,7 +20,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     
     readonly Memory<byte> readLengthBuffer_ = new byte[sizeof(int)];
 
-    readonly ILogger Logger = Log.ForContext<TcpClientTransceiver>();
+    readonly ILogger logger_ = Log.ForContext<TcpClientTransceiver>();
 
     public const int HeaderSize = 0;
 
@@ -46,15 +50,20 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 
     public async ValueTask<Memory<byte>> ReceiveAsync(CancellationToken cancellation)
     {
-        await ReadAsync(readLengthBuffer_, cancellation);
+        await ReadAsync(readLengthBuffer_, cancellation); // Read the length of the message
         int length = Bits.ReadInt(readLengthBuffer_.Span);
 
-        Logger.Verbose("Received reliable message of length {Length}.", length);
+        logger_.Verbose("Received reliable message of length {Length}.", length);
+
+        /*
+         * Message format:
+         * [ Message Length: int ] [ Message ]
+         */
 
         if (length <= 0)
             return Memory<byte>.Empty;
         
-        var memory = ArrayPool<byte>.Shared.RentMemory(length);
+        var memory = ArrayPool<byte>.Shared.RentMemory(length); // Read the message
         // We may "leak" some memory if we fail to read but GC will take care of it
 
         await ReadAsync(memory, cancellation);
@@ -66,11 +75,23 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     
     public async ValueTask SendAsync(Memory<byte> message, CancellationToken cancellation)
     {
+        await SendAsync((ReadOnlyMemory<byte>)message, cancellation);
+        ArrayPool<byte>.Shared.Return(message);
+    }
+
+    public async ValueTask SendAsync(ReadOnlyMemory<byte> message, CancellationToken cancellation)
+    {
         int length = message.Length;
 
-        Logger.Verbose("Sending reliable message of length {Length}.", length);
+        logger_.Verbose("Sending reliable message of length {Length}.", length);
 
         Bits.Write(length, writeLengthBuffer_.Span);
+
+        /*
+         * Message format:
+         * Part 1: [ Message Length: int ]
+         * Part 2: [ Message ]
+         */
 
         await WriteAsync(writeLengthBuffer_, cancellation);
         await WriteAsync(message, cancellation);

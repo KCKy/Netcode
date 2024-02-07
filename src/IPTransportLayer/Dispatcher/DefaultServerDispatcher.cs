@@ -112,7 +112,7 @@ public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
         ArrayPool<byte>.Shared.Return(owner);
     }
 
-    void WriteMessageHeader(PooledBufferWriter<byte> writer, int preHeader, MessageType type)
+    static void WriteMessageHeader(PooledBufferWriter<byte> writer, int preHeader, MessageType type)
     {
         /*
          * Header format:

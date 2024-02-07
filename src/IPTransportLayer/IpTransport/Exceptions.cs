@@ -1,5 +1,8 @@
 ﻿namespace DefaultTransport.IpTransport;
 
+/// <summary>
+/// Thrown when a connection is being closed due to the ender side ending the connection.
+/// </summary>
 class OtherSideEndedException : ApplicationException
 {
     public OtherSideEndedException() { }
@@ -8,7 +11,7 @@ class OtherSideEndedException : ApplicationException
 }
 
 /// <summary>
-/// Thrown when 
+/// Thrown when a <see cref="IpClientTransport"/> times out.
 /// </summary>
 public class TimedOutException : ApplicationException
 {

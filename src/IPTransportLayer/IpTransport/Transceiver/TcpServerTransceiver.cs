@@ -5,11 +5,15 @@ using Useful;
 
 namespace DefaultTransport.IpTransport;
 
+/// <summary>
+/// Extends usability of <see cref="TcpClientTransceiver"/> to the server.
+/// Designed to work with <see cref="IPendingMessages{T}"/> and <see cref="Receiver{T}"/>.
+/// </summary>
 sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id)>
 {
     readonly ConcurrentDictionary<long, ConnectedClient> idToConnection_;
 
-    readonly ILogger Logger = Log.ForContext<TcpServerTransceiver>();
+    readonly ILogger logger_ = Log.ForContext<TcpServerTransceiver>();
 
     public TcpServerTransceiver(ConcurrentDictionary<long, ConnectedClient> clients)
     {
@@ -18,15 +22,15 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id
 
     public const int HeaderSize = 0;
 
-    async ValueTask SafeSendAsync(ConnectedClient client, Memory<byte> message, CancellationToken cancellation)
+    async ValueTask SafeSendAsync(ConnectedClient client, ReadOnlyMemory<byte> message, CancellationToken cancellation)
     {
         try
         {
-            await client.ClientTransceiver.SendAsync(message, cancellation);
+            await client.ClientTransceiver.SendAsync(message, cancellation); // The memory is borrowed to be sent to the specific client.
         }
         catch (Exception ex)
         {
-            Logger.Error(ex, "Client {Id} failed to send.", client.Id);
+            logger_.Error(ex, "Client {Id} failed to send.", client.Id);
             client.Cancellation.Cancel();
         }
     }
@@ -37,11 +41,13 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id
 
         if (id is not { } clientId)
         {
+            // Broadcast
             foreach ((_, ConnectedClient client) in idToConnection_)
                 await SafeSendAsync(client, message, cancellation);
         }
         else
         {
+            // Unicast
             if (idToConnection_.TryGetValue(clientId, out ConnectedClient? client))
                 await SafeSendAsync(client, message, cancellation);
         }
