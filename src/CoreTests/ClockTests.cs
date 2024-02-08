@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Core.Providers;
+using Core.Timing;
 using Serilog;
 using Xunit.Abstractions;
 
@@ -84,7 +85,7 @@ public sealed class ClockTests
     {
         Clock clock = new()
         {
-            TargetTPS = tps
+            TargetTps = tps
         };
 
         double period = 1 / tps;

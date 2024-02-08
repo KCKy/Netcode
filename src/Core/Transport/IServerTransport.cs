@@ -14,6 +14,7 @@ public interface IServerTransport : IServerInTransport, IServerOutTransport { }
 /// <summary>
 /// A message from a client to the server.
 /// </summary>
+/// <param name="id">The id of the client the message is from.</param>
 /// <param name="packet">Move of the received packet (pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
 
 public delegate void ServerMessageEvent(long id, Memory<byte> packet);
@@ -26,12 +27,12 @@ public interface IServerInTransport
     /// <summary>
     /// Event which is invoked when a reliable message from a client is received.
     /// </summary>
-    event Action<long, Memory<byte>> OnReliableMessage;
+    event ServerMessageEvent OnReliableMessage;
 
     /// <summary>
     /// Event which is invoked when an unreliable message from a client is received.
     /// </summary>
-    event Action<long, Memory<byte>> OnUnreliableMessage;
+    event ServerMessageEvent OnUnreliableMessage;
 
     /// <summary>
     /// Event which is invoked when a new client connects to the server. The id of the connection is passed.

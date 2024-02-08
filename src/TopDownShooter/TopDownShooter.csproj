@@ -10,10 +10,14 @@
 
   <ItemGroup>
     <None Remove="LiberationMono-Regular.ttf" />
+    <None Remove="tile.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="LiberationMono-Regular.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="tile.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -28,12 +32,6 @@
     <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
     <ProjectReference Include="..\SfmlExtensions\SfmlExtensions.csproj" />
     <ProjectReference Include="..\Useful\Useful.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="tile.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

@@ -45,7 +45,7 @@ public record struct SerilogOption(string Name, string Value)
 /// <param name="LocalAddress">The address the local socket should bind to.</param>
 /// <param name="TargetAddress">The address of the target server.</param>
 /// <param name="DoCheckSum">Whether to do checksums of game states.</param>
-/// <param name="TraceFrameTime">Whether to trace time took to update each frame in the log.</param>
+/// <param name="TraceFrameTime">Whether to trace time, how much took to update each frame, in the log.</param>
 /// <param name="TraceState">Whether to log all states in the log.</param>
 /// <param name="LatencyPadding">Amount of time in seconds specifying how much early inputs should be received by the server. Recommended value for standard connections are 5 - 10 ms.</param>
 /// <param name="ConnectionTimeoutMs">Time in seconds, the timeout of a new client connection. </param>

@@ -4,6 +4,9 @@ using Useful;
 
 namespace Core.Utility;
 
+/// <summary>
+/// Owner a specific game state, keeps its index, provides methods for updating, checksums and serialization.
+/// </summary>
 sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
@@ -66,7 +69,7 @@ sealed class StateHolder<TC, TS, TG> : IStateHolder<TC, TS, TG>
         }
         catch (Exception ex)
         {
-            logger_.Error(ex, "State update failed with exception!");
+            logger_.Error(ex, "State update failed with an exception!");
         }
 
         return UpdateOutput.Empty;

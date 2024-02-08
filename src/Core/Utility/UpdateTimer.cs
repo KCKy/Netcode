@@ -3,11 +3,14 @@ using Serilog;
 
 namespace Core.Utility;
 
+/// <summary>
+/// Timer to measure and log state update times.
+/// </summary>
 readonly struct UpdateTimer
 {
     readonly Stopwatch stopwatch_ = new();
 
-    readonly ILogger Logger = Log.ForContext<UpdateTimer>();
+    readonly ILogger logger_ = Log.ForContext<UpdateTimer>();
 
     public UpdateTimer() { }
 
@@ -19,7 +22,7 @@ readonly struct UpdateTimer
     public void End(long frame)
     {
         stopwatch_.Stop();
-        Logger.Verbose("Update {Frame} took {Milliseconds}.", frame, stopwatch_.ElapsedMilliseconds);
+        logger_.Verbose("Update {Frame} took {Milliseconds}.", frame, stopwatch_.ElapsedMilliseconds);
         stopwatch_.Reset();
     }
 }

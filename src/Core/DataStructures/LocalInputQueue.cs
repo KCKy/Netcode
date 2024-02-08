@@ -6,6 +6,9 @@ namespace Core.DataStructures;
 /// Stores all inputs of the local client between authoritative and predict state.
 /// Provides access to these inputs to reevaluate predict state in case of a misprediction.
 /// </summary>
+/// <remarks>
+/// This structure is thread-safe.
+/// </remarks>
 /// <typeparam name="TInput"></typeparam>
 public interface ILocalInputQueue<TInput>
 {

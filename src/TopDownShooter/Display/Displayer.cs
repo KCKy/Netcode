@@ -3,6 +3,7 @@ using Useful;
 using System.Diagnostics;
 using GameCommon;
 using SFML.System;
+using SfmlExtensions;
 
 namespace TopDownShooter.Display;
 

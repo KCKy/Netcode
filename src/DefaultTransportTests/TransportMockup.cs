@@ -37,8 +37,8 @@ sealed class MockClientTransport : IClientTransport
 
 sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTransport>
 {
-    public event Action<long, Memory<byte>>? OnReliableMessage;
-    public event Action<long, Memory<byte>>? OnUnreliableMessage;
+    public event ServerMessageEvent? OnReliableMessage;
+    public event ServerMessageEvent? OnUnreliableMessage;
     public event Action<long>? OnClientJoin;
     public event Action<long>? OnClientFinish;
 
@@ -137,8 +137,8 @@ sealed class SingleClientMockTransport : IClientTransport
 
 sealed class SingleServerMockTransport : IServerTransport
 {
-    public event Action<long, Memory<byte>>? OnReliableMessage;
-    public event Action<long, Memory<byte>>? OnUnreliableMessage;
+    public event ServerMessageEvent? OnReliableMessage;
+    public event ServerMessageEvent? OnUnreliableMessage;
     public void InvokeReliable(long id, Memory<byte> message) => OnReliableMessage?.Invoke(id, message);
     public void InvokeUnreliable(long id, Memory<byte> message) => OnUnreliableMessage?.Invoke(id, message);
 

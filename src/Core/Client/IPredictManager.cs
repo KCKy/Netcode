@@ -19,9 +19,9 @@ interface IPredictManager<TC, TS, TG>
     /// Provide authoritative input for given frame update to check for mispredictions.
     /// </summary>
     /// <remarks>
-    /// This shell be called only atomically after given auth state update.
+    /// This shall be called atomically after given auth state update.
     /// </remarks>
-    /// <param name="serializedInput">Serialized authoritative input, only borrowed.</param>
+    /// <param name="serializedInput">Borrow of serialized authoritative input.</param>
     /// <param name="frame">Index of the frame the input belongs to.</param>
     /// <param name="input">Move of input corresponding to <paramref name="serializedInput"/>.</param>
     void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TC, TS> input);
@@ -53,5 +53,8 @@ interface IPredictManager<TC, TS, TG>
     /// <summary>
     /// The current frame of predict simulation.
     /// </summary>
+    /// <remarks>
+    /// This method is thread safe.
+    /// </remarks>
     long Frame { get; }
 }

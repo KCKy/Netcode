@@ -1,5 +1,8 @@
-﻿namespace Core.Providers;
+﻿namespace Core.Timing;
 
+/// <summary>
+/// A clock which periodically raises an event.
+/// </summary>
 public interface IClock
 {
     /// <summary>
@@ -8,9 +11,9 @@ public interface IClock
     event Action OnTick;
 
     /// <summary>
-    /// The ticks per second of the server. Constant.
+    /// The target TPS of the clock, the clock should as closely match this TPS while spacing the ticks evenly.
     /// </summary>
-    double TargetTPS { get; set; }
+    double TargetTps { get; set; }
 
     /// <summary>
     /// Starts the clock.

@@ -1,5 +1,6 @@
 ﻿using Core.DataStructures;
 using Core.Providers;
+using Core.Timing;
 using Core.Transport;
 using Core.Utility;
 using MemoryPack;
@@ -8,29 +9,79 @@ using Useful;
 
 namespace Core.Server;
 
-public sealed class Server<TClientInput, TServerInput, TGameState>
+/// <summary>
+/// Provides common API of the server usable across games.
+/// </summary>
+public interface IServer
+{
+    /// <summary>
+    /// Whether to log all states in the log.
+    /// </summary>
+    bool TraceState { get; }
+
+    /// <summary>
+    /// Whether to do checksums of game states. The server will calculate the checksum and send it to each client.
+    /// </summary>
+    bool SendChecksum { get; }
+
+    /// <summary>
+    /// Whether to trace time, how much took to update each frame, in the log.
+    /// </summary>
+    bool TraceFrameTime { get; }
+
+    /// <summary>
+    /// Begin the server. Starts the update clock and handling clients.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">If the server has already been started or terminated.</exception>
+    /// <returns>Task representing the servers runtime. When the server crashes the task will be faulted. If the server is stopped it will be cancelled.</returns>
+    Task RunAsync();
+
+    /// <summary>
+    /// Stops the server. State updates will stop.
+    /// </summary>
+    void Terminate();
+}
+
+
+/// <summary>
+/// The main server class. Takes care of collecting inputs of clients,
+/// periodically updating the authoritative state based on collected input, manages clients, informs them about authoritative inputs,
+/// and whether they send their inputs on time. Also supports optional checksums of the state.
+/// </summary>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
+public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     where TGameState : class, IGameState<TClientInput, TServerInput>, new()
     where TClientInput : class, new()
     where TServerInput : class, new()
 {
-    readonly IStateHolder<TClientInput, TServerInput, TGameState> holder_;
+    // Locking the holder stop RW/WR conflicts and correct init behaviour (WW does not happen due to tickMutex)
+    readonly IStateHolder<TClientInput, TServerInput, TGameState> holder_; 
     readonly IClientInputQueue<TClientInput> inputQueue_;
-    readonly ILogger Logger = Log.ForContext<Server<TClientInput, TServerInput, TGameState>>();
+    readonly ILogger logger_ = Log.ForContext<Server<TClientInput, TServerInput, TGameState>>();
     readonly IClock clock_;
     readonly CancellationTokenSource clockCancellation_ = new();
     readonly IServerInputProvider<TServerInput, TGameState> inputProvider_;
-    readonly IClientInputPredictor<TClientInput> inputPredictor_;
     readonly IDisplayer<TGameState> displayer_;
     readonly IServerSender sender_;
     readonly IServerReceiver receiver_;
 
-    readonly object terminationMutex_ = new();
-    readonly object tickMutex_ = new();
+    readonly object terminationMutex_ = new(); // Assures atomicity of start and termination operations.
+    readonly object tickMutex_ = new(); // Assures tick updates are atomic.
 
     bool started_ = false;
     bool terminated_ = false;
     bool updatingEnded_ = false;
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="sender">Sender to use for sending messages to clients.</param>
+    /// <param name="receiver">Receiver to use for receiving messages from clients.</param>
+    /// <param name="displayer">Optional displayer to display the server state.</param>
+    /// <param name="serverProvider">Optional server input provider. If none is provided <see cref="DefaultServerInputProvider{TServerInput,TGameState}"/> is used.</param>
+    /// <param name="inputPredictor">Optional client input predictor. If none is provided <see cref="DefaultClientInputPredictor{TClientInput}"/> is used.</param>
     public Server(IServerSender sender, IServerReceiver receiver,
         IDisplayer<TGameState>? displayer = null,
         IServerInputProvider<TServerInput, TGameState>? serverProvider = null,
@@ -40,11 +91,10 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         receiver_ = receiver;
         displayer_ = displayer ?? new DefaultDisplayer<TGameState>();
         inputProvider_ = serverProvider ?? new DefaultServerInputProvider<TServerInput, TGameState>();
-        inputPredictor_ = inputPredictor ?? new DefaultClientInputPredictor<TClientInput>();
-        inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate, inputPredictor_);
+        inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate,
+            inputPredictor ?? new DefaultClientInputPredictor<TClientInput>());
         holder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
         clock_ = new Clock();
-        
         timer_ = new();
         SetHandlers();
     }
@@ -54,7 +104,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         IServerInputProvider<TServerInput, TGameState> serverProvider,
         IClientInputQueue<TClientInput> queue,
         IStateHolder<TClientInput, TServerInput, TGameState> holder,
-        IClock clock, IClientInputPredictor<TClientInput> inputPredictor)
+        IClock clock)
     {
         sender_ = sender;
         receiver_ = receiver;
@@ -63,8 +113,6 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         inputQueue_ = queue;
         holder_ = holder;
         clock_ = clock;
-        inputPredictor_ = inputPredictor;
-
         timer_ = new();
         SetHandlers();
     }
@@ -85,29 +133,35 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
         receiver_.OnRemoveClient -= FinishClient;
     }
 
+    /// <inheritdoc/>
     public bool TraceState { get; set; }
+
+    /// <inheritdoc/>
     public bool SendChecksum { get; set; }
+
+    /// <inheritdoc/>
     public bool TraceFrameTime { get; init; }
 
+    /// <inheritdoc/>
     public async Task RunAsync()
     {
         lock (terminationMutex_)
         {
-            if (started_ || terminated_)
-                return;
+            if (terminated_)
+                throw new InvalidOperationException("The server has been terminated.");
+
+            if (started_)
+                throw new InvalidOperationException("The server has already been started.");
 
             started_ = true;
-            clock_.TargetTPS = TGameState.DesiredTickRate;
+            clock_.TargetTps = TGameState.DesiredTickRate;
             clock_.OnTick += Tick;
         }
 
-        try
-        {
-            await clock_.RunAsync(clockCancellation_.Token);
-        }
-        catch (OperationCanceledException) { }
+        await clock_.RunAsync(clockCancellation_.Token);
     }
 
+    /// <inheritdoc/>
     public void Terminate()
     {
         lock (terminationMutex_)
@@ -128,37 +182,52 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
     readonly PooledBufferWriter<byte> authInputWriter_ = new();
     readonly PooledBufferWriter<byte> traceStateWriter_ = new();
 
-    long Update()
+    UpdateInput<TClientInput, TServerInput> GatherInput()
     {
-        // Gather input
         var clientInput = inputQueue_.ConstructAuthoritativeFrame();
-        long frame = holder_.Frame + 1;
-
         TServerInput serverInput = inputProvider_.GetInput(holder_.State);
-        UpdateInput<TClientInput, TServerInput> input = new(clientInput, serverInput);
+        return new(clientInput, serverInput);
+    }
 
-        // Update
+    void HandleKicking(long[]? clientsToKick)
+    {
+        if (clientsToKick is not { Length: > 0 } toTerminate)
+            return;
+
+        foreach (long client in toTerminate)
+            sender_.Kick(client);
+    }
+
+    (UpdateOutput output, Memory<byte> trace, long? checksum) StateUpdate(UpdateInput<TClientInput, TServerInput> input)
+    {
         UpdateOutput output;
         lock (holder_)
             output = holder_.Update(input);
         
+        // It is ok to release to lock earlier, as update is atomic and the state is modified only in the update (concurrent reading is allowed).
+
         displayer_.AddAuthoritative(holder_.Frame, holder_.State);
         var trace = TraceState ? traceStateWriter_.MemoryPackSerialize(holder_.State) : Memory<byte>.Empty;
         long? checksum = SendChecksum ? holder_.GetChecksum() : null;
+        return (output, trace, checksum);
+    }
 
-        // Trace
+    long Update()
+    {
+        var input = GatherInput();
+
+        long frame = holder_.Frame + 1;
+
+        // Update
+        (UpdateOutput output, var trace, long? checksum) = StateUpdate(input);
+
         if (!trace.IsEmpty)
-            Logger.Verbose("Finished state update for {Frame} resulting with {State}", frame, trace);
+            logger_.Verbose("Finished state update for {Frame} resulting with {State}", frame, trace);
 
-        // Kick?
-        if (output.ClientsToTerminate is { Length: > 0 } toTerminate)
-            foreach (long client in toTerminate)
-                sender_.Kick(client);
+        HandleKicking(output.ClientsToTerminate);
 
-        // Send
         sender_.SendAuthoritativeInput(frame, checksum, input);
 
-        // Stop?
         if (output.ShallStop)
         {
             updatingEnded_ = true;
@@ -188,13 +257,17 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
     void AddClient(long id)
     {
         inputQueue_.AddClient(id);
+        long frame;
 
+        // We need to synchronize the state and assure an update is not in progress.
+        // The client won't miss next input's as the lock is not released until the client is initialized.
         lock (holder_)
         {
-            long frame = holder_.Frame;
+            frame = holder_.Frame;
             sender_.Initialize(id, frame, holder_.State);
-            Logger.Debug("Initialized {Id} for {Frame}.", id, frame);
         }
+
+        logger_.Debug("Initialized {Id} for {Frame}.", id, frame);
     }
 
     void AddInput(long id, long frame, ReadOnlySpan<byte> serializedInput)
@@ -203,7 +276,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 
         if (input is null)
         {
-            Logger.Debug("Got invalid input.");
+            logger_.Debug("Got invalid input.");
             return;
         }
 
@@ -212,7 +285,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState>
 
     void FinishClient(long id)
     {
-        Logger.Debug("Client {Id} disconnected.", id);
+        logger_.Debug("Client {Id} disconnected.", id);
         inputQueue_.RemoveClient(id);
     }
 }

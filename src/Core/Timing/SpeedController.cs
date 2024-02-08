@@ -1,19 +1,33 @@
 ﻿using Serilog;
 using Useful;
 
-namespace Core.Providers;
+namespace Core.Timing;
 
+/// <summary>
+/// The default <see cref="SpeedController"/> implementation.
+/// Sets the speed to approach the desired delta in <see cref="SmoothingTime"/> seconds.
+/// </summary>
+/// <remarks>
+/// Because the current delta is constantly being updated the speed is also constantly updated.
+/// Therefore, from purely theoretical point of view the desired delta would never be achieved but only approached.
+/// However, for practical use this technique does not overshoot and converges close enough to the desired delta in short time.
+/// </remarks>
 public class SpeedController : ISpeedController
 {
     readonly Clock clock_ = new();
 
+    /// <inheritdoc/>
     public Task RunAsync(CancellationToken cancelToken = new()) => clock_.RunAsync(cancelToken);
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
     public SpeedController()
     {
         FrameMemory = 20;
     }
 
+    /// <inheritdoc/>
     public event Action? OnTick
     {
         add => clock_.OnTick += value;
@@ -25,6 +39,9 @@ public class SpeedController : ISpeedController
     double currentDelta_ = 0;
     double targetSpeed_ = 1;
 
+    /// <summary>
+    /// The time to smooth over. The controller shall set speed such that the desired delta would be achieved over this time (if no speed change occured after).
+    /// </summary>
     public double SmoothingTime { get; init; } = 1;
 
     readonly ILogger logger_ = Log.ForContext<SpeedController>();
@@ -41,12 +58,13 @@ public class SpeedController : ISpeedController
         // The update period in accordance to new speed.
         currentPeriod_ = Math.Min(1 / newSpeed, 1);
 
-        clock_.TargetTPS = CurrentTPS;
+        clock_.TargetTps = CurrentTps;
 
         logger_.Verbose("Setting new period to {currentPeriod_} s. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
     }
 
-    public double TargetTPS
+    /// <inheritdoc/>
+    public double TargetTps
     {
         get
         {
@@ -71,6 +89,7 @@ public class SpeedController : ISpeedController
 
     const string DeltaMustBeReal = "Delta must be a real number.";
 
+    /// <inheritdoc/>
     public double TargetDelta
     {
         get => targetDelta_;
@@ -90,6 +109,10 @@ public class SpeedController : ISpeedController
         }
     }
 
+    /// <summary>
+    /// For better results, the controller takes a minimum delay value over a past window (to account for fluctuating connections).
+    /// This value determines this window's size in game ticks.
+    /// </summary>
     public int FrameMemory
     {
         get => statsWindowed_.Length;
@@ -103,6 +126,7 @@ public class SpeedController : ISpeedController
 
     MinimumWindowed<double> statsWindowed_;
 
+    /// <inheritdoc/>
     public double CurrentDelta
     {
         get => currentDelta_;
@@ -123,7 +147,8 @@ public class SpeedController : ISpeedController
         }
     }
 
-    public double CurrentTPS
+    /// <inheritdoc/>
+    public double CurrentTps
     {
         get
         {

@@ -1,9 +1,14 @@
-using Serilog;
 using System.Diagnostics;
+using Core.Providers;
+using Serilog;
 using Useful;
 
-namespace Core.Providers;
+namespace Core.Timing;
 
+/// <summary>
+/// Default implementation of <see cref="IClock"/>.
+/// Creates a timing thread, which uses passive waiting.
+/// </summary>
 public sealed class Clock : IClock
 {
     /// <inheritdoc/>
@@ -14,13 +19,21 @@ public sealed class Clock : IClock
     static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
     readonly long clockQuantumTicks_ = TicksPerMs * 15;
 
+    /// <summary>
+    /// The smallest time period of sleep to requested from the OS.
+    /// </summary>
+    /// <remarks>
+    /// On some operating systems (like sleep) calling sleep on a too small value results in sleeping for an undesirably long amount of time.
+    /// In these cases it is desirable to yield instead.
+    /// </remarks>
     public TimeSpan ClockQuantumSecs
     {
         get => TimeSpan.FromSeconds(clockQuantumTicks_ / (double)Stopwatch.Frequency);
         init => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
     }
 
-    public double TargetTPS
+    /// <inheritdoc/>
+    public double TargetTps
     {
         get => targetTps_;
         set
@@ -31,12 +44,16 @@ public sealed class Clock : IClock
         }
     }
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <exception cref="PlatformNotSupportedException">If the given platform does not support precise hardware timing required by the clock.</exception>
     public Clock()
     {
         if (!Stopwatch.IsHighResolution)
             throw new PlatformNotSupportedException("Platform does not support precision timing.");
 
-        TargetTPS = 1;
+        TargetTps = 1;
     }
 
     readonly ILogger logger_ = Log.ForContext<Clock>();

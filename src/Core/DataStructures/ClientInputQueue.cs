@@ -1,14 +1,12 @@
-﻿using System.Buffers;
-using System.Diagnostics;
-using System.Security.Cryptography;
+﻿using System.Diagnostics;
 using Core.Providers;
-using Core.Utility;
 using Serilog;
 
 namespace Core.DataStructures;
 
 /// <summary>
 /// Receives all client input to the server. Constructs authoritative client update inputs <see cref="UpdateClientInfo{TClientInput}"/>.
+/// Authorizes all received inputs and raises <see cref="OnInputAuthored"/> informing whether inputs are being received on time.
 /// </summary>
 /// <typeparam name="TClientInput"></typeparam>
 public interface IClientInputQueue<TClientInput>
@@ -36,8 +34,8 @@ where TClientInput : class, new()
     /// <summary>
     /// Adds an input for given client.
     /// </summary>
-    /// <param name="id">Id of the client.</param>
-    /// <param name="frame">frame number to which the input corresponds.</param>
+    /// <param name="id">ID of the client.</param>
+    /// <param name="frame">Frame number to which the input corresponds.</param>
     /// <param name="input">The input.</param>
     void AddInput(long id, long frame, TClientInput input);
 
@@ -47,9 +45,20 @@ where TClientInput : class, new()
     /// <returns>Input frame for current frame.</returns>
     Memory<UpdateClientInfo<TClientInput>> ConstructAuthoritativeFrame();
     
+    /// <summary>
+    /// Raised when given client input is being authored by the server.
+    /// </summary>
     event InputAuthoredDelegate OnInputAuthored;
 }
 
+/// <summary>
+/// Event describing the authorization of a given client's input.
+/// If <paramref name="difference"/> is negative that means given input was not received in time and the server ignored the late input,
+/// positive value means the input was received in-time to be accounted for in the frame update.
+/// </summary>
+/// <param name="id">The ID of the client the input belongs to.</param>
+/// <param name="frame">The frame index of the frame the input is for.</param>
+/// <param name="difference">The difference of the corresponding frame update time and the input receive time.</param>
 public delegate void InputAuthoredDelegate(long id, long frame, TimeSpan difference);
 
 /// <inheritdoc/>
@@ -98,6 +107,11 @@ where TClientInput : class, new()
 
     readonly object mutex_ = new();
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="tps">The TPS the game should run at. Used for input delay calculations.</param>
+    /// <param name="predictor">Input predictor for client inputs. Used as a substitute when input of a client are not received in time.</param>
     public ClientInputQueue(double tps, IClientInputPredictor<TClientInput> predictor)
     {
         ticksPerSecond_ = tps;
@@ -116,7 +130,7 @@ where TClientInput : class, new()
 
     long frame_ = -1;
 
-    readonly ILogger Logger = Log.ForContext<ClientInputQueue<TClientInput>>();
+    readonly ILogger logger_ = Log.ForContext<ClientInputQueue<TClientInput>>();
 
     /// <inheritdoc/>
     public void AddClient(long id)
@@ -125,11 +139,11 @@ where TClientInput : class, new()
         {
             if (!idToInputs_.TryAdd(id, new(predictor_)))
             {
-                Logger.Fatal("To add duplicate client {Id}", id);
+                logger_.Fatal("To add duplicate client {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));
             }
 
-            Logger.Verbose("Added client {Id}.", id);
+            logger_.Verbose("Added client {Id}.", id);
         }
     }
 
@@ -141,13 +155,13 @@ where TClientInput : class, new()
 
             if (!idToInputs_.Remove(id))
             {
-                Logger.Fatal("To remove non-contained {Id}", id);
+                logger_.Fatal("To remove non-contained {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));
             }
 
             removedClients_.Add(id);
 
-            Logger.Verbose("Removed client {Id}.", id);
+            logger_.Verbose("Removed client {Id}.", id);
         }
     }
 
@@ -156,39 +170,34 @@ where TClientInput : class, new()
     {
         lock (mutex_)
         {
-            long timestamp = Stopwatch.GetTimestamp();
+            long now = Stopwatch.GetTimestamp();
 
             if (!idToInputs_.TryGetValue(id, out var clientInfo))
             {
-                Logger.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
+                logger_.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
             if (frame <= frame_)
             {
-                long now = Stopwatch.GetTimestamp();
-
                 if (frame <= clientInfo.LastAuthorizedInput)
                     return; // No need to notify, notification has already been made.
 
                 clientInfo.LastAuthorizedInput = frame;
 
-                var framePart = Stopwatch.GetElapsedTime(lastFrameUpdate_, timestamp);
+                var framePart = Stopwatch.GetElapsedTime(lastFrameUpdate_, now);
 
                 TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_) - framePart;
                 OnInputAuthored?.Invoke(id, frame, difference);
 
-                Logger.Debug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
+                logger_.Debug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
                 return;
             }
             
-            if (!clientInfo.TryAdd(frame, input, timestamp))
-            {
-                //Logger.Verbose("Got repeated input from client {Id} for {Frame} at {Current}..", id, frame, frame_);
-                return;
-            }
+            if (!clientInfo.TryAdd(frame, input, now))
+                return; // The input was already received.
 
-            Logger.Verbose("Got input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
+            logger_.Verbose("Got input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
         }
     }
 
@@ -221,7 +230,7 @@ where TClientInput : class, new()
                     TimeSpan difference = Stopwatch.GetElapsedTime(value, lastFrameUpdate_);
                     OnInputAuthored?.Invoke(id, nextFrame, difference);
 
-                    Logger.Verbose("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
+                    logger_.Verbose("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
                 }
                 
                 i++;
@@ -236,11 +245,12 @@ where TClientInput : class, new()
             frame_ = nextFrame;
             removedClients_.Clear();
 
-            Logger.Verbose("Constructed authoritative frame for {FrameIndex}.", nextFrame);
+            logger_.Verbose("Constructed authoritative frame for {FrameIndex}.", nextFrame);
 
             return frame;
         }
     }
 
+    /// <inheritdoc/>
     public event InputAuthoredDelegate? OnInputAuthored;
 }

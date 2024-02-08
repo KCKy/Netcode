@@ -3,7 +3,6 @@ using SFML.System;
 
 namespace GameOfLife;
 
-
 static class DirectionExtensions
 {
     public static Vector2i MapToMovement(this Direction direction)

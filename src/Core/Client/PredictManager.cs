@@ -7,6 +7,7 @@ using Core.Transport;
 using Core.Utility;
 using MemoryPack;
 using Serilog;
+using Serilog.Core;
 using Useful;
 
 namespace Core.Client;
@@ -16,7 +17,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     where TC : class, new()
     where TS : class, new()
 {
-    readonly ILogger Logger = Log.ForContext<PredictManager<TC, TS, TG>>();
+    readonly ILogger logger_ = Log.ForContext<PredictManager<TC, TS, TG>>();
 
     /*
      * Mutex ordering to avoid deadlocks:
@@ -26,19 +27,19 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
      * Replacement Mutex
      */
 
-    /// This mutex assures predict ticks are not executed concurrently,
-    /// Which may happen in some extreme edge cases.
+    // This mutex assures predict ticks are not executed concurrently,
+    // Which may happen in some extreme edge cases.
     readonly object tickMutex_ = new();
 
-    /// Predict queue is thread safe, but only one task (predict or replace) is allowed to manage its predictions, until it is superseded.
-    /// This mutex assures atomicity of replace identification and predict queue write access.
+    // Predict queue is thread safe, but only one task (predict or replace) is allowed to manage its predictions, until it is superseded.
+    // This mutex assures atomicity of replace identification and predict queue write access.
     readonly object replacementMutex_ = new();
 
     readonly ConcurrentQueue<Memory<byte>> predictQueue_ = new();
     
-    /// The mutex of replacement state shall be held during the whole duration of a replacement task, and should be released only after the task is finished.
-    /// It provides access to the content of the holder.
-    /// <see cref="replacementMutex_"/> should be acquired every now and then to check whether the replacement is still required.
+    // The mutex of replacement state shall be held during the whole duration of a replacement task, and should be released only after the task is finished.
+    // It provides access to the content of the holder.
+    // replacementMutex should be acquired occasionally to check whether the replacement is still required.
     readonly IStateHolder<TC, TS, TG> replacementState_ = new StateHolder<TC, TS, TG>();
     long currentReplacement_ = 0;
     bool activeReplacement_ = false;
@@ -84,7 +85,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
 
         predictQueue_.Clear();
 
-        Logger.Debug("Initiated predict state.");
+        logger_.Debug("Initiated predict state.");
     }
 
     public long Frame
@@ -105,7 +106,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         if (predictedInput.Span.SequenceEqual(serializedInput))
             return;
 
-        Logger.Debug("Divergence appeared for frame {Frame}.", frame);
+        logger_.Debug("Divergence appeared for frame {Frame}.", frame);
 
         // We have a divergence, a new replacement is required.
 
@@ -135,21 +136,19 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
 
     async Task ReplaceGameStateAsync(long replacementIndex, long frame, Memory<byte> serializedState, UpdateInput<TC, TS> input)
     {
-        await Task.Yield(); // RunAsync in a different thread
+        await Task.Yield(); // Run async. in a different thread
 
-        Logger.Debug("Began replacement for frame {Frame}.", frame);
+        logger_.Debug("Began replacement for frame {Frame}.", frame);
 
         // Wait for earlier replacements to finish
         lock (replacementState_)
         {
             // Check ownership
             lock (replacementMutex_)
-            {
                 if (currentReplacement_ > replacementIndex)
                     return;
-            }
 
-            ClientInputs.Pop(frame); // Only inputs greater than frame will be needed from now.
+            ClientInputs.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
 
             TG? state = replacementState_.State;
 
@@ -163,76 +162,99 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
             replacementState_.Frame = frame;
             replacementState_.State = state;
 
-            // Begin replacement loop
-            while (true)
+            ReplacementLoop(replacementIndex, frame, input);
+        }
+    }
+
+    long TryReplace(long replacementIndex, long frame, UpdateInput<TC, TS> input)
+    {
+        lock (predictState_)
+        {
+            long difference = predictState_.Frame - frame;
+
+            if (difference == 0)
             {
-                // Check how many steps remain
-                long difference;
-                lock (predictState_)
-                {
-                    difference = predictState_.Frame - frame;
+                Debug.Assert(predictState_.Frame == replacementState_.Frame);
 
-                    if (difference == 0)
-                    {
-                        Debug.Assert(predictState_.Frame == replacementState_.Frame);
+                // Replacement was successful
+                (replacementState_.State, predictState_.State) = (predictState_.State, replacementState_.State);
+                predictInput_ = input;
 
-                        // Replacement was successful
-                        (replacementState_.State, predictState_.State) = (predictState_.State, replacementState_.State);
-                        predictInput_ = input;
-                        
-                        lock (replacementMutex_)
-                            if (currentReplacement_ <= replacementIndex)
-                                activeReplacement_ = false; // Replacement has not been superseded yet. Return predict queue ownership to predict queue.
-                        
-                        Debug.Assert(frame == replacementState_.Frame);
+                lock (replacementMutex_)
+                    if (currentReplacement_ <= replacementIndex)
+                        activeReplacement_ = false; // Replacement has not been superseded yet. Time to return predict queue ownership to predict queue.
 
-                        Logger.Debug("Successfully replaced predict at frame {Frame}.", frame);
-                        return;
-                    }
-                }
+                Debug.Assert(frame == replacementState_.Frame);
 
-                if (difference < 0)
-                {
-                    Logger.Error("Predict state is behind replacement state. This should not happen. {Replacement} {Predict}", replacementState_.Frame, predictState_.Frame);
-                    return;
-                }
-            
-                // Replacement state is behind predict we need to update
-
-                Logger.Debug("Need to catchup {Updates} updates.", difference);
-
-                while (difference > 0)
-                {
-                    frame++;
-                    difference--;
-
-                    // This is assured to exist
-                    TC localInput = ClientInputs[frame] ?? new();
-
-                    // Predict
-                    PredictClientInput(input.ClientInput.Span, localInput);
-                    ServerInputPredictor.PredictInput(ref input.ServerInput, replacementState_.State);
-
-                    MemoryPackSerializer.Serialize(replacementInputWriter_, input);
-
-                    lock (replacementMutex_)
-                    {
-                        if (currentReplacement_ > replacementIndex)
-                        {
-                            replacementInputWriter_.Reset();
-                            return;
-                        }
-
-                        // If were still current, we may add our prediction
-
-                        predictQueue_.Enqueue(replacementInputWriter_.ExtractAndReplace());
-                    }
-
-                    replacementState_.Update(input);
-
-                    Debug.Assert(frame == replacementState_.Frame);
-                }
+                logger_.Debug("Successfully replaced predict at frame {Frame}.", frame);
             }
+
+            return difference;
+        }
+    }
+
+    bool UpdateReplacementState(long replacementIndex, long difference, ref long frame, UpdateInput<TC, TS> input)
+    {
+        while (difference > 0)
+        {
+            frame++;
+            difference--;
+
+            // This is assured to exist
+            TC localInput = ClientInputs[frame] ?? throw new ArgumentException();
+
+            // Predict
+            PredictClientInput(input.ClientInput.Span, localInput);
+            ServerInputPredictor.PredictInput(ref input.ServerInput, replacementState_.State);
+
+            MemoryPackSerializer.Serialize(replacementInputWriter_, input);
+
+            lock (replacementMutex_)
+            {
+                if (currentReplacement_ > replacementIndex)
+                {
+                    replacementInputWriter_.Reset();
+                    return true;
+                }
+
+                // If were still current, we may add our prediction
+
+                predictQueue_.Enqueue(replacementInputWriter_.ExtractAndReplace());
+            }
+
+            replacementState_.Update(input);
+
+            Debug.Assert(frame == replacementState_.Frame);
+        }
+
+        return false;
+    }
+
+    void ReplacementLoop(long replacementIndex, long frame, UpdateInput<TC, TS> input)
+    {
+        while (true)
+        {
+            // Check how many steps remain
+            long difference = TryReplace(replacementIndex, frame, input);
+
+            switch (difference)
+            {
+                case 0:
+                    return; // Replacement was done successfully.
+                case < 0:
+                    logger_.Warning(
+                        "Predict state is behind replacement state. This should happen only on startup. {Replacement} {Predict}",
+                        replacementState_.Frame, predictState_.Frame);
+                    return;
+            }
+
+            // Replacement state is behind predict we need to update
+
+            logger_.Debug("Need to catchup {Updates} updates.", difference);
+
+            bool shouldEnd = UpdateReplacementState(replacementIndex, difference, ref frame, input);
+            if (shouldEnd)
+                return;
         }
     }
 
@@ -247,7 +269,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         Sender.SendInput(frame, localInput);
 
         // Modify
-        Logger.Verbose("Updating predict at frame {frame}.", frame);
+        logger_.Verbose("Updating predict at frame {frame}.", frame);
             
         lock (predictState_)
         {

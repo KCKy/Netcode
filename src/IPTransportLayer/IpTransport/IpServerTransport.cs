@@ -49,12 +49,12 @@ public class IpServerTransport : IServerTransport
     }
 
     /// <inheritdoc/>
-    public event Action<long, Memory<byte>>? OnReliableMessage;
+    public event ServerMessageEvent? OnReliableMessage;
 
     void HandleUdpReceive((Memory<byte> message, long id) value) => OnUnreliableMessage?.Invoke(value.id, value.message);
     
     /// <inheritdoc/>
-    public event Action<long, Memory<byte>>? OnUnreliableMessage;
+    public event ServerMessageEvent? OnUnreliableMessage;
 
     /// <inheritdoc/>
     public event Action<long>? OnClientJoin;

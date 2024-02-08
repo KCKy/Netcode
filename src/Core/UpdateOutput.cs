@@ -17,7 +17,7 @@ public struct UpdateOutput
     public bool ShallStop;
 
     /// <summary>
-    /// Default constructor. Creates an instance representing nothing.
+    /// Default constructor. Creates an instance representing no special action.
     /// </summary>
     public UpdateOutput()
     {
