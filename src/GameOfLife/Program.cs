@@ -1,7 +1,7 @@
 ﻿using GameCommon;
 using Useful;
 
-namespace SnakeGame;
+namespace GameOfLife;
 
 static class Program
 {
@@ -13,7 +13,7 @@ static class Program
             () => (null, new ServerInputProvider(), null),
             () =>
             {
-                displayer = new("Top Down Shooter Demo");
+                displayer = new("Game of Life Demo");
                 ClientInputProvider input = new(displayer.Window);
                 return (displayer, input, null, new ServerInputPredictor());
             },

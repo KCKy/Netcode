@@ -5,7 +5,7 @@ using SFML.System;
 using SfmlExtensions;
 using Useful;
 
-namespace SnakeGame;
+namespace GameOfLife;
 
 class Displayer : SfmlDisplayer<GameState>
 {

@@ -3,7 +3,7 @@ using MemoryPack;
 using SFML.System;
 using System.Linq;
 
-namespace SnakeGame;
+namespace GameOfLife;
 
 [MemoryPackable]
 sealed partial class Player

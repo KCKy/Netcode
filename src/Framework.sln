@@ -11,11 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "CoreTests\Core
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DefaultTransportTests", "DefaultTransportTests\DefaultTransportTests.csproj", "{02AEA535-06E6-4879-9AA5-FFFD02AE8484}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SnakeGame", "SnakeGame\SnakeGame.csproj", "{7F88E835-D011-4F25-8EA0-2FE668A87A55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameOfLife", "GameOfLife\GameOfLife.csproj", "{7F88E835-D011-4F25-8EA0-2FE668A87A55}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Useful", "Useful\Useful.csproj", "{5CEBB6A6-0203-4C86-8B3A-D703CD737E3D}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MemoryTestGame", "MemoryTestGame\MemoryTestGame.csproj", "{573838F8-05F2-405F-B784-89158388E1FA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopDownShooter", "TopDownShooter\TopDownShooter.csproj", "{5EEDC652-F64D-4084-9AD9-614737B2AE00}"
 EndProject
@@ -53,10 +51,6 @@ Global
 		{5CEBB6A6-0203-4C86-8B3A-D703CD737E3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5CEBB6A6-0203-4C86-8B3A-D703CD737E3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5CEBB6A6-0203-4C86-8B3A-D703CD737E3D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{573838F8-05F2-405F-B784-89158388E1FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{573838F8-05F2-405F-B784-89158388E1FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{573838F8-05F2-405F-B784-89158388E1FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{573838F8-05F2-405F-B784-89158388E1FA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5EEDC652-F64D-4084-9AD9-614737B2AE00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5EEDC652-F64D-4084-9AD9-614737B2AE00}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5EEDC652-F64D-4084-9AD9-614737B2AE00}.Release|Any CPU.ActiveCfg = Release|Any CPU

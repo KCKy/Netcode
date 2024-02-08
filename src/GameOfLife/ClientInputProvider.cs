@@ -3,7 +3,7 @@ using SFML.Graphics;
 using SFML.Window;
 using static SFML.Window.Keyboard;
 
-namespace SnakeGame;
+namespace GameOfLife;
 
 class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
 {

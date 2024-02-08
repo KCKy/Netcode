@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Core.Providers;
 
-namespace SnakeGame
+namespace GameOfLife
 {
     class ServerInputPredictor : IServerInputPredictor<ServerInput, GameState>
     {

@@ -1,6 +1,6 @@
 ﻿using Core.Providers;
 
-namespace SnakeGame
+namespace GameOfLife
 {
     class ServerInputProvider : IServerInputProvider<ServerInput, GameState>
     {
@@ -8,7 +8,7 @@ namespace SnakeGame
         {
             ServerInput ret = new();
 
-            if (info.Frame == 50)
+            if (info.Frame % 50 == 0)
                 ret.CellRespawnEventSeed = new Random().Next() + 1;
 
             return ret;

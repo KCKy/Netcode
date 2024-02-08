@@ -3,7 +3,7 @@ using SFML.Graphics;
 using SFML.System;
 using SfmlExtensions;
 
-namespace SnakeGame;
+namespace GameOfLife;
 
 [MemoryPackable]
 sealed partial class PlayerAvatar : ILevelObject

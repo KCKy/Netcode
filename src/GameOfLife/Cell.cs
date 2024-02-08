@@ -2,7 +2,7 @@
 using SFML.Graphics;
 using SFML.System;
 
-namespace SnakeGame;
+namespace GameOfLife;
 
 [MemoryPackable]
 sealed partial class Cell : ILevelObject
