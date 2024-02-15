@@ -1,4 +1,6 @@
-﻿namespace Core.Client;
+﻿using System;
+
+namespace Core.Client;
 
 interface IPredictManager<TC, TS, TG>
     where TG : class, IGameState<TC, TS>, new()

@@ -1,4 +1,6 @@
-﻿namespace Useful;
+﻿using System.Collections.Generic;
+
+namespace Useful;
 
 /// <summary>
 /// Extensions for <see cref="IEnumerable{T}"/>.

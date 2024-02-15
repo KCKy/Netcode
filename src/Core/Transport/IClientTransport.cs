@@ -1,4 +1,6 @@
-﻿namespace Core.Transport;
+﻿using System;
+
+namespace Core.Transport;
 
 /// <summary>
 /// The client transport layer of the framework. Provides abstraction of sending and receiving reliable and unreliable messages to/from the server.

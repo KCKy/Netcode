@@ -1,4 +1,5 @@
-﻿using HashDepot;
+﻿using System;
+using HashDepot;
 using Serilog;
 using Useful;
 

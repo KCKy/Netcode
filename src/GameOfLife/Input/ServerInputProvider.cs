@@ -1,4 +1,5 @@
-﻿using Core.Providers;
+﻿using System;
+using Core.Providers;
 
 namespace GameOfLife
 {

@@ -1,4 +1,6 @@
-﻿namespace Core.Utility;
+﻿using System;
+
+namespace Core.Utility;
 
 interface IStateHolder<TC, TS, TG>
     where TC : class, new()

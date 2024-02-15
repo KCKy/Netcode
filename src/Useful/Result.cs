@@ -1,4 +1,6 @@
-﻿namespace Useful;
+﻿using System;
+
+namespace Useful;
 
 /// <summary>
 /// Represents a result of an operation which does not return a value on success.

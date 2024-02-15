@@ -1,4 +1,6 @@
-﻿namespace Useful;
+﻿using System;
+
+namespace Useful;
 
 /// <summary>
 /// Extension methods for <see cref="T:Span{byte}"/>.

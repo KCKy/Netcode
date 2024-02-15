@@ -1,4 +1,5 @@
-﻿using Core.DataStructures;
+﻿using System.Linq;
+using Core.DataStructures;
 
 namespace CoreTests;
 

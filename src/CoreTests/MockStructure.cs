@@ -1,4 +1,5 @@
-﻿using Core;
+﻿using System.Linq;
+using Core;
 using MemoryPack;
 
 namespace CoreTests;

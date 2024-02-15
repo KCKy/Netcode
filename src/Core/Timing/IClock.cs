@@ -1,4 +1,8 @@
-﻿namespace Core.Timing;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Core.Timing;
 
 /// <summary>
 /// A clock which periodically raises an event.

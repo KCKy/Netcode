@@ -1,10 +1,12 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
+using System.Collections.Generic;
 using Useful;
 
 namespace DefaultTransport.Dispatcher;
 
 /// <summary>
-/// Helper structure for aggregation of data generated over time for into packets.
+/// Helper structure for aggregation of data generated over time into packets.
 /// </summary>
 /// <example>
 /// Instead of sending the information just for time <c>t</c>, we send it for times <c>[t - n, t]</c>, this way some packet loss is acceptable.

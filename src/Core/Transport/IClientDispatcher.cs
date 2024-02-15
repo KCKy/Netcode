@@ -1,4 +1,6 @@
-﻿namespace Core.Transport;
+﻿using System;
+
+namespace Core.Transport;
 
 /// <summary>
 /// Allows sending messages of the application protocol to the server.

@@ -1,4 +1,7 @@
-﻿namespace DefaultTransport.IpTransport;
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace DefaultTransport.IpTransport;
 
 interface ISendProtocol<in TOut>
 {

@@ -1,4 +1,6 @@
-﻿namespace DefaultTransport.IpTransport;
+﻿using System;
+
+namespace DefaultTransport.IpTransport;
 
 /// <summary>
 /// Thrown when a connection is being closed due to the ender side ending the connection.

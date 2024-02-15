@@ -20,7 +20,7 @@ public sealed class Grid
     /// The horizontal number of grid cells.
     /// </summary>
     public int Width { get; set; } = 10;
-    
+
     /// <summary>
     /// The vertical number of grid cells.
     /// </summary>
@@ -33,8 +33,8 @@ public sealed class Grid
     /// <param name="origin">The position the grid shall be rendered from.</param>
     public void Draw(RenderTarget target, Vector2f origin)
     {
-        for (int x = 0; x < Width; x++)
-        for (int y = 0; y < Height; y++)
+        for (var x = 0; x < Width; x++)
+        for (var y = 0; y < Height; y++)
         {
             Cell.Position = origin + new Vector2f(x * Cell.Size.X, y * Cell.Size.Y);
             target.Draw(Cell);

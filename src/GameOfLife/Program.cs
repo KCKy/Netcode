@@ -1,4 +1,5 @@
-﻿using GameCommon;
+﻿using System.Threading.Tasks;
+using GameCommon;
 using Useful;
 
 namespace GameOfLife;

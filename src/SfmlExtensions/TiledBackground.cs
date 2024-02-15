@@ -1,10 +1,11 @@
-﻿using SFML.Graphics;
+﻿using System;
+using SFML.Graphics;
 using SFML.System;
 
 namespace SfmlExtensions;
 
 /// <summary>
-/// An infinitely repeating background of tiles. 
+/// An infinitely repeating background of tiles.
 /// </summary>
 public sealed class TiledBackground
 {

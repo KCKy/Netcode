@@ -1,8 +1,11 @@
-﻿using Serilog;
+﻿using System;
+using Serilog;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using Useful;
 
 namespace DefaultTransport.IpTransport;
@@ -47,7 +50,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
                 {
                     // This error seems to make no sense, it's not the servers fault the other side closed.
                     // SOURCE: https://stackoverflow.com/questions/34242622/windows-udp-sockets-recvfrom-fails-with-error-10054
-                    logger_.Warning("Received error " + ex.ErrorCode + "on UDP receive.");
+                    logger_.Warning("Received error {Code} on UDP receive.", ex.ErrorCode);
                     continue;
                 }
                 

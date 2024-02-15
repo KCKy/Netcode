@@ -1,4 +1,6 @@
-﻿namespace Useful;
+﻿using System;
+
+namespace Useful;
 
 /// <summary>
 /// Utility methods for binary conversions.

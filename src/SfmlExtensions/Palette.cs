@@ -1,4 +1,5 @@
-﻿using SFML.System;
+﻿using System;
+using SFML.System;
 
 namespace SfmlExtensions;
 
@@ -15,10 +16,13 @@ namespace SfmlExtensions;
 /// <param name="D">D</param>
 public readonly record struct Palette(Vector3f A, Vector3f B, Vector3f C, Vector3f D)
 {
-    static float Formula(float a, float b, float c, float d, float t) => a + b * MathF.Cos(MathF.Tau * (c * t + d));
+    static float Formula(float a, float b, float c, float d, float t)
+    {
+        return a + b * MathF.Cos(MathF.Tau * (c * t + d));
+    }
 
     /// <summary>
-    /// Sample the palette.
+    ///     Sample the palette.
     /// </summary>
     /// <param name="t">The point to sample.</param>
     /// <returns>A vector of RGB values.</returns>
