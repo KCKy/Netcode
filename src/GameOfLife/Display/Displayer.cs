@@ -55,7 +55,7 @@ class Displayer : SfmlDisplayer<GameState>
 
     public override void AddAuthoritative(long frame, GameState gameState)
     {
-        authWriter_.Copy(gameState.level_, ref authLevel_);
+        authWriter_.Copy(gameState.Level, ref authLevel_);
     }
 
     readonly PooledBufferWriter<byte> predictWriter_ = new();
@@ -63,6 +63,6 @@ class Displayer : SfmlDisplayer<GameState>
     public override void AddPredict(long frame, GameState gameState)
     {
         CheckState(frame, gameState);
-        predictWriter_.Copy(gameState.level_, ref level_);
+        predictWriter_.Copy(gameState.Level, ref level_);
     }
 }

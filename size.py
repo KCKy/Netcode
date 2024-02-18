@@ -20,12 +20,13 @@ def human_readable(num: str, suffix: str = "B") -> str:
 
 total_lines = 0
 total_size = 0
+total_codelines = 0
 
-def file_stats(file: str, dir: str) -> (int, int):
+def file_stats(file: str, dir: str) -> tuple[int, int, int]:
     global total_lines, total_size
 
     if not is_source(file):
-        return (None, None)
+        return (None, None, None)
 
     path = os.path.join(dir, file)
 
@@ -34,9 +35,12 @@ def file_stats(file: str, dir: str) -> (int, int):
     
     with open(path, 'r') as f:
         lines = f.readlines()
-        lines = len(lines)
+
+        code_lines = 0
+        for line in lines:
+            code_lines += 0 if line.strip().startswith(("//")) else 1
         
-        return (size, lines)
+        return (size, len(lines), code_lines)
 
 for subdir, dirs, files in os.walk(ROOT):
     if not is_source_dir(subdir) or len(files) == 0:
@@ -44,27 +48,33 @@ for subdir, dirs, files in os.walk(ROOT):
 
     dir_lines = 0
     dir_size = 0
+    dir_codelines = 0
     
     file_names = []
 
     for file in files:
-        (size, lines) = file_stats(file, subdir)
+        (size, lines, code_lines) = file_stats(file, subdir)
         if size is None or size <= 0:
             continue
 
         file_names.append(file)
         dir_lines += lines
         dir_size += size
+        dir_codelines += code_lines
 
     total_lines += dir_lines
     total_size += dir_size
+    total_codelines += dir_codelines
 
     if dir_lines > 0:
         print(subdir)
         print(f"    {", ".join(file_names)}")
         print(f"    {dir_lines} lines")
+        print(f"    {dir_codelines} code lines")
         print(f"    {human_readable(dir_size)}")
 
 print()
 print(f"{total_lines} lines")
+print(f"{total_codelines} code lines")
 print(f"{human_readable(total_size)}")
+print(f"{round(total_codelines / total_lines * 100, 1)} % of code")

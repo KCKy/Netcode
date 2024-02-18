@@ -28,11 +28,11 @@ partial class GameState : IGameState<ClientInput, ServerInput>
     [MemoryPackInclude]
     public SortedDictionary<long, Player> IdToPlayer = new();
 
-    public Level level_ = new(LevelWidth, LevelHeight);
+    public Level Level = new(LevelWidth, LevelHeight);
 
     bool TrySpawnPlayer(long id, Player player)
     {
-        ref ILevelObject? spawn = ref level_[SpawnPoint];
+        ref ILevelObject? spawn = ref Level[SpawnPoint];
 
         if (spawn is not null)
             return false;
@@ -58,22 +58,22 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         Vector2i movement = direction.MapToMovement();
         Vector2i newPos = oldPos + movement;
 
-        if (!level_.InBounds(newPos))
+        if (!Level.InBounds(newPos))
             return;
 
-        ref ILevelObject? place = ref level_[newPos];
+        ref ILevelObject? place = ref Level[newPos];
 
         if (place is not null)
             return;
 
-        ref ILevelObject? oldPlace = ref level_[oldPos];
+        ref ILevelObject? oldPlace = ref Level[oldPos];
 
         (place, oldPlace) = (oldPlace, null);
         player.Position = newPos;
     }
 
     int GetOccupation(int x, int y) =>
-        level_.At(x, y) switch
+        Level.At(x, y) switch
         {
             null => 0,
             Cell cell => cell.State != Cell.CellState.Newborn ? 1 : 0,
@@ -88,13 +88,13 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     void UpdateGame()
     {
-        int width = level_.Width;
-        int height = level_.Height;
+        int width = Level.Width;
+        int height = Level.Height;
 
         for (int x = 0; x < width; x++)
         for (int y = 0; y < height; y++)
         {
-            ref ILevelObject? obj = ref level_[x, y];
+            ref ILevelObject? obj = ref Level[x, y];
 
             switch (obj)
             {
@@ -118,11 +118,11 @@ partial class GameState : IGameState<ClientInput, ServerInput>
             }
         }
 
-        int size = level_.Size;
+        int size = Level.Size;
 
         for (int i = 0; i < size; i++)
         {
-            ref ILevelObject? obj = ref level_[i];
+            ref ILevelObject? obj = ref Level[i];
 
             if (obj is not Cell cell)
                 continue;
@@ -140,11 +140,11 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
         Random random = new(serverInput.CellRespawnEventSeed);
 
-        int size = level_.Size;
+        int size = Level.Size;
 
         for (int i = 0; i < size; i++)
         {
-            ref ILevelObject? obj = ref level_[i];
+            ref ILevelObject? obj = ref Level[i];
 
             if (obj is not Cell and not null)
                 continue;
