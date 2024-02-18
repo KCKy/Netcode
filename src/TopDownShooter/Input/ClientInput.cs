@@ -13,6 +13,7 @@ partial class ClientInput
     public int ShootX;
     public int ShootY;
     public int ShootFrameOffset;
+    public bool Respawn;
 }
 
 class ClientInputPredictor : IClientInputPredictor<ClientInput>
@@ -23,5 +24,6 @@ class ClientInputPredictor : IClientInputPredictor<ClientInput>
         previous.ShootX = 0;
         previous.ShootY = 0;
         previous.ShootFrameOffset = 0;
+        previous.Respawn = false;
     }
 }

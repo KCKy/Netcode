@@ -112,15 +112,23 @@ sealed partial class Player : IEntity
 
         foreach (Player player in avatars)
         {
+            if (player == this)
+                continue;
+
             if (player.GetPositionHistory(histIndex) is not { } targetPos)
                 continue;
 
             if (!CheckHit(position, direction, targetPos))
                 continue;
             
-            player.Position = new(0, 0);
-            player.velocity_ = new(0, 0);
+            player.Respawn();
         }
+    }
+
+    public void Respawn()
+    {
+        Position = new(0, 0);
+        velocity_ = new(0, 0);
     }
 
     const int Radius = 32;

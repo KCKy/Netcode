@@ -24,7 +24,7 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
         window.MouseMoved += MouseMovedHandler;
     }
 
-    bool left_, right_, up_, down_, start_, shoot_;
+    bool left_, right_, up_, down_, shoot_, start_;
     int shootX_, shootY_;
 
     readonly object mutex_ = new();
@@ -72,9 +72,6 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
             case Key.S or Key.Down:
                 down_ = false;
                 return;
-            case Key.Space:
-                start_ = false;
-                return;
         }
     }
 
@@ -117,6 +114,7 @@ class ClientInputProvider : IClientInputProvider<ClientInput>, IDisposable
                 ShootFrameOffset = shoot_ ? displayer_.GetFrameOffset() : 0
             };
 
+            start_ = false;
             shoot_ = false;
             shootX_ = 0;
             shootY_ = 0;

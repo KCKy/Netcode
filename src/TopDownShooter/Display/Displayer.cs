@@ -24,7 +24,11 @@ sealed class Displayer : SfmlDisplayer<GameState>
     long latestPredict_ = long.MinValue;
     long latestAuth_ = long.MinValue;
 
-    public int GetFrameOffset() => predictLerper_.FramesBehind + (int)Math.Round(predictLerper_.CurrentFrameProgression);
+    public int GetFrameOffset()
+    {
+        return (int)(Client!.PredictFrame - Client!.AuthFrame) + authLerper_.FramesBehind +
+               (int)Math.Round(authLerper_.CurrentFrameProgression);
+    }
 
     static readonly float FrameLength = (float)(1 / GameState.DesiredTickRate);
 
@@ -63,6 +67,7 @@ sealed class Displayer : SfmlDisplayer<GameState>
     {
         origin_ = Center - (Vector2f)Window.Size * .5f;
         background_.Draw(Window, origin_);
+        authLerper_.Draw(delta);
         predictLerper_.Draw(delta);
     }
 
