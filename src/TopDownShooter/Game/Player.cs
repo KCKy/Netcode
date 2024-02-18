@@ -165,5 +165,7 @@ sealed partial class Player : IEntity
         Draw(displayer.Window, position - origin);
     }
 
+    public bool IsPredicted(long localId) => playerId_ == localId;
+
     public long EntityId => entityId_;
 }
