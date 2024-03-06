@@ -10,7 +10,7 @@ namespace Core.DataStructures;
 /// Receives all client input to the server. Constructs authoritative client update inputs <see cref="UpdateClientInfo{TClientInput}"/>.
 /// Authorizes all received inputs and raises <see cref="OnInputAuthored"/> informing whether inputs are being received on time.
 /// </summary>
-/// <typeparam name="TClientInput"></typeparam>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
 public interface IClientInputQueue<TClientInput>
 where TClientInput : class, new()
 {
@@ -63,7 +63,7 @@ where TClientInput : class, new()
 /// <param name="difference">The difference of the corresponding frame update time and the input receive time.</param>
 public delegate void InputAuthoredDelegate(long id, long frame, TimeSpan difference);
 
-/// <inheritdoc/>
+/// <inheritdoc cref="IClientInputQueue{TClientInput}"/>
 public sealed class ClientInputQueue<TClientInput> : IClientInputQueue<TClientInput>
 where TClientInput : class, new()
 {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -29,7 +30,7 @@ public class SpeedController : ISpeedController
     {
         FrameMemory = 20;
     }
-
+    
     /// <inheritdoc/>
     public event Action? OnTick
     {
@@ -37,33 +38,54 @@ public class SpeedController : ISpeedController
         remove => clock_.OnTick -= value;
     }
 
-    double currentPeriod_ = 0;
     double targetDelta_ = 0;
     double currentDelta_ = 0;
     double targetSpeed_ = 1;
+    double currentSpeed_ = 1;
 
-    /// <summary>
-    /// The time to smooth over. The controller shall set speed such that the desired delta would be achieved over this time (if no speed change occured after).
-    /// </summary>
-    public double SmoothingTime { get; init; } = 1;
+    /// <inheritdoc/>
+    public double TargetNeighborhood
+    {
+        get => targetNeighborhood_;
+        set
+        {
+            if (!double.IsPositive(value))
+                throw new ArgumentOutOfRangeException(nameof(value), value, "The radius must be positive.");
+            targetNeighborhood_ = value;
+            speedFunctionExponent_ = CalculateSpeedFunctionExponent(smoothingTime_);
+        }
+    }
+
+    /// <inheritdoc/>
+    public double SmoothingTime
+    {
+        get => smoothingTime_;
+        set
+        {
+            if (!double.IsPositive(value))
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Smoothing time must be positive.");
+            smoothingTime_ = value;
+            speedFunctionExponent_ = CalculateSpeedFunctionExponent(smoothingTime_);
+        }
+    }
 
     readonly ILogger logger_ = Log.ForContext<SpeedController>();
     readonly object mutex_ = new();
 
     void Update()
     {
-        // We need to catch up / lose D seconds over the time of one second.
+        // We need to catch up / lose difference "distance-seconds"
         double difference =  targetDelta_ - currentDelta_;
-        double deltaSpeed = targetSpeed_ * difference / SmoothingTime;
+        double deltaSpeedBase = Math.Abs(difference) / targetNeighborhood_;
 
-        double newSpeed = Math.Max(0, deltaSpeed + targetSpeed_);
+        double deltaSpeed = Math.Sign(difference) * Math.Pow(deltaSpeedBase, speedFunctionExponent_);
+        double newSpeed = Math.Max(0, deltaSpeed + targetSpeed_); // Speed cannot be negative
 
         // The update period in accordance to new speed.
-        currentPeriod_ = Math.Min(1 / newSpeed, 1);
+        currentSpeed_ = newSpeed;
 
-        clock_.TargetTps = CurrentTps;
-
-        logger_.Verbose("Setting new period to {currentPeriod_} s. (D : {Difference}, V: {DeltaV})", newSpeed, difference, deltaSpeed);
+        clock_.TargetTps = currentSpeed_;
+        logger_.Verbose("Setting new speed to {CurrentSpeed} TPS. (D : {Difference}, V: {DeltaV}, E: {Exponent}, O:{Epsilon})", currentSpeed_, difference, deltaSpeed, speedFunctionExponent_, targetNeighborhood_);
     }
 
     /// <inheritdoc/>
@@ -127,7 +149,17 @@ public class SpeedController : ISpeedController
         }
     }
 
+    static double CalculateSpeedFunctionExponent(double t) => 1 / t + 1;
+
     MinimumWindowed<double> statsWindowed_;
+
+    const double DefaultTargetNeighborhood = 0.025;
+    double targetNeighborhood_ = DefaultTargetNeighborhood;
+
+    const double DefaultSmoothingTime = 1;
+    double smoothingTime_ = DefaultSmoothingTime;
+
+    double speedFunctionExponent_ = CalculateSpeedFunctionExponent(DefaultSmoothingTime);
 
     /// <inheritdoc/>
     public double CurrentDelta
@@ -156,7 +188,7 @@ public class SpeedController : ISpeedController
         get
         {
             lock (mutex_)
-                return 1f / currentPeriod_;
+                return currentSpeed_;
         }
     }
 }

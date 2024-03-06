@@ -102,24 +102,6 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         SetHandlers();
     }
 
-    internal Server(IServerSender sender, IServerReceiver receiver,
-        IDisplayer<TGameState> displayer,
-        IServerInputProvider<TServerInput, TGameState> serverProvider,
-        IClientInputQueue<TClientInput> queue,
-        IStateHolder<TClientInput, TServerInput, TGameState> holder,
-        IClock clock)
-    {
-        sender_ = sender;
-        receiver_ = receiver;
-        displayer_ = displayer;
-        inputProvider_ = serverProvider;
-        inputQueue_ = queue;
-        holder_ = holder;
-        clock_ = clock;
-        timer_ = new();
-        SetHandlers();
-    }
-
     void SetHandlers()
     {
         inputQueue_.OnInputAuthored += sender_.InputAuthored;
@@ -144,6 +126,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
     /// <inheritdoc/>
     public bool TraceFrameTime { get; init; }
+
 
     /// <inheritdoc/>
     public async Task RunAsync()

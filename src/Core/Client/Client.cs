@@ -44,6 +44,11 @@ public interface IClient
     double PredictDelayMargin { get; set; }
 
     /// <summary>
+    /// Amount of time to smooth prediction speed over.
+    /// </summary>
+    double SmoothingTime { get; set; }
+
+    /// <summary>
     /// The id of the client.
     /// </summary>
     long Id { get; }
@@ -136,7 +141,14 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         get => clock_.TargetDelta;
         set => clock_.TargetDelta = value;
     }
-    
+
+    /// <inheritdoc/>
+    public double SmoothingTime
+    {
+        get => clock_.SmoothingTime;
+        set => clock_.SmoothingTime = value;
+    }
+
     /// <summary>
     /// Constructor.
     /// </summary>
@@ -157,7 +169,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         displayer_ = displayer ?? new DefaultDisplayer<TGameState>();
         clock_ = new SpeedController()
         {
-            TargetTps = TGameState.DesiredTickRate
+            TargetTps = TGameState.DesiredTickRate,
+            TargetNeighborhood = 1 / TGameState.DesiredTickRate
         };
 
         authStateHolder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
@@ -194,20 +207,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         receiver_.OnStart -= Start;
     }
     
-    internal Client(IClientSender sender, IClientReceiver receiver, IDisplayer<TGameState> displayer, ISpeedController controller, IStateHolder<TClientInput, TServerInput, TGameState> authStateHolder,
-        IPredictManager<TClientInput, TServerInput, TGameState> predictManager)
-    {
-        sender_ = sender;
-        receiver_ = receiver;
-        displayer_ = displayer;
-        clock_ = controller;
-        authStateHolder_ = authStateHolder;
-        predictManager_ = predictManager;
-        PredictDelayMargin = 0.15f;
-        timer_ = new();
-        SetHandlers();
-    }
-
     /// <inheritdoc/>
     public long Id { get; private set; } = long.MaxValue;
 

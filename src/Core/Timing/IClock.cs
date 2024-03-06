@@ -10,7 +10,7 @@ namespace Core.Timing;
 public interface IClock
 {
     /// <summary>
-    /// Is evenly called on a clock tick.
+    /// Is evenly called on a clock tick. Provides delta time in seconds.
     /// </summary>
     event Action OnTick;
 

@@ -21,4 +21,14 @@ public interface ISpeedController : IClock
     /// Current delay from the server, the controller will modify current tps to so <see cref="CurrentTps"/> would approach this value.
     /// </summary>
     double CurrentDelta { get; set; }
+
+    /// <summary>
+    /// The radius of the area, which is considered close enough to be in sync with the target.
+    /// </summary>
+    public double TargetNeighborhood { get; set; }
+
+    /// <summary>
+    /// The time to smooth over. The controller shall set speed such that the <see cref="TargetNeighborhood"/> of the delta would be achieved over this time (if no speed change occured after).
+    /// </summary>
+    public double SmoothingTime { get; set; }
 }

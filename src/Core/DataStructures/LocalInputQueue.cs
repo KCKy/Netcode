@@ -11,7 +11,7 @@ namespace Core.DataStructures;
 /// <remarks>
 /// This structure is thread-safe.
 /// </remarks>
-/// <typeparam name="TInput"></typeparam>
+/// <typeparam name="TInput">The type of the inputs structure.</typeparam>
 public interface ILocalInputQueue<TInput>
 {
     /// <summary>
@@ -42,7 +42,7 @@ public interface ILocalInputQueue<TInput>
     void Pop(long frame);
 }
 
-/// <inheritdoc/>
+/// <inheritdoc cref="ILocalInputQueue{TInput}"/>
 public sealed class LocalInputQueue<TInput> : ILocalInputQueue<TInput>
 where TInput : class
 {

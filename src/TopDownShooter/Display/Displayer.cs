@@ -2,6 +2,7 @@
 using TopDownShooter.Game;
 using Useful;
 using GameCommon;
+using Serilog;
 using SFML.System;
 using SfmlExtensions;
 
@@ -24,10 +25,16 @@ sealed class Displayer : SfmlDisplayer<GameState>
     long latestPredict_ = long.MinValue;
     long latestAuth_ = long.MinValue;
 
+    readonly ILogger logger_ = Log.ForContext<Displayer>();
+
     public int GetFrameOffset()
     {
-        return (int)(Client!.PredictFrame - Client!.AuthFrame) + authLerper_.FramesBehind +
-               (int)Math.Round(authLerper_.CurrentFrameProgression);
+        long predictFrame = Client!.PredictFrame - Client!.AuthFrame;
+        int framesBehind = authLerper_.FramesBehind;
+        float frameProgression = authLerper_.CurrentFrameProgression;
+
+        logger_.Verbose("Current frame offset: {PredictDiff} + {FramesBehind} + {Frame Progression}", predictFrame, framesBehind, frameProgression);
+        return 1 + (int)predictFrame + framesBehind + (int)Math.Round(frameProgression);
     }
 
     static readonly float FrameLength = (float)(1 / GameState.DesiredTickRate);

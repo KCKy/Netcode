@@ -9,7 +9,6 @@ using Core.Transport;
 using Core.Utility;
 using MemoryPack;
 using Serilog;
-using Serilog.Core;
 using Useful;
 
 namespace Core.Client;
@@ -174,22 +173,22 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         {
             long difference = predictState_.Frame - frame;
 
-            if (difference == 0)
-            {
-                Debug.Assert(predictState_.Frame == replacementState_.Frame);
+            if (difference != 0)
+                return difference;
 
-                // Replacement was successful
-                (replacementState_.State, predictState_.State) = (predictState_.State, replacementState_.State);
-                predictInput_ = input;
+            Debug.Assert(predictState_.Frame == replacementState_.Frame);
 
-                lock (replacementMutex_)
-                    if (currentReplacement_ <= replacementIndex)
-                        activeReplacement_ = false; // Replacement has not been superseded yet. Time to return predict queue ownership to predict queue.
+            // Replacement was successful
+            (replacementState_.State, predictState_.State) = (predictState_.State, replacementState_.State);
+            predictInput_ = input;
 
-                Debug.Assert(frame == replacementState_.Frame);
+            lock (replacementMutex_)
+                if (currentReplacement_ <= replacementIndex)
+                    activeReplacement_ = false; // Replacement has not been superseded yet. Time to return predict queue ownership to predict queue.
 
-                logger_.Debug("Successfully replaced predict at frame {Frame}.", frame);
-            }
+            Debug.Assert(frame == replacementState_.Frame);
+
+            logger_.Debug("Successfully replaced predict at frame {Frame}.", frame);
 
             return difference;
         }

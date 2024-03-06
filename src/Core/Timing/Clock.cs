@@ -35,6 +35,22 @@ public sealed class Clock : IClock
         init => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
     }
 
+    
+    readonly long maxWaitTime_ = TicksPerMs * 100;
+
+    /// <summary>
+    /// The smallest time period of sleep to requested from the OS.
+    /// </summary>
+    /// <remarks>
+    /// On some operating systems (like sleep) calling sleep on a too small value results in sleeping for an undesirably long amount of time.
+    /// In these cases it is desirable to yield instead.
+    /// </remarks>
+    public TimeSpan MaxWaitTime
+    {
+        get => TimeSpan.FromSeconds(maxWaitTime_ / (double)Stopwatch.Frequency);
+        init => maxWaitTime_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
+    }
+
     /// <inheritdoc/>
     public double TargetTps
     {
@@ -89,6 +105,7 @@ public sealed class Clock : IClock
                     double freq = Stopwatch.Frequency;
                     tickSum += delta;
                     tickCount++;
+
                     logger_.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, (double)tickSum / tickCount / freq);
 
                     OnTick?.Invoke();
@@ -97,7 +114,7 @@ public sealed class Clock : IClock
                 continue;
             }
 
-            long wait = Math.Max(0, remaining - clockQuantumTicks_);
+            long wait = Math.Clamp(remaining - clockQuantumTicks_, 0, maxWaitTime_);
             Thread.Sleep((int)(wait / TicksPerMs));
         }
     }
