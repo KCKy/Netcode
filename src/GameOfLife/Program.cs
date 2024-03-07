@@ -1,34 +1,94 @@
-﻿using System.Threading.Tasks;
-using GameCommon;
+﻿using System;
+using System.Net;
+using Core.Client;
+using Core.Server;
+using DefaultTransport.Dispatcher;
+using DefaultTransport.IpTransport;
+using Serilog;
 using Useful;
 
 namespace GameOfLife;
 
 static class Program
 {
-    static Task Main(string[] args)
+    const int DefaultPort = 45963;
+    static readonly IPEndPoint DefaultTarget = new(IPAddress.Loopback, DefaultPort);
+    
+    static void SetupLogging()
     {
-        Displayer? displayer = null;
+        Log.Logger = new LoggerConfiguration().WriteTo.Console().MinimumLevel.Verbose().CreateLogger();
+        TaskExtensions.OnFault += (task, exc) => Log.Error("Task faulted: {Task} with exception:\n{Exception}", task, exc);
+        TaskExtensions.OnCanceled += task => Log.Error("Task was wrongly cancelled: {Task}", task);
+    }
 
-        Task game = IpGameLoader.Load<GameState, ClientInput, ServerInput>(args,
-            () => (null, new ServerInputProvider(), null),
-            () =>
-            {
-                displayer = new("Game of Life Demo");
-                ClientInputProvider input = new(displayer.Window);
-                return (displayer, input, null, new ServerInputPredictor());
-            },
-            c => displayer!.Client = c,
-            s => { },
-            c => c.Terminate(),
-            s => s.Terminate());
+    static void ClientMain()
+    {
+        SetupLogging();
 
-        if (displayer is null)
-            return game;
+        // Setup transport
+        IPEndPoint target = Command.GetEndPoint("Enter an address to connect to: ", DefaultTarget);
+        IpClientTransport transport = new(target);
+        DefaultClientDispatcher dispatcher = new(transport);
         
-        game.AssureSuccess();
-        while (displayer.Update()) { }
+        // Game specific implementation
+        Displayer displayer = new("Game of Life Demo");
+        ClientInputProvider clientInputProvider = new(displayer.Window);
+        ServerInputPredictor serverInputPredictor = new();
 
-        return Task.CompletedTask;
+        // Construct client
+        Client<ClientInput, ServerInput, GameState> client = new(dispatcher)
+        {
+            ClientInputProvider = clientInputProvider,
+            Displayer = displayer,
+            ServerInputPredictor = serverInputPredictor
+        };
+
+        displayer.Client = client;
+
+        // Run
+        client.RunAsync().AssureSuccess();
+        transport.RunAsync().AssureSuccess();
+        
+        while (displayer.Update())
+        { }
+    }
+
+    static void ServerMain()
+    {
+        SetupLogging();
+
+        // Setup transport
+        int port = Command.GetPort("Enter a port to run the server on: ", DefaultPort);
+        IPEndPoint endPoint = new(IPAddress.Any, port);
+        IpServerTransport transport = new(endPoint);
+        DefaultServerDispatcher dispatcher = new(transport);
+
+        // Game specific implementation
+        ServerInputProvider serverInputProvider = new();
+
+        // Construct server
+        Server<ClientInput, ServerInput, GameState> server = new(dispatcher)
+        {
+            ServerInputProvider = serverInputProvider
+        };
+
+        server.RunAsync().AssureSuccess();
+        transport.RunAsync().Wait();
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("Run client or server [c/s]? ");
+        char? command = Console.ReadLine()?.ToLower()[0];
+        
+        switch (command)
+        {
+            case 's':
+                ServerMain();
+                return;
+            default:
+                ClientMain();
+                return;
+        }
     }
 }

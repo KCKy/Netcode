@@ -1,10 +1,11 @@
-﻿using Core.Client;
+﻿using Core;
+using Core.Client;
 using Core.Providers;
 using SFML.Graphics;
 using SFML.Window;
 using Clock = SFML.System.Clock;
 
-namespace GameCommon;
+namespace SfmlExtensions;
 
 /// <summary>
 /// Base for creating a client <see cref="IDisplayer{T}"/> over the SFML rendering framework.

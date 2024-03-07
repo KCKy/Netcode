@@ -5,25 +5,24 @@ using Serilog;
 using TopDownShooter.Display;
 using TopDownShooter.Input;
 using Useful;
-using static SFML.Graphics.Font;
 
 namespace TopDownShooter.Game;
 
 [MemoryPackable]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
-    [MemoryPackInclude] SortedDictionary<long, ClientInfo> idToClient_ = new();
+    [MemoryPackInclude] SortedDictionary<long, ClientInfo> idToClientInfo_ = new();
     [MemoryPackInclude] long lastConnected_ = long.MinValue;
     [MemoryPackInclude] long entityCounter_ = 0;
 
     public IEnumerable<(long Id, IEntity Entity)> GetEntities(PooledBufferWriter<byte> copyWriter)
     {
-        foreach ((long id, ClientInfo info) in idToClient_)
+        foreach ((long id, ClientInfo info) in idToClientInfo_)
         {
             if (info.Avatar is not { } avatar)
                 continue;
             
-            Player copy = new(avatar.EntityId, id)
+            PlayerAvatar copy = new(avatar.EntityId, id)
             {
                 Position = avatar.Position
             };
@@ -31,22 +30,22 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         }
     }
 
-    void UpdatePlayers(UpdateClientInfo<ClientInput> info, List<Player> avatars)
+    PlayerAvatar? UpdatePlayerAvatar(UpdateClientInfo<ClientInput> info)
     {
         (long id, ClientInput input, bool disconnected) = info;
-
-        if (!idToClient_.TryGetValue(id, out ClientInfo? client))
+        
+        if (!idToClientInfo_.TryGetValue(id, out ClientInfo? client))
         {
             if (id <= lastConnected_)
-                return;
+                return null;
 
             lastConnected_ = id;
             client = new();
-            idToClient_.Add(id, client);
+            idToClientInfo_.Add(id, client);
         }
 
         if (disconnected)
-            idToClient_.Remove(id);
+            idToClientInfo_.Remove(id);
 
         if (client.Avatar is not { } avatar)
         {
@@ -56,25 +55,25 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         }
 
         avatar.Update(input);
-        avatars.Add(avatar);
+        return avatar;
     }
 
-    Player? GetAvatar(UpdateClientInfo<ClientInput> info)
+    PlayerAvatar? GetAvatar(UpdateClientInfo<ClientInput> info)
     {
         if (info.Terminated)
             return null;
 
-        return idToClient_.TryGetValue(info.Id, out ClientInfo? client) ? client.Avatar : null;
+        return idToClientInfo_.TryGetValue(info.Id, out ClientInfo? client) ? client.Avatar : null;
     }
 
-    void ProcessShooting(UpdateClientInfo<ClientInput> info, List<Player> avatars)
+    void ProcessShooting(UpdateClientInfo<ClientInput> info, List<PlayerAvatar> avatars)
     {
         ClientInput input = info.Input;
 
         if (!input.Shoot)
             return;
 
-        Player? avatar = GetAvatar(info);
+        PlayerAvatar? avatar = GetAvatar(info);
         avatar?.Shoot(new(input.ShootX, input.ShootY), avatars, -input.ShootFrameOffset);
     }
 
@@ -85,24 +84,27 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         if (!input.Start)
             return;
 
-        Player? avatar = GetAvatar(info);
+        PlayerAvatar? avatar = GetAvatar(info);
         avatar?.Respawn();
     }
 
-    readonly List<Player> tempAvatarList_ = new(); // Not part of state
-
     public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs)
     {
-        tempAvatarList_.Clear();
+        List<PlayerAvatar> avatars = new();
+        var clientInputs = updateInputs.ClientInputInfos.Span;
 
-        foreach (var info in updateInputs.ClientInput.Span)
-            UpdatePlayers(info, tempAvatarList_);
-
-        foreach (var info in updateInputs.ClientInput.Span)
+        foreach (var info in clientInputs)
+        {
+            PlayerAvatar? avatar = UpdatePlayerAvatar(info);
+            if (avatar is not null)
+                avatars.Add(avatar);
+        }
+            
+        foreach (var info in clientInputs)
             ProcessRespawn(info);
 
-        foreach (var info in updateInputs.ClientInput.Span)
-            ProcessShooting(info, tempAvatarList_);
+        foreach (var info in clientInputs)
+            ProcessShooting(info, avatars);
 
         return UpdateOutput.Empty;
     }
@@ -113,5 +115,5 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 [MemoryPackable]
 partial class ClientInfo
 {
-    public Player? Avatar = null;
+    public PlayerAvatar? Avatar = null;
 }

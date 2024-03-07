@@ -12,38 +12,7 @@ namespace Core.DataStructures;
 /// This structure is thread-safe.
 /// </remarks>
 /// <typeparam name="TInput">The type of the inputs structure.</typeparam>
-public interface ILocalInputQueue<TInput>
-{
-    /// <summary>
-    /// Accessor.
-    /// </summary>
-    /// <param name="frame">Index of the frame.</param>
-    /// <returns>Element at given frame index or null if out of range.</returns>
-    TInput? this[long frame] { get; }
-
-    /// <summary>
-    /// Enqueues an element to the queue.
-    /// </summary>
-    /// <param name="input">Element to add.</param>
-    /// <param name="frame">Frame index of the element. This must be consecutive.</param>
-    void Add(TInput input, long frame);
-
-    /// <summary>
-    /// Resets the queue like <see cref="Pop"/> but additionally all inputs lesser or equal than <paramref name="frame"/> are skipped (they shall not be added
-    /// via <see cref="Add"/>).
-    /// </summary>
-    /// <param name="frame">A non-negative value to reset the queue to.</param>
-    void Set(long frame);
-
-    /// <summary>
-    /// Marks all elements lesser than or equal to given index (even those yet to be added) to be deleted.
-    /// </summary>
-    /// <param name="frame">A non-negative value to reset the queue to.</param>
-    void Pop(long frame);
-}
-
-/// <inheritdoc cref="ILocalInputQueue{TInput}"/>
-public sealed class LocalInputQueue<TInput> : ILocalInputQueue<TInput>
+public sealed class LocalInputQueue<TInput>
 where TInput : class
 {
     readonly object mutex_ = new();
@@ -53,7 +22,11 @@ where TInput : class
     long firstFrame_ = 0; // First frame which is contained in the structure
     long lastFrame_ = -1; // Last frame which is contained in the structure
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Accessor.
+    /// </summary>
+    /// <param name="frame">Index of the frame.</param>
+    /// <returns>Element at given frame index or null if out of range.</returns>
     public TInput? this[long frame]
     {
         get
@@ -69,7 +42,11 @@ where TInput : class
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Enqueues an element to the queue.
+    /// </summary>
+    /// <param name="input">Element to add.</param>
+    /// <param name="frame">Frame index of the element. This must be consecutive.</param>
     public void Add(TInput input, long frame)
     {
         lock (mutex_)
@@ -86,7 +63,11 @@ where TInput : class
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Resets the queue like <see cref="Pop"/> but additionally all inputs lesser or equal than <paramref name="frame"/> are skipped (they shall not be added
+    /// via <see cref="Add"/>).
+    /// </summary>
+    /// <param name="frame">A non-negative value to reset the queue to.</param>
     public void Set(long frame)
     {
         lock (mutex_)
@@ -98,7 +79,10 @@ where TInput : class
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Marks all elements lesser than or equal to given index (even those yet to be added) to be deleted.
+    /// </summary>
+    /// <param name="frame">A non-negative value to reset the queue to.</param>
     public void Pop(long frame)
     {
         lock (mutex_)

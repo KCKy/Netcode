@@ -17,7 +17,7 @@ namespace DefaultTransport.Dispatcher;
 /// As specified in the protocol the dispatcher keeps all user inputs for states which have not yet been authored and aggregates
 /// them in a single message. 
 /// </remarks>
-public sealed class DefaultClientDispatcher : IClientSender, IClientReceiver
+public sealed class DefaultClientDispatcher : IClientDispatcher
 {
     readonly IClientTransport outTransport_;
     

@@ -13,7 +13,7 @@ using Useful;
 
 namespace Core.Client;
 
-sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
+sealed class PredictManager<TC, TS, TG>
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
@@ -41,39 +41,51 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     // The mutex of replacement state shall be held during the whole duration of a replacement task, and should be released only after the task is finished.
     // It provides access to the content of the holder.
     // replacementMutex should be acquired occasionally to check whether the replacement is still required.
-    readonly IStateHolder<TC, TS, TG> replacementState_ = new StateHolder<TC, TS, TG>();
+    readonly StateHolder<TC, TS, TG> replacementState_ = new StateHolder<TC, TS, TG>();
     long currentReplacement_ = 0;
     bool activeReplacement_ = false;
     ///
 
     // Mutex of this object shall be held when the holder or input is checked or updated to assure atomicity and validity.
-    readonly IStateHolder<TC, TS, TG> predictState_ = new StateHolder<TC, TS, TG>();
+    readonly StateHolder<TC, TS, TG> predictState_ = new StateHolder<TC, TS, TG>();
     UpdateInput<TC, TS> predictInput_ = UpdateInput<TC, TS>.Empty;
     //
     
     // Mutex of auth state holder must be acquired before we can read it.
-    public required IStateHolder<TC, TS, TG> AuthState { private get; init; }
+    public required StateHolder<TC, TS, TG> AuthState { private get; init; }
     //
     
     // Following objects are thread safe
-    public required IClientInputPredictor<TC> InputPredictor { private get; init; }
-    public required IServerInputPredictor<TS, TG> ServerInputPredictor { private get; init; }
-    public required IClientSender Sender { private get; init; }
+    public required IClientInputPredictor<TC> InputPredictor { private get; set; }
+    public required IServerInputPredictor<TS, TG> ServerInputPredictor { private get; set; }
+    public required IClientSender Sender { private get; set; }
     //
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// The local id of the client.
+    /// </summary>
+    /// <remarks>
+    /// This shall be set exactly once before <see cref="InformAuthInput"/> or <see cref="Tick"/> is called.
+    /// </remarks>
     public long LocalId { private get; set; }
     
     // This object is exclusive to predict.
-    public required IClientInputProvider<TC> InputProvider { private get; init; }
+    public required IClientInputProvider<TC> ClientInputProvider { private get; set; }
 
     // Making new client inputs is exclusive to predict update.
-    public required ILocalInputQueue<TC> ClientInputs { private get; init; }
+    readonly LocalInputQueue<TC> clientInputs_ = new();
 
     // Displaying is exclusive to the predict update.
-    public required IDisplayer<TG> Displayer { private get; init; }
+    public required IDisplayer<TG> Displayer { private get; set; }
     
-    /// <inheritdoc/>
+    /// <summary>
+    /// Initialize the predict manager to be able to receive inputs.
+    /// </summary>
+    /// <remarks>
+    /// This shall be called exactly once before <see cref="InformAuthInput"/> or <see cref="Tick"/> is called.
+    /// </remarks>
+    /// <param name="frame">The index of the state.</param>
+    /// <param name="state">The state to initialize with.</param>
     public void Init(long frame, TG state)
     {
         lock (predictState_)
@@ -82,13 +94,19 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
             predictState_.State = state;
         }
 
-        ClientInputs.Set(frame);
+        clientInputs_.Set(frame);
 
         predictQueue_.Clear();
 
         logger_.Debug("Initiated predict state.");
     }
 
+    /// <summary>
+    /// The current frame of predict simulation.
+    /// </summary>
+    /// <remarks>
+    /// This method is thread safe.
+    /// </remarks>
     public long Frame
     {
         get
@@ -98,7 +116,15 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Provide authoritative input for given frame update to check for mispredictions.
+    /// </summary>
+    /// <remarks>
+    /// This shall be called atomically after given auth state update.
+    /// </remarks>
+    /// <param name="serializedInput">Borrow of serialized authoritative input.</param>
+    /// <param name="frame">Index of the frame the input belongs to.</param>
+    /// <param name="input">Move of input corresponding to <paramref name="serializedInput"/>.</param>
     public void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TC, TS> input)
     {
         if (!predictQueue_.TryDequeue(out var predictedInput))
@@ -149,7 +175,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
                 if (currentReplacement_ > replacementIndex)
                     return;
 
-            ClientInputs.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
+            clientInputs_.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
 
             TG? state = replacementState_.State;
 
@@ -202,10 +228,10 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
             difference--;
 
             // This is assured to exist
-            TC localInput = ClientInputs[frame] ?? throw new ArgumentException();
+            TC localInput = clientInputs_[frame] ?? throw new ArgumentException();
 
             // Predict
-            PredictClientInput(input.ClientInput.Span, localInput);
+            PredictClientInput(input.ClientInputInfos.Span, localInput);
             ServerInputPredictor.PredictInput(ref input.ServerInput, replacementState_.State);
 
             MemoryPackSerializer.Serialize(replacementInputWriter_, input);
@@ -262,9 +288,9 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
     void PredictUpdate()
     {
         // Input
-        TC localInput = InputProvider.GetInput();
+        TC localInput = ClientInputProvider.GetInput();
         long frame = predictState_.Frame + 1;
-        ClientInputs.Add(localInput, frame);
+        clientInputs_.Add(localInput, frame);
 
         // Send
         Sender.SendInput(frame, localInput);
@@ -275,7 +301,7 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         lock (predictState_)
         {
             // Predict other input
-            PredictClientInput(predictInput_.ClientInput.Span, localInput);
+            PredictClientInput(predictInput_.ClientInputInfos.Span, localInput);
             ServerInputPredictor.PredictInput(ref predictInput_.ServerInput, predictState_.State);
             
             // Update
@@ -302,12 +328,24 @@ sealed class PredictManager<TC, TS, TG> : IPredictManager<TC, TS, TG>
         }
     }
 
+    /// <summary>
+    /// Update the predict state once.
+    /// </summary>
+    /// <remarks>
+    /// This method is thread safe.
+    /// </remarks>
     public void Tick()
     {
         lock (tickMutex_)
             PredictUpdate();
     }
 
+    /// <summary>
+    /// Stops the predict manager from further management.
+    /// </summary>
+    /// <remarks>
+    /// This method is thread safe.
+    /// </remarks>
     public void Stop()
     {
         lock (replacementMutex_)

@@ -19,8 +19,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopDownShooter", "TopDownSh
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SfmlExtensions", "SfmlExtensions\SfmlExtensions.csproj", "{9539496B-5C80-43D8-AAFC-32D63FC58AD8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameCommon", "GameCommon\GameCommon.csproj", "{3496DCAD-3A99-478F-9F94-3AA9C162051E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,10 +57,6 @@ Global
 		{9539496B-5C80-43D8-AAFC-32D63FC58AD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9539496B-5C80-43D8-AAFC-32D63FC58AD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9539496B-5C80-43D8-AAFC-32D63FC58AD8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3496DCAD-3A99-478F-9F94-3AA9C162051E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3496DCAD-3A99-478F-9F94-3AA9C162051E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3496DCAD-3A99-478F-9F94-3AA9C162051E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3496DCAD-3A99-478F-9F94-3AA9C162051E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

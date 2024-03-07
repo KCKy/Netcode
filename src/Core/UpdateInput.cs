@@ -21,18 +21,18 @@ public partial struct UpdateInput<TClientInput, TServerInput>
     /// <summary>
     /// List for all connected clients containing their inputs.
     /// </summary>
-    public Memory<UpdateClientInfo<TClientInput>> ClientInput;
+    public Memory<UpdateClientInfo<TClientInput>> ClientInputInfos;
 
     /// <summary>
     /// Constructor.
     /// </summary>
-    /// <param name="clientInput">Move of the collection of client inputs.</param>
+    /// <param name="clientInputInfos">Move of the collection of client inputs.</param>
     /// <param name="serverInput">Move of the server input.</param>
     [MemoryPackConstructor]
-    public UpdateInput(Memory<UpdateClientInfo<TClientInput>> clientInput, TServerInput serverInput)
+    public UpdateInput(Memory<UpdateClientInfo<TClientInput>> clientInputInfos, TServerInput serverInput)
     {
         ServerInput = serverInput;
-        ClientInput = clientInput;
+        ClientInputInfos = clientInputInfos;
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ public partial struct UpdateInput<TClientInput, TServerInput>
     public UpdateInput()
     {
         ServerInput = new();
-        ClientInput = Memory<UpdateClientInfo<TClientInput>>.Empty;
+        ClientInputInfos = Memory<UpdateClientInfo<TClientInput>>.Empty;
     }
 
     /// <summary>

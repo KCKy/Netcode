@@ -1,10 +1,11 @@
 ﻿using Core.Client;
+using Core.Timing;
 using Useful;
 
-namespace GameCommon;
+namespace Core;
 
 /// <summary>
-/// General debug info collection for clients.
+/// General debug info collector for clients.
 /// </summary>
 public sealed class DebugInfo
 {
@@ -49,6 +50,8 @@ public sealed class DebugInfo
         double lerperFrames = lerperFrames_.Update(delta, Lerper?.FramesBehind ?? 0);
         double fps = 1 / drawDelta_.Update(delta, delta);
 
+        ISpeedController? speedController = Client?.SpeedController;
+
         return $"Draw FPS: {fps:0.00}\n" +
                $"Auth Frame: {authFrame}\n" +
                $"Predict Frame: {predictFrame}\n" +
@@ -56,11 +59,10 @@ public sealed class DebugInfo
                $"Frame progression: {Lerper?.CurrentFrameProgression:0.00}\n" +
                $"Lerper frames behind: {lerperFrames:0.00}\n" +
                $"Client ID: {Client?.Id}\n" +
-               $"Current TPS: {Client?.CurrentTps:0.00}\n" +
-               $"Target TPS: {Client?.TargetTps:0.00}\n" +
-               $"Current Delta: {Client?.CurrentDelta:0.00}\n" +
-               $"Target Delta: {Client?.TargetDelta:0.00}\n" +
-               $"Predict Delay Margin: {Client?.PredictDelayMargin:0.00}\n" +
+               $"Current TPS: {speedController?.CurrentTps:0.00}\n" +
+               $"Target TPS: {speedController?.TargetTps:0.00}\n" +
+               $"Current Delta: {speedController?.CurrentDelta:0.00}\n" +
+               $"Target Delta: {speedController?.TargetDelta:0.00}\n" +
                $"TraceState: {Client?.TraceState}\n" +
                $"Checksum: {Client?.UseChecksum}\n" +
                $"TraceTime: {Client?.TraceFrameTime}\n";

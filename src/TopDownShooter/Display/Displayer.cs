@@ -1,7 +1,6 @@
 ﻿using System;
 using TopDownShooter.Game;
 using Useful;
-using GameCommon;
 using Serilog;
 using SFML.System;
 using SfmlExtensions;

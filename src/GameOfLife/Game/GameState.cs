@@ -25,7 +25,6 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     public static Vector2i SpawnPoint = new(0, 0);
 
-    [MemoryPackInclude]
     public SortedDictionary<long, Player> IdToPlayer = new();
 
     public Level Level = new(LevelWidth, LevelHeight);
@@ -157,8 +156,10 @@ partial class GameState : IGameState<ClientInput, ServerInput>
     {
         UpdateGame();
 
-        foreach ((long id, ClientInput input, bool disconnected) in updateInputs.ClientInput.Span)
+        foreach (var clientInfo in updateInputs.ClientInputInfos.Span)
         {
+            (long id, ClientInput input, bool disconnected) = clientInfo;
+
             if (disconnected)
             {
                 IdToPlayer.Remove(id);
@@ -178,11 +179,11 @@ partial class GameState : IGameState<ClientInput, ServerInput>
                 UpdatePlayer(id, player);
                 continue;
             }
-            
-            if (!input.Start)
-                continue;
 
-            TrySpawnPlayer(id, player);
+            if (input.Start)
+            {
+                TrySpawnPlayer(id, player);
+            }
         }
 
         CheckRespawn(updateInputs.ServerInput);

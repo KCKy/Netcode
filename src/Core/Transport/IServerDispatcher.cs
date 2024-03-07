@@ -3,6 +3,11 @@
 namespace Core.Transport;
 
 /// <summary>
+/// Implements the server-side sending and receiving binary messages.
+/// </summary>
+public interface IServerDispatcher : IServerSender, IServerReceiver  { }
+
+/// <summary>
 /// Allows sending messages of the application protocol from the server to clients.
 /// </summary>
 /// <remarks>

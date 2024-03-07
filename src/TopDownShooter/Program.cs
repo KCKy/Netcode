@@ -1,38 +1,91 @@
-﻿using System.Threading.Tasks;
-using GameCommon;
+﻿using System.Net;
 using TopDownShooter.Game;
 using TopDownShooter.Input;
 using TopDownShooter.Display;
 using Useful;
+using Core.Client;
+using Core.Server;
+using DefaultTransport.Dispatcher;
+using DefaultTransport.IpTransport;
+using Serilog;
+using System;
 
 namespace TopDownShooter;
 
 static class Program
 {
-    static Task Main(string[] args)
+    const int DefaultPort = 45963;
+    static readonly IPEndPoint DefaultTarget = new(IPAddress.Loopback, DefaultPort);
+
+    static void SetupLogging()
     {
-        Displayer? displayer = null;
+        Log.Logger = new LoggerConfiguration().WriteTo.Console().MinimumLevel.Verbose().CreateLogger();
+        TaskExtensions.OnFault += (task, exc) => Log.Error("Task faulted: {Task} with exception:\n{Exception}", task, exc);
+        TaskExtensions.OnCanceled += task => Log.Error("Task was wrongly cancelled: {Task}", task);
+    }
 
-        Task run = IpGameLoader.Load<GameState, ClientInput, ServerInput>(args, 
-            () => (null, null, new ClientInputPredictor()),
-            () =>
-            {
-                displayer = new("Top Down Shooter Demo");
-                ClientInputProvider input = new(displayer);
-                return (displayer, input, new ClientInputPredictor(), null);
-            },
-            c => displayer!.Client = c,
-            s => { },
-            c => c.Terminate(),
-            s => s.Terminate());
+    static void ClientMain()
+    {
+        SetupLogging();
 
-        if (displayer is null)
-            return run;
+        IPEndPoint target = Command.GetEndPoint("Enter an address to connect to: ", DefaultTarget);
+        IpClientTransport transport = new(target);
+        DefaultClientDispatcher dispatcher = new(transport);
+        
+        Displayer displayer = new("Top Down Shooter Demo");
 
-        run.AssureSuccess();
+        Client<ClientInput, ServerInput, GameState> client = new(dispatcher)
+        {
+            ClientInputPredictor = new ClientInputPredictor(),
+            ClientInputProvider = new ClientInputProvider(displayer),
+            Displayer = displayer
+        };
 
-        while (displayer.Update()) { }
+        displayer.Client = client;
 
-        return Task.CompletedTask;
+        client.RunAsync().AssureSuccess();
+        transport.RunAsync().AssureSuccess();
+        
+        while (displayer.Update())
+        { }
+    }
+
+    static void ServerMain()
+    {
+        SetupLogging();
+
+        int port = Command.GetPort("Enter a port to run the server on: ", DefaultPort);
+
+        IPEndPoint endPoint = new(IPAddress.Any, port);
+
+        IpServerTransport transport = new(endPoint);
+
+        DefaultServerDispatcher dispatcher = new(transport);
+
+        ClientInputPredictor clientInputPredictor = new();
+
+        Server<ClientInput, ServerInput, GameState> server = new(dispatcher)
+        {
+            ClientInputPredictor = clientInputPredictor
+        };
+
+        server.RunAsync().AssureSuccess();
+        transport.RunAsync().Wait();
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("Run client or server [c/s]? ");
+        char? command = Console.ReadLine()?.ToLower()[0];
+        
+        switch (command)
+        {
+            case 's':
+                ServerMain();
+                return;
+            default:
+                ClientMain();
+                return;
+        }
     }
 }

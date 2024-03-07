@@ -7,53 +7,6 @@ using Serilog;
 namespace Core.DataStructures;
 
 /// <summary>
-/// Receives all client input to the server. Constructs authoritative client update inputs <see cref="UpdateClientInfo{TClientInput}"/>.
-/// Authorizes all received inputs and raises <see cref="OnInputAuthored"/> informing whether inputs are being received on time.
-/// </summary>
-/// <typeparam name="TClientInput">The type of the client input.</typeparam>
-public interface IClientInputQueue<TClientInput>
-where TClientInput : class, new()
-{
-    /// <summary>
-    /// The latest constructed input frame number.
-    /// </summary>
-    long Frame { get; }
-
-    /// <summary>
-    /// Add a client, which is from now expected to send input.
-    /// </summary>
-    /// <param name="id">The id of the client.</param>
-    /// <exception cref="ArgumentException">If client with given id has already been added.</exception>
-    void AddClient(long id);
-
-    /// <summary>
-    /// Removes a client from the queue, discard all unretrieved inputs and disconnect the client.
-    /// </summary>
-    /// <param name="id">The id of the client.</param>
-    /// <exception cref="ArgumentException">If the client id is not in the collection.</exception>
-    void RemoveClient(long id);
-
-    /// <summary>
-    /// Adds an input for given client.
-    /// </summary>
-    /// <param name="id">ID of the client.</param>
-    /// <param name="frame">Frame number to which the input corresponds.</param>
-    /// <param name="input">The input.</param>
-    void AddInput(long id, long frame, TClientInput input);
-
-    /// <summary>
-    /// Constructs the next input frame out of collected inputs, any late inputs will be ignored.
-    /// </summary>
-    /// <returns>Input frame for current frame.</returns>
-    Memory<UpdateClientInfo<TClientInput>> ConstructAuthoritativeFrame();
-    
-    /// <summary>
-    /// Raised when given client input is being authored by the server.
-    /// </summary>
-    event InputAuthoredDelegate OnInputAuthored;
-}
-
-/// <summary>
 /// Event describing the authorization of a given client's input.
 /// If <paramref name="difference"/> is negative that means given input was not received in time and the server ignored the late input,
 /// positive value means the input was received in-time to be accounted for in the frame update.
@@ -63,8 +16,12 @@ where TClientInput : class, new()
 /// <param name="difference">The difference of the corresponding frame update time and the input receive time.</param>
 public delegate void InputAuthoredDelegate(long id, long frame, TimeSpan difference);
 
-/// <inheritdoc cref="IClientInputQueue{TClientInput}"/>
-public sealed class ClientInputQueue<TClientInput> : IClientInputQueue<TClientInput>
+/// <summary>
+/// Receives all client input to the server. Constructs authoritative client update inputs <see cref="UpdateClientInfo{TClientInput}"/>.
+/// Authorizes all received inputs and raises <see cref="inputAuthored_"/> informing whether inputs are being received on time.
+/// </summary>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+public sealed class ClientInputQueue<TClientInput>
 where TClientInput : class, new()
 {
     sealed class SingleClientQueue
@@ -114,13 +71,19 @@ where TClientInput : class, new()
     /// </summary>
     /// <param name="tps">The TPS the game should run at. Used for input delay calculations.</param>
     /// <param name="predictor">Input predictor for client inputs. Used as a substitute when input of a client are not received in time.</param>
-    public ClientInputQueue(double tps, IClientInputPredictor<TClientInput> predictor)
+    /// <param name="onInputAuthored">Raised when given client input is being authored.</param>
+    public ClientInputQueue(double tps, IClientInputPredictor<TClientInput> predictor, InputAuthoredDelegate onInputAuthored)
     {
         ticksPerSecond_ = tps;
         predictor_ = predictor;
+        inputAuthored_ = onInputAuthored;
     }
 
-    /// <inheritdoc/>/// 
+    readonly InputAuthoredDelegate inputAuthored_;
+
+    /// <summary>
+    /// The latest constructed input frame number.
+    /// </summary>
     public long Frame
     {
         get
@@ -134,7 +97,11 @@ where TClientInput : class, new()
 
     readonly ILogger logger_ = Log.ForContext<ClientInputQueue<TClientInput>>();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Add a client, which is from now expected to send input.
+    /// </summary>
+    /// <param name="id">The id of the client.</param>
+    /// <exception cref="ArgumentException">If client with given id has already been added.</exception>
     public void AddClient(long id)
     {
         lock (mutex_)
@@ -149,7 +116,11 @@ where TClientInput : class, new()
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Removes a client from the queue, discard all unretrieved inputs and disconnect the client.
+    /// </summary>
+    /// <param name="id">The id of the client.</param>
+    /// <exception cref="ArgumentException">If the client id is not in the collection.</exception>
     public void RemoveClient(long id)
     {
         lock (mutex_)
@@ -167,7 +138,12 @@ where TClientInput : class, new()
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Adds an input for given client.
+    /// </summary>
+    /// <param name="id">ID of the client.</param>
+    /// <param name="frame">Frame number to which the input corresponds.</param>
+    /// <param name="input">The input.</param>
     public void AddInput(long id, long frame, TClientInput input)
     {
         lock (mutex_)
@@ -190,7 +166,7 @@ where TClientInput : class, new()
                 var framePart = Stopwatch.GetElapsedTime(lastFrameUpdate_, now);
 
                 TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_) - framePart;
-                OnInputAuthored?.Invoke(id, frame, difference);
+                inputAuthored_?.Invoke(id, frame, difference);
 
                 logger_.Debug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
                 return;
@@ -205,7 +181,10 @@ where TClientInput : class, new()
 
     long lastFrameUpdate_ = long.MaxValue;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Constructs the next input frame out of collected inputs, any late inputs will be ignored.
+    /// </summary>
+    /// <returns>Input frame for current frame.</returns>
     public Memory<UpdateClientInfo<TClientInput>> ConstructAuthoritativeFrame()
     {
         lock (mutex_)
@@ -230,7 +209,7 @@ where TClientInput : class, new()
                 {
                     queue.LastAuthorizedInput = nextFrame;
                     TimeSpan difference = Stopwatch.GetElapsedTime(value, lastFrameUpdate_);
-                    OnInputAuthored?.Invoke(id, nextFrame, difference);
+                    inputAuthored_?.Invoke(id, nextFrame, difference);
 
                     logger_.Verbose("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
                 }
@@ -252,7 +231,4 @@ where TClientInput : class, new()
             return frame;
         }
     }
-
-    /// <inheritdoc/>
-    public event InputAuthoredDelegate? OnInputAuthored;
 }

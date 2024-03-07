@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -12,9 +11,8 @@ namespace Core.Timing;
 /// Sets the speed to approach the desired delta in <see cref="SmoothingTime"/> seconds.
 /// </summary>
 /// <remarks>
-/// Because the current delta is constantly being updated the speed is also constantly updated.
-/// Therefore, from purely theoretical point of view the desired delta would never be achieved but only approached.
-/// However, for practical use this technique does not overshoot and converges close enough to the desired delta in short time.
+/// From purely theoretical point of view the desired delta is only being approached.
+/// However, this technique does not overshoot and converges close enough to the desired delta in a short time.
 /// </remarks>
 public class SpeedController : ISpeedController
 {
@@ -23,14 +21,6 @@ public class SpeedController : ISpeedController
     /// <inheritdoc/>
     public Task RunAsync(CancellationToken cancelToken = new()) => clock_.RunAsync(cancelToken);
 
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    public SpeedController()
-    {
-        FrameMemory = 20;
-    }
-    
     /// <inheritdoc/>
     public event Action? OnTick
     {
@@ -38,7 +28,7 @@ public class SpeedController : ISpeedController
         remove => clock_.OnTick -= value;
     }
 
-    double targetDelta_ = 0;
+    double targetDelta_ = 0.05;
     double currentDelta_ = 0;
     double targetSpeed_ = 1;
     double currentSpeed_ = 1;
@@ -52,7 +42,6 @@ public class SpeedController : ISpeedController
             if (!double.IsPositive(value))
                 throw new ArgumentOutOfRangeException(nameof(value), value, "The radius must be positive.");
             targetNeighborhood_ = value;
-            speedFunctionExponent_ = CalculateSpeedFunctionExponent(smoothingTime_);
         }
     }
 
@@ -151,7 +140,7 @@ public class SpeedController : ISpeedController
 
     static double CalculateSpeedFunctionExponent(double t) => 1 / t + 1;
 
-    MinimumWindowed<double> statsWindowed_;
+    MinimumWindowed<double> statsWindowed_ = new(1);
 
     const double DefaultTargetNeighborhood = 0.025;
     double targetNeighborhood_ = DefaultTargetNeighborhood;

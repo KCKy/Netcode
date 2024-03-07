@@ -1,6 +1,5 @@
 ﻿using System;
 using Core.Utility;
-using GameCommon;
 using SFML.Graphics;
 using SFML.System;
 using SfmlExtensions;

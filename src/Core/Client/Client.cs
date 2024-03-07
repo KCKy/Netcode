@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.DataStructures;
 using Core.Transport;
 using Core.Providers;
 using Core.Timing;
@@ -18,36 +17,6 @@ namespace Core.Client;
 /// </summary>
 public interface IClient
 {
-    /// <summary>
-    /// <see cref="ISpeedController.CurrentTps"/> of the underlying predict loop speed controller.
-    /// </summary>
-    double CurrentTps { get; }
-    
-    /// <summary>
-    /// <see cref="ISpeedController.CurrentDelta"/> of the underlying predict loop speed controller.
-    /// </summary>
-    double CurrentDelta { get; }
-    
-    /// <summary>
-    /// <see cref="ISpeedController.TargetDelta"/> of the underlying predict loop speed controller.
-    /// </summary>
-    double TargetDelta { get; }
-    
-    /// <summary>
-    /// <see cref="IClock.TargetTps"/> of the underlying predict loop speed controller.
-    /// </summary>
-    double TargetTps { get; }
-
-    /// <summary>
-    /// Amount of time in seconds specifying how much early inputs should be received by the server. This extra margin assures small delays don't result in input loss.
-    /// </summary>
-    double PredictDelayMargin { get; set; }
-
-    /// <summary>
-    /// Amount of time to smooth prediction speed over.
-    /// </summary>
-    double SmoothingTime { get; set; }
-
     /// <summary>
     /// The id of the client.
     /// </summary>
@@ -79,6 +48,11 @@ public interface IClient
     long PredictFrame { get; }
 
     /// <summary>
+    /// Speed controller which defines the speed of the prediction loop.
+    /// </summary>
+    public ISpeedController SpeedController { get; init; }
+
+    /// <summary>
     /// Begin the client. Starts the update controller for predict, input collection, and server communication.
     /// </summary>
     /// <exception cref="InvalidOperationException">If the client has already been started or terminated.</exception>
@@ -106,105 +80,104 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     where TServerInput : class, new()
 
 {
-    readonly IStateHolder<TClientInput, TServerInput, TGameState> authStateHolder_; // Used to stop RW/WR/WW conflicts.
-    readonly ILogger logger_ = Log.ForContext<Client<TClientInput, TServerInput, TGameState>>();
-    readonly ISpeedController clock_;
-    readonly IDisplayer<TGameState> displayer_;
-    readonly IClientSender sender_;
-    readonly IClientReceiver receiver_;
-    readonly IPredictManager<TClientInput, TServerInput, TGameState> predictManager_;
-
+    readonly StateHolder<TClientInput, TServerInput, TGameState> authStateHolder_ = new(); // Mutex used to stop RW/WR/WW conflicts.
+    readonly PredictManager<TClientInput, TServerInput, TGameState> predictManager_;
     readonly CancellationTokenSource clockCancellation_ = new();
     readonly object terminationMutex_ = new(); // Assures atomicity of start and termination operations.
-    readonly UpdateTimer timer_;
+    readonly UpdateTimer timer_ = new();
+
+    readonly ILogger logger_ = Log.ForContext<Client<TClientInput, TServerInput, TGameState>>();
+       
+    readonly IClientDispatcher dispatcher_;
 
     bool started_ = false;
     bool terminated_ = false;
     bool initiated_ = false;
     bool identified_ = false;
-    
-    /// <inheritdoc/>
-    public double CurrentTps => clock_.CurrentTps;
-    
-    /// <inheritdoc/>
-    public double CurrentDelta => clock_.CurrentDelta;
-    
-    /// <inheritdoc/>
-    public double TargetDelta => clock_.TargetDelta;
-    
-    /// <inheritdoc/>
-    public double TargetTps => clock_.TargetTps;
 
     /// <inheritdoc/>
-    public double PredictDelayMargin
+    public ISpeedController SpeedController { get; init; }
+
+    readonly IDisplayer<TGameState> displayer_ = new DefaultDisplayer<TGameState>();
+
+    /// <summary>
+    /// Displayer to display the auth state and predict state.
+    /// </summary>
+    public IDisplayer<TGameState> Displayer
     {
-        get => clock_.TargetDelta;
-        set => clock_.TargetDelta = value;
+        init
+        {
+            displayer_ = value;
+            predictManager_.Displayer = value;
+        }
     }
 
-    /// <inheritdoc/>
-    public double SmoothingTime
+    /// <summary>
+    /// Client input provider. If none is provided <see cref="DefaultClientInputProvider{TClientInput}"/> is used.
+    /// </summary>
+    public IClientInputProvider<TClientInput> ClientInputProvider
     {
-        get => clock_.SmoothingTime;
-        set => clock_.SmoothingTime = value;
+        init => predictManager_.ClientInputProvider = value;
+    }
+
+    /// <summary>
+    /// Client input predictor. If none is provided <see cref="DefaultClientInputPredictor{TClientInput}"/> is used.
+    /// </summary>
+    public IClientInputPredictor<TClientInput> ClientInputPredictor
+    {
+        init => predictManager_.InputPredictor = value;
+    }
+
+    /// <summary>
+    /// Server input predictor. If none is provided <see cref="DefaultServerInputPredictor{TServerInput,TGameState}"/> is used.
+    /// </summary>
+    public IServerInputPredictor<TServerInput, TGameState> ServerInputPredictor
+    {
+        init => predictManager_.ServerInputPredictor = value;
     }
 
     /// <summary>
     /// Constructor.
     /// </summary>
-    /// <param name="sender">Sender to use for sending messages the server.</param>
-    /// <param name="receiver">Receiver to use for receiving messages from the server.</param>
-    /// <param name="displayer">Optional displayer to display the auth state and predict state.</param>
-    /// <param name="inputProvider">Optional client input provider. If none is provided <see cref="DefaultClientInputProvider{TClientInput}"/> is used.</param>
-    /// <param name="serverInputPredictor">Optional server input predictor. If none is provided <see cref="DefaultServerInputPredictor{TServerInput,TGameState}"/> is used.</param>
-    /// <param name="clientInputPredictor">Optional client input predictor. If none is provided <see cref="DefaultClientInputPredictor{TClientInput}"/> is used.</param>
-    public Client(IClientSender sender, IClientReceiver receiver,
-        IDisplayer<TGameState>? displayer,
-        IClientInputProvider<TClientInput>? inputProvider,
-        IServerInputPredictor<TServerInput, TGameState>? serverInputPredictor = null,
-        IClientInputPredictor<TClientInput>? clientInputPredictor = null)
+    /// <param name="dispatcher">Sender to use for sending messages the server.</param>
+    public Client(IClientDispatcher dispatcher)
     {
-        sender_ = sender;
-        receiver_ = receiver;
-        displayer_ = displayer ?? new DefaultDisplayer<TGameState>();
-        clock_ = new SpeedController()
+        dispatcher_ = dispatcher;
+
+        SpeedController = new SpeedController()
         {
             TargetTps = TGameState.DesiredTickRate,
-            TargetNeighborhood = 1 / TGameState.DesiredTickRate
+            TargetNeighborhood = 1 / TGameState.DesiredTickRate,
+            FrameMemory = (int)Math.Ceiling(TGameState.DesiredTickRate)
         };
-
-        authStateHolder_ = new StateHolder<TClientInput, TServerInput, TGameState>();
 
         predictManager_ = new PredictManager<TClientInput, TServerInput, TGameState>
         {
-            ClientInputs = new LocalInputQueue<TClientInput>(),
-            InputPredictor = clientInputPredictor ?? new DefaultClientInputPredictor<TClientInput>(),
-            ServerInputPredictor = serverInputPredictor ?? new DefaultServerInputPredictor<TServerInput, TGameState>(),
-            InputProvider = inputProvider ?? new DefaultClientInputProvider<TClientInput>(),
+            Displayer = displayer_,
+            InputPredictor = new DefaultClientInputPredictor<TClientInput>(),
+            ServerInputPredictor = new DefaultServerInputPredictor<TServerInput, TGameState>(),
+            ClientInputProvider = new DefaultClientInputProvider<TClientInput>(),
             AuthState = authStateHolder_,
-            Sender = sender_,
-            Displayer = displayer_
+            Sender = dispatcher_,
         };
 
-        PredictDelayMargin = 0.15f;
-        timer_ = new();
         SetHandlers();
     }
 
     void SetHandlers()
     {
-        receiver_.OnAddAuthInput += AddAuthoritativeInput;
-        receiver_.OnInitialize += Initialize;
-        receiver_.OnSetDelay += SetDelay;
-        receiver_.OnStart += Start;
+        dispatcher_.OnAddAuthInput += AddAuthoritativeInput;
+        dispatcher_.OnInitialize += Initialize;
+        dispatcher_.OnSetDelay += SetDelay;
+        dispatcher_.OnStart += Start;
     }
 
     void UnsetHandlers()
     {
-        receiver_.OnAddAuthInput -= AddAuthoritativeInput;
-        receiver_.OnInitialize -= Initialize;
-        receiver_.OnSetDelay -= SetDelay;
-        receiver_.OnStart -= Start;
+        dispatcher_.OnAddAuthInput -= AddAuthoritativeInput;
+        dispatcher_.OnInitialize -= Initialize;
+        dispatcher_.OnSetDelay -= SetDelay;
+        dispatcher_.OnStart -= Start;
     }
     
     /// <inheritdoc/>
@@ -248,7 +221,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
         try
         {
-            await clock_.RunAsync(clockCancellation_.Token);
+            await SpeedController.RunAsync(clockCancellation_.Token);
         }
         catch (OperationCanceledException) { }
     }
@@ -266,10 +239,10 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             terminated_ = true;
 
-            sender_.Disconnect();
+            dispatcher_.Disconnect();
 
             predictManager_.Stop();
-            clock_.OnTick -= predictManager_.Tick;
+            SpeedController.OnTick -= predictManager_.Tick;
             clockCancellation_.Cancel();
             UnsetHandlers();
         }
@@ -350,13 +323,47 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             logger_.Debug("Client received id {Id}", id);
 
             identified_ = true;
+
             Id = id;
             predictManager_.LocalId = id;
             displayer_.Init(id);
 
             if (initiated_ && identified_)
-                clock_.OnTick += predictManager_.Tick;
+                SpeedController.OnTick += predictManager_.Tick;
         }
+    }
+
+    (TGameState authState, TGameState predictState) DeserializeStates(Memory<byte> serializedState)
+    {
+        var span = serializedState.Span;
+        var authState = MemoryPackSerializer.Deserialize<TGameState>(span);
+        var predictState = MemoryPackSerializer.Deserialize<TGameState>(span);
+            
+        if (authState is null || predictState is null)
+        {
+            logger_.Fatal("The state is invalid.");
+            throw new ArgumentException("Received invalid init state.", nameof(serializedState));
+        }
+        
+        ArrayPool<byte>.Shared.Return(serializedState);
+
+        return (authState, predictState);
+    }
+
+    void InitializeAuthState(long frame, TGameState authState)
+    {
+        lock (authStateHolder_)
+        {
+            authStateHolder_.Frame = frame;
+            authStateHolder_.State = authState;
+            displayer_.AddAuthoritative(frame, authState);
+            stateInitiated_ = true;
+        }
+    }
+
+    void InitializePredictState(long frame, TGameState predictState)
+    {
+        predictManager_.Init(frame, predictState);
     }
 
     void Initialize(long frame, Memory<byte> serializedState)
@@ -368,37 +375,16 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             initiated_ = true;
 
-            // Deserialize state
-            var span = serializedState.Span;
-            var authState = MemoryPackSerializer.Deserialize<TGameState>(span);
-            var predictState = MemoryPackSerializer.Deserialize<TGameState>(span);
-            
-            if (authState is null || predictState is null)
-            {
-                logger_.Fatal("Received invalid init state {Serialized}.", serializedState);
-                throw new ArgumentException("Received invalid init state.", nameof(serializedState));
-            }
-
             logger_.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
 
-            ArrayPool<byte>.Shared.Return(serializedState);
+            (TGameState authState, TGameState predictState) = DeserializeStates(serializedState);
 
-            // Init auth
-
-            lock (authStateHolder_)
-            {
-                authStateHolder_.Frame = frame;
-                authStateHolder_.State = authState;
-                displayer_.AddAuthoritative(frame, authState);
-                stateInitiated_ = true;
-            }
-
-            // Init predict
-            predictManager_.Init(frame, predictState);
+            InitializeAuthState(frame, authState);
+            InitializePredictState(frame, predictState);
             
             // Run
             if (initiated_ && identified_)
-                clock_.OnTick += predictManager_.Tick;
+                SpeedController.OnTick += predictManager_.Tick;
         }
     }
 
@@ -408,5 +394,5 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         Authorize(input, checksum, frame);
     }
 
-    void SetDelay(double delay) => clock_.CurrentDelta = delay;
+    void SetDelay(double delay) => SpeedController.CurrentDelta = delay;
 }

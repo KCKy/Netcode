@@ -2,19 +2,20 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.Providers;
 using Serilog;
 using Useful;
 
 namespace Core.Timing;
 
 /// <summary>
-/// Default implementation of <see cref="IClock"/>.
+/// A clock which periodically raises an event.
 /// Creates a timing thread, which uses passive waiting.
 /// </summary>
-public sealed class Clock : IClock
+public sealed class Clock
 {
-    /// <inheritdoc/>
+    /// <summary>
+    /// Is evenly called on a clock tick. Provides delta time in seconds.
+    /// </summary>
     public event Action? OnTick;
     
     volatile int targetPeriod_;
@@ -51,7 +52,9 @@ public sealed class Clock : IClock
         init => maxWaitTime_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// The target TPS of the clock, the clock should as closely match this TPS while spacing the ticks evenly.
+    /// </summary>
     public double TargetTps
     {
         get => targetTps_;
@@ -77,9 +80,9 @@ public sealed class Clock : IClock
 
     readonly ILogger logger_ = Log.ForContext<Clock>();
 
-    void TimerThread(object? _cancelToken)
+    void TimerThread(object? cancelTokenRaw)
     {
-        CancellationToken cancelToken = (CancellationToken)_cancelToken!;
+        CancellationToken cancelToken = (CancellationToken)cancelTokenRaw!;
 
         long tickSum = 0;
         long tickCount = 0;
@@ -119,7 +122,11 @@ public sealed class Clock : IClock
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Starts the clock.
+    /// </summary>
+    /// <param name="cancelToken">Token to stop the clock from running.</param>
+    /// <returns>Infinite task which may be cancelled which represents the clock lifetime.</returns>
     public async Task RunAsync(CancellationToken cancelToken = new())
     {
         Thread thread = new(TimerThread)

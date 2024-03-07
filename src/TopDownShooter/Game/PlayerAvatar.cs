@@ -44,7 +44,7 @@ partial struct Position
 }
 
 [MemoryPackable]
-sealed partial class Player : IEntity
+sealed partial class PlayerAvatar : IEntity
 {
     [MemoryPackInclude]
     long id_;
@@ -62,14 +62,14 @@ sealed partial class Player : IEntity
     long playerId_;
 
     [MemoryPackConstructor]
-    Player() { }
+    PlayerAvatar() { }
     
     public override string ToString()
     {
         return Position.ToString();
     }
 
-    public Player(long entityId, long playerId)
+    public PlayerAvatar(long entityId, long playerId)
     {
         entityId_ = entityId;
         playerId_ = playerId;
@@ -103,14 +103,14 @@ sealed partial class Player : IEntity
 
     public Vec2<Fixed>? GetPositionHistory(int index) => position_.GetHistory(index);
 
-    public void Shoot(Vec2<Fixed> direction, List<Player> avatars, int histIndex)
+    public void Shoot(Vec2<Fixed> direction, List<PlayerAvatar> avatars, int histIndex)
     {
         Log.Information("Shooting with hist index: {HistIndex}.", histIndex);
 
         if (position_.GetHistory(histIndex) is not { } position)
             return;
 
-        foreach (Player player in avatars)
+        foreach (PlayerAvatar player in avatars)
         {
             if (player == this)
                 continue;
@@ -157,7 +157,7 @@ sealed partial class Player : IEntity
 
     public void DrawLerped(Displayer displayer, Vector2f origin, IEntity to, float t)
     {
-        if (to as Player is not { EntityId: var otherId } target || otherId != entityId_)
+        if (to as PlayerAvatar is not { EntityId: var otherId } target || otherId != entityId_)
             throw new ArgumentException("Invalid target entity.", nameof(to));
 
         ref var rawSourcePosition = ref Position;

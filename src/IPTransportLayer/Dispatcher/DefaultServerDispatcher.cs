@@ -15,7 +15,7 @@ namespace DefaultTransport.Dispatcher;
 /// <remarks>
 /// For the server side check <see cref="DefaultClientDispatcher"/>.
 /// </remarks>
-public sealed class DefaultServerDispatcher : IServerSender, IServerReceiver
+public sealed class DefaultServerDispatcher : IServerDispatcher
 {
     readonly IServerTransport transport_;
 

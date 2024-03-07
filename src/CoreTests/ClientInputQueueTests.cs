@@ -22,7 +22,7 @@ public sealed class ClientInputQueueTests
     [InlineData(long.MinValue)]
     public void Basic(long id)
     {
-        ClientInputQueue<MockStructure> queue = new(1, new DefaultClientInputPredictor<MockStructure>());
+        ClientInputQueue<MockStructure> queue = new(1, new DefaultClientInputPredictor<MockStructure>(), (_, _, _) => {});
         
         MockStructure thirdStructure = new(1, 1, 1, 1);
 
@@ -102,11 +102,9 @@ public sealed class ClientInputQueueTests
     [InlineData(long.MinValue, 42)]
     public void InputAuthorLate(long id, int tps)
     {
-        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>());
         InputAuthCapturer capturer = new();
-
-        queue.OnInputAuthored += capturer.Capture;
-
+        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>(), capturer.Capture);
+        
         queue.AddClient(id);
 
         queue.ConstructAuthoritativeFrame(); // Failed to send frame in time
@@ -130,9 +128,8 @@ public sealed class ClientInputQueueTests
     [InlineData(long.MinValue, 42)]
     public void InputAuthorInTime(long id, int tps)
     {
-        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>());
         InputAuthCapturer capturer = new();
-        queue.OnInputAuthored += capturer.Capture;
+        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>(), capturer.Capture);
 
         queue.AddClient(id);
 
