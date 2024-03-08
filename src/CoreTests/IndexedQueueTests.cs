@@ -1,12 +1,13 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Core.DataStructures;
 
 namespace CoreTests;
 
 /// <summary>
-/// Test class for <see cref="LocalInputQueue{TInput}"/>
+/// Test class for <see cref="InputQueue{TInput}"/>
 /// </summary>
-public sealed class LocalInputQueueTests
+public sealed class IndexedQueueTests
 {
     record MockData(int Value);
 
@@ -20,7 +21,7 @@ public sealed class LocalInputQueueTests
     [InlineData(42)]
     public void Empty(int startValue)
     {
-        LocalInputQueue<MockData> queue = new();
+        IndexedQueue<MockData> queue = new();
 
         queue.Set(startValue);
 
@@ -45,13 +46,14 @@ public sealed class LocalInputQueueTests
     [InlineData(42, 50)]
     public void Add(int startValue, int count)
     {
-        LocalInputQueue<MockData> queue = new();
+        IndexedQueue<MockData> queue = new();
 
-        queue.Set(startValue - 1);
+        queue.Set(startValue);
 
         foreach (MockData data in from x in Enumerable.Range(startValue, count) select new MockData(x))
         {
-            queue.Add(data, data.Value);
+            long index = queue.Add(data);
+            Assert.Equal(data.Value, index);
 
             for (int i = startValue; i <= data.Value; i++)
                 Assert.Equal(i, queue[i]?.Value);
@@ -72,12 +74,15 @@ public sealed class LocalInputQueueTests
     [InlineData(42, 50)]
     public void Pop(int startValue, int count)
     {
-        LocalInputQueue<MockData> queue = new();
+        IndexedQueue<MockData> queue = new();
 
-        queue.Set(startValue - 1);
+        queue.Set(startValue);
 
         foreach (MockData data in from x in Enumerable.Range(startValue, count) select new MockData(x))
-            queue.Add(data, data.Value);
+        {
+            long index = queue.Add(data);
+            Assert.Equal(data.Value, index);
+        }
 
         int end = startValue + count;
 

@@ -73,7 +73,7 @@ sealed class PredictManager<TC, TS, TG>
     public required IClientInputProvider<TC> ClientInputProvider { private get; set; }
 
     // Making new client inputs is exclusive to predict update.
-    readonly LocalInputQueue<TC> clientInputs_ = new();
+    readonly IndexedQueue<TC> clientInputs_ = new();
 
     // Displaying is exclusive to the predict update.
     public required IDisplayer<TG> Displayer { private get; set; }
@@ -94,7 +94,8 @@ sealed class PredictManager<TC, TS, TG>
             predictState_.State = state;
         }
 
-        clientInputs_.Set(frame);
+        lock (clientInputs_)
+            clientInputs_.Set(frame + 1);
 
         predictQueue_.Clear();
 
@@ -175,7 +176,8 @@ sealed class PredictManager<TC, TS, TG>
                 if (currentReplacement_ > replacementIndex)
                     return;
 
-            clientInputs_.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
+            lock (clientInputs_)
+                clientInputs_.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
 
             TG? state = replacementState_.State;
 
@@ -227,8 +229,9 @@ sealed class PredictManager<TC, TS, TG>
             frame++;
             difference--;
 
-            // This is assured to exist
-            TC localInput = clientInputs_[frame] ?? throw new ArgumentException();
+            TC localInput;
+            lock (clientInputs_)
+                localInput = clientInputs_[frame] ?? throw new("Input queue is corrupted."); // This should never throw
 
             // Predict
             PredictClientInput(input.ClientInputInfos.Span, localInput);
@@ -290,8 +293,13 @@ sealed class PredictManager<TC, TS, TG>
         // Input
         TC localInput = ClientInputProvider.GetInput();
         long frame = predictState_.Frame + 1;
-        clientInputs_.Add(localInput, frame);
 
+        lock (clientInputs_)
+        {
+            long used = clientInputs_.Add(localInput);
+            Debug.Assert(frame == used);
+        }
+        
         // Send
         Sender.SendInput(frame, localInput);
 
