@@ -170,7 +170,7 @@ public sealed class DefaultDispatcherTests
             }
         };
 
-        client.OnSetDelay += _ =>
+        client.OnSetDelay += (_, _) =>
         {
             lock (mutex)
                 delay++;

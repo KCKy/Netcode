@@ -127,7 +127,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         if (double.IsRealNumber(difference))
         {
-            OnSetDelay?.Invoke(difference);
+            OnSetDelay?.Invoke(frame, difference);
 
             lock (aggregator_)
                 aggregator_.Pop(frame);

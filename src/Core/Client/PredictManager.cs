@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Core.DataStructures;
 using Core.Providers;
+using Core.Timing;
 using Core.Transport;
 using Core.Utility;
 using MemoryPack;
@@ -26,16 +27,17 @@ sealed class PredictManager<TC, TS, TG>
      * Replacement State
      * Predict State
      * Replacement Mutex
+     * Client Inputs
      */
 
     // This mutex assures predict ticks are not executed concurrently,
     // Which may happen in some extreme edge cases.
     readonly object tickMutex_ = new();
 
-    // Predict queue is thread safe, but only one task (predict or replace) is allowed to manage its predictions, until it is superseded.
+    // Only one task (predict or replace) is allowed to manage its predictions, until it is superseded.
     // This mutex assures atomicity of replace identification and predict queue write access.
     readonly object replacementMutex_ = new();
-
+    
     readonly ConcurrentQueue<Memory<byte>> predictQueue_ = new();
     
     // The mutex of replacement state shall be held during the whole duration of a replacement task, and should be released only after the task is finished.
@@ -54,7 +56,7 @@ sealed class PredictManager<TC, TS, TG>
     // Mutex of auth state holder must be acquired before we can read it.
     public required StateHolder<TC, TS, TG> AuthState { private get; init; }
     //
-    
+
     // Following objects are thread safe
     public required IClientInputPredictor<TC> InputPredictor { private get; set; }
     public required IServerInputPredictor<TS, TG> ServerInputPredictor { private get; set; }
@@ -72,12 +74,14 @@ sealed class PredictManager<TC, TS, TG>
     // This object is exclusive to predict.
     public required IClientInputProvider<TC> ClientInputProvider { private get; set; }
 
-    // Making new client inputs is exclusive to predict update.
+    // This queue needs to be locked. Making new client inputs is exclusive to predict update.
     readonly IndexedQueue<TC> clientInputs_ = new();
 
     // Displaying is exclusive to the predict update.
     public required IDisplayer<TG> Displayer { private get; set; }
     
+    public required DelayCalculator<TG, TC, TS> DelayCalculator { private get; set; }
+
     /// <summary>
     /// Initialize the predict manager to be able to receive inputs.
     /// </summary>
@@ -96,6 +100,8 @@ sealed class PredictManager<TC, TS, TG>
 
         lock (clientInputs_)
             clientInputs_.Set(frame + 1);
+
+        DelayCalculator.Init(frame);
 
         predictQueue_.Clear();
 
@@ -231,7 +237,7 @@ sealed class PredictManager<TC, TS, TG>
 
             TC localInput;
             lock (clientInputs_)
-                localInput = clientInputs_[frame] ?? throw new("Input queue is corrupted."); // This should never throw
+                localInput = clientInputs_[frame]; // This is supposed to never fail
 
             // Predict
             PredictClientInput(input.ClientInputInfos.Span, localInput);
@@ -299,7 +305,13 @@ sealed class PredictManager<TC, TS, TG>
             long used = clientInputs_.Add(localInput);
             Debug.Assert(frame == used);
         }
-        
+
+        {
+            long used = DelayCalculator.Tick();
+            Debug.Assert(frame == used);
+        }
+
+
         // Send
         Sender.SendInput(frame, localInput);
 
@@ -335,7 +347,7 @@ sealed class PredictManager<TC, TS, TG>
             }
         }
     }
-
+    
     /// <summary>
     /// Update the predict state once.
     /// </summary>

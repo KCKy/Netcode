@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Core.DataStructures;
 using Core.Transport;
 using Core.Providers;
 using Core.Timing;
@@ -87,7 +89,9 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     readonly UpdateTimer timer_ = new();
 
     readonly ILogger logger_ = Log.ForContext<Client<TClientInput, TServerInput, TGameState>>();
-       
+
+    readonly DelayCalculator<TGameState, TClientInput, TServerInput> delayCalculator_ = new();
+
     readonly IClientDispatcher dispatcher_;
 
     bool started_ = false;
@@ -159,6 +163,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             ClientInputProvider = new DefaultClientInputProvider<TClientInput>(),
             AuthState = authStateHolder_,
             Sender = dispatcher_,
+            DelayCalculator = delayCalculator_
         };
 
         SetHandlers();
@@ -168,18 +173,22 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     {
         dispatcher_.OnAddAuthInput += AddAuthoritativeInput;
         dispatcher_.OnInitialize += Initialize;
-        dispatcher_.OnSetDelay += SetDelay;
+        dispatcher_.OnSetDelay += delayCalculator_.SetDelay;
         dispatcher_.OnStart += Start;
+        delayCalculator_.OnDelayChanged += UpdateDelay;
     }
 
     void UnsetHandlers()
     {
         dispatcher_.OnAddAuthInput -= AddAuthoritativeInput;
         dispatcher_.OnInitialize -= Initialize;
-        dispatcher_.OnSetDelay -= SetDelay;
+        dispatcher_.OnSetDelay -= delayCalculator_.SetDelay;
         dispatcher_.OnStart -= Start;
+        delayCalculator_.OnDelayChanged -= UpdateDelay;
     }
-    
+
+    void UpdateDelay(double delay) => SpeedController.CurrentDelta = delay;
+
     /// <inheritdoc/>
     public long Id { get; private set; } = long.MaxValue;
 
@@ -393,6 +402,4 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         logger_.Verbose("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
         Authorize(input, checksum, frame);
     }
-
-    void SetDelay(double delay) => SpeedController.CurrentDelta = delay;
 }

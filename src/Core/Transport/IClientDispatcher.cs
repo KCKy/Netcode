@@ -66,6 +66,7 @@ public delegate void AddAuthInputDelegate(long frame, Memory<byte> input, long? 
 /// <summary>
 /// Set delay message (unreliable) tells how much ahead a given input of this client was received by the server before the corresponding state update.
 /// </summary>
+/// <param name="frame">The frame index of the state update.</param>
 /// <param name="delay">Amount of time in seconds.</param>
 /// <remarks>
 /// If given input was not received in time, the value is negative.
@@ -77,7 +78,7 @@ public delegate void AddAuthInputDelegate(long frame, Memory<byte> input, long? 
 /// 4. Server sends delay with value of T(3) - T(2), where T is time of given event.
 /// This allows the client to send messages just before the update hits (makes the experience most responsive).
 /// </example>
-public delegate void SetDelayDelegate(double delay);
+public delegate void SetDelayDelegate(long frame, double delay);
 
 /// <summary>
 /// Notifies about client-targeted messages of the application protocol.
