@@ -25,14 +25,13 @@ public sealed class IndexedQueueTests
 
         queue.Set(startValue);
 
-        // Queue is empty
-        Assert.Null(queue[0]);
-        Assert.Null(queue[1]);
-        Assert.Null(queue[-1]);
-        Assert.Null(queue[long.MaxValue]);
-        Assert.Null(queue[long.MinValue]);
-        Assert.Null(queue[42]);
-        Assert.Null(queue[-42]);
+        Assert.Throws<IndexOutOfRangeException>(() => queue[0]);
+        Assert.Throws<IndexOutOfRangeException>(() => queue[1]);
+        Assert.Throws<IndexOutOfRangeException>(() => queue[-1]);
+        Assert.Throws<IndexOutOfRangeException>(() => queue[long.MaxValue]);
+        Assert.Throws<IndexOutOfRangeException>(() => queue[long.MinValue]);
+        Assert.Throws<IndexOutOfRangeException>(() => queue[42]);
+        Assert.Throws<IndexOutOfRangeException>(() => queue[-42]);
     }
 
     /// <summary>
@@ -58,8 +57,8 @@ public sealed class IndexedQueueTests
             for (int i = startValue; i <= data.Value; i++)
                 Assert.Equal(i, queue[i]?.Value);
 
-            Assert.Null(queue[startValue - 1]);
-            Assert.Null(queue[data.Value + 1]);
+            Assert.Throws<IndexOutOfRangeException>(() => queue[startValue - 1]);
+            Assert.Throws<IndexOutOfRangeException>(() => queue[data.Value + 1]);
         }
     }
 
@@ -93,8 +92,8 @@ public sealed class IndexedQueueTests
             for (int j = i + 1; j < end; j++)
                 Assert.Equal(j, queue[j]?.Value);
 
-            Assert.Null(queue[i]);
-            Assert.Null(queue[end]);
+            Assert.Throws<IndexOutOfRangeException>(() => queue[i]);
+            Assert.Throws<IndexOutOfRangeException>(() => queue[end]);
         }
     }
 }
