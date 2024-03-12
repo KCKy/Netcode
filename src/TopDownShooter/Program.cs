@@ -9,6 +9,7 @@ using DefaultTransport.Dispatcher;
 using DefaultTransport.IpTransport;
 using Serilog;
 using System;
+using Serilog.Events;
 
 namespace TopDownShooter;
 
@@ -19,7 +20,7 @@ static class Program
 
     static void SetupLogging()
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.Console().MinimumLevel.Verbose().CreateLogger();
+        Log.Logger = new LoggerConfiguration().WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug).WriteTo.File("log.txt").MinimumLevel.Verbose().CreateLogger();
         TaskExtensions.OnFault += (task, exc) => Log.Error("Task faulted: {Task} with exception:\n{Exception}", task, exc);
         TaskExtensions.OnCanceled += task => Log.Error("Task was wrongly cancelled: {Task}", task);
     }

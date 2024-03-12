@@ -90,7 +90,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     readonly ILogger logger_ = Log.ForContext<Client<TClientInput, TServerInput, TGameState>>();
 
-    readonly DelayCalculator<TGameState, TClientInput, TServerInput> delayCalculator_ = new();
+    readonly DelayCalculator<TGameState, TClientInput, TServerInput> delayCalculator_;
 
     readonly IClientDispatcher dispatcher_;
 
@@ -100,7 +100,15 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     bool identified_ = false;
 
     /// <inheritdoc/>
-    public ISpeedController SpeedController { get; init; }
+    public ISpeedController SpeedController
+    {
+        get => speedController_;
+        init
+        {
+            speedController_ = value;
+            delayCalculator_.UsedSpeedController = value;
+        }
+    }
 
     readonly IDisplayer<TGameState> displayer_ = new DefaultDisplayer<TGameState>();
 
@@ -148,11 +156,15 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     {
         dispatcher_ = dispatcher;
 
-        SpeedController = new SpeedController()
+        speedController_ = new SpeedController()
         {
             TargetTps = TGameState.DesiredTickRate,
             TargetNeighborhood = 1 / TGameState.DesiredTickRate,
-            FrameMemory = (int)Math.Ceiling(TGameState.DesiredTickRate)
+        };
+
+        delayCalculator_ = new DelayCalculator<TGameState, TClientInput, TServerInput>()
+        {
+            UsedSpeedController = SpeedController
         };
 
         predictManager_ = new PredictManager<TClientInput, TServerInput, TGameState>
@@ -279,6 +291,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     }
 
     bool stateInitiated_ = false; // Used to assure invalid auth state updates don't happen before initiation.
+    readonly ISpeedController speedController_;
 
     void Update(UpdateInput<TClientInput, TServerInput> input, Span<byte> serializedInput, long? checksum, long inputFrame)
     {
@@ -304,6 +317,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             logger_.Verbose("Authorized frame {Frame}", frame);
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
+
+        delayCalculator_.Update();
     }
 
     void Authorize(Memory<byte> serializedInput, long? checksum, long frame)

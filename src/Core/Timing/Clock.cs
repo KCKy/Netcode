@@ -21,7 +21,7 @@ public sealed class Clock
     volatile int targetPeriod_;
     double targetTps_;
     static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
-    readonly long clockQuantumTicks_ = TicksPerMs * 15;
+    long clockQuantumTicks_ = TicksPerMs * 15;
 
     /// <summary>
     /// The smallest time period of sleep to requested from the OS.
@@ -30,14 +30,14 @@ public sealed class Clock
     /// On some operating systems (like sleep) calling sleep on a too small value results in sleeping for an undesirably long amount of time.
     /// In these cases it is desirable to yield instead.
     /// </remarks>
-    public TimeSpan ClockQuantumSecs
+    public TimeSpan ClockQuantum
     {
         get => TimeSpan.FromSeconds(clockQuantumTicks_ / (double)Stopwatch.Frequency);
-        init => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
+        set => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
     }
 
     
-    readonly long maxWaitTime_ = TicksPerMs * 100;
+    long maxWaitTime_ = TicksPerMs * 100;
 
     /// <summary>
     /// The smallest time period of sleep to requested from the OS.
@@ -49,7 +49,7 @@ public sealed class Clock
     public TimeSpan MaxWaitTime
     {
         get => TimeSpan.FromSeconds(maxWaitTime_ / (double)Stopwatch.Frequency);
-        init => maxWaitTime_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
+        set => maxWaitTime_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
     }
 
     /// <summary>
@@ -60,8 +60,9 @@ public sealed class Clock
         get => targetTps_;
         set
         {
-            targetPeriod_ = (int)(1 / value * Stopwatch.Frequency);
-            logger_.Verbose("New clock target period: {Period} ({Freq} tps)", targetPeriod_, Stopwatch.Frequency);
+            double period = 1 / value * Stopwatch.Frequency;
+            targetPeriod_ = (int)Math.Clamp(period, 1, int.MaxValue);
+            logger_.Verbose("New clock target period: {Period}", targetPeriod_);
             targetTps_ = value;
         }
     }

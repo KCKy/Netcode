@@ -36,25 +36,42 @@ public class SpeedController : ISpeedController
     /// <inheritdoc/>
     public double TargetNeighborhood
     {
-        get => targetNeighborhood_;
+        get
+        {
+            lock (mutex_)
+                return targetNeighborhood_;
+        }
         set
         {
             if (!double.IsPositive(value))
                 throw new ArgumentOutOfRangeException(nameof(value), value, "The radius must be positive.");
-            targetNeighborhood_ = value;
+
+            lock (mutex_)
+            {
+                targetNeighborhood_ = value;
+                clock_.MaxWaitTime = TimeSpan.FromSeconds(value);
+            }
         }
     }
 
     /// <inheritdoc/>
     public double SmoothingTime
     {
-        get => smoothingTime_;
+        get
+        {
+            lock (mutex_)
+                return smoothingTime_;
+        }
         set
         {
             if (!double.IsPositive(value))
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Smoothing time must be positive.");
-            smoothingTime_ = value;
-            speedFunctionExponent_ = CalculateSpeedFunctionExponent(smoothingTime_);
+            
+            lock (mutex_)
+            {
+                smoothingTime_ = value;
+                speedFunctionExponent_ = CalculateSpeedFunctionExponent(smoothingTime_);
+            }
         }
     }
 
@@ -123,24 +140,7 @@ public class SpeedController : ISpeedController
         }
     }
 
-    /// <summary>
-    /// For better results, the controller takes a minimum delay value over a past window (to account for fluctuating connections).
-    /// This value determines this window's size in game ticks.
-    /// </summary>
-    public int FrameMemory
-    {
-        get => statsWindowed_.Length;
-        init
-        {
-            if (value <= 0)
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Memory must have positive size.");
-            statsWindowed_ = new(value);
-        }
-    }
-
     static double CalculateSpeedFunctionExponent(double t) => 1 / t + 1;
-
-    MinimumWindowed<double> statsWindowed_ = new(1);
 
     const double DefaultTargetNeighborhood = 0.025;
     double targetNeighborhood_ = DefaultTargetNeighborhood;
@@ -164,7 +164,7 @@ public class SpeedController : ISpeedController
 
             lock (mutex_)
             {
-                currentDelta_ = statsWindowed_.Add(value);
+                currentDelta_ = value;
                 logger_.Verbose("Updated delta to {Delta}", currentDelta_);
                 Update();
             }
