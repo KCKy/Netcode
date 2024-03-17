@@ -95,7 +95,10 @@ sealed class DelayCalculator<TG, TC, TS>
         Monitor.Enter(mutex_);
 
         if (frame <= latestDelayFrame_)
+        {
+            Monitor.Exit(mutex_);
             return;
+        }
         
         latestDelay_ = delay;
         latestDelayFrame_ = frame;
