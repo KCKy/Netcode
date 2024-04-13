@@ -4,11 +4,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.Transport;
 using Serilog;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransport.IpTransport;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Information about a connected client.

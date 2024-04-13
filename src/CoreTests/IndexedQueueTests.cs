@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Linq;
-using Core.DataStructures;
+using Kcky.GameNewt.DataStructures;
 
-namespace CoreTests;
+namespace Kcky.GameNewt.Tests;
 
 /// <summary>
-/// Test class for <see cref="InputQueue{TInput}"/>
+/// Test class for <see cref="IndexedQueue{TInput}"/>
 /// </summary>
 public sealed class IndexedQueueTests
 {

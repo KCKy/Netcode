@@ -1,4 +1,4 @@
-﻿namespace Core.Providers;
+﻿namespace Kcky.GameNewt.Providers;
 
 /// <summary>
 /// The default implementation of the <see cref="IServerInputProvider{TServerInput,TGameState}"/>.

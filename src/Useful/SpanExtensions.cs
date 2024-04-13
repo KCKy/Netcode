@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Extension methods for <see cref="T:Span{byte}"/>.

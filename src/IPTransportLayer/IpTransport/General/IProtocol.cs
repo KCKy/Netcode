@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace DefaultTransport.IpTransport;
+namespace Kcky.GameNewt.Transport.Default;
 
 interface ISendProtocol<in TOut>
 {

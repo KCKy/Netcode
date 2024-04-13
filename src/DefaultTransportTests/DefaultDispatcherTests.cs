@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Buffers;
-using DefaultTransport.Dispatcher;
 using MemoryPack;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransportTests;
+namespace Kcky.GameNewt.Transport.Default.Tests;
 
 /// <summary>
 /// Tests for <see cref="DefaultServerDispatcher"/> and <see cref="DefaultClientDispatcher"/>.

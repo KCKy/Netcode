@@ -5,6 +5,25 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>Kcky.Useful</Title>
+    <PackageId>Kcky.Useful</PackageId>
+    <Authors>KCKy</Authors>
+    <Description>A collection of generaly useful types.</Description>
+    <PackageProjectUrl>https://github.com/KCKy/Netcode</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KCKy/Netcode</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>utility,useful,general,extensions</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <IsAotCompatible>True</IsAotCompatible>
+    <IsTrimmable>False</IsTrimmable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <IsAotCompatible>True</IsAotCompatible>
+    <IsTrimmable>False</IsTrimmable>
   </PropertyGroup>
 
 </Project>

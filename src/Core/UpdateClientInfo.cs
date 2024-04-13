@@ -1,6 +1,6 @@
 ﻿using MemoryPack;
 
-namespace Core;
+namespace Kcky.GameNewt;
 
 /// <summary>
 /// Holds information about input from a given client.

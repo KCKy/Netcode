@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Utility methods for binary conversions.

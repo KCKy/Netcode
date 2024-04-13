@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Utility extension methods for tasks.

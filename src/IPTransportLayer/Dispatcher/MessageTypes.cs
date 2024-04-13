@@ -1,9 +1,9 @@
-﻿namespace DefaultTransport.Dispatcher;
+﻿namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Message types of the default transport protocol, backed by the single byte message ID.
 /// </summary>
-public enum MessageType : byte
+enum MessageType : byte
 {
     /// <summary>
     /// Corresponds to <see cref="DefaultServerDispatcher.Initialize{T}"/>.

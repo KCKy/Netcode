@@ -5,12 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using DefaultTransport.IpTransport;
 using Serilog;
 using Xunit.Abstractions;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransportTests;
+namespace Kcky.GameNewt.Transport.Default.Tests;
 
 /// <summary>
 /// Tests for <see cref="IpClientTransport"/> and <see cref="IpServerTransport"/>.

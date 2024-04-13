@@ -1,4 +1,4 @@
-﻿namespace Core.Providers;
+﻿namespace Kcky.GameNewt.Providers;
 
 /// <summary>
 /// Displays the game state to the user (render, audio, etc.).

@@ -2,11 +2,11 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.Timing;
+using Kcky.GameNewt.Timing;
 using Serilog;
 using Xunit.Abstractions;
 
-namespace CoreTests;
+namespace Kcky.GameNewt.Tests;
 
 /// <summary>
 /// Tests for <see cref="Clock"/>

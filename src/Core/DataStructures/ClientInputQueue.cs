@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Core.Providers;
+using Kcky.GameNewt.Providers;
 using Serilog;
 
-namespace Core.DataStructures;
+namespace Kcky.GameNewt.DataStructures;
 
 /// <summary>
 /// Event describing the authorization of a given client's input.
@@ -14,14 +14,14 @@ namespace Core.DataStructures;
 /// <param name="id">The ID of the client the input belongs to.</param>
 /// <param name="frame">The frame index of the frame the input is for.</param>
 /// <param name="difference">The difference of the corresponding frame update time and the input receive time.</param>
-public delegate void InputAuthoredDelegate(long id, long frame, TimeSpan difference);
+delegate void InputAuthoredDelegate(long id, long frame, TimeSpan difference);
 
 /// <summary>
 /// Receives all client input to the server. Constructs authoritative client update inputs <see cref="UpdateClientInfo{TClientInput}"/>.
 /// Authorizes all received inputs and raises <see cref="inputAuthored_"/> informing whether inputs are being received on time.
 /// </summary>
 /// <typeparam name="TClientInput">The type of the client input.</typeparam>
-public sealed class ClientInputQueue<TClientInput>
+sealed class ClientInputQueue<TClientInput>
 where TClientInput : class, new()
 {
     sealed class SingleClientQueue

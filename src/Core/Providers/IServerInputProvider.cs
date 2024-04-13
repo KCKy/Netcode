@@ -1,4 +1,4 @@
-﻿namespace Core.Providers;
+﻿namespace Kcky.GameNewt.Providers;
 
 /// <summary>
 /// Server-side component responsible for providing the server's input into the state update.

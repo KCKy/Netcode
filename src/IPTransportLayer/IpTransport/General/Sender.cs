@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
-using Useful;
 
-namespace DefaultTransport.IpTransport;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Takes messages from a <typeparamref name="TMessages"/> and sends them over a <see cref="ISendProtocol{TOut}"/>.

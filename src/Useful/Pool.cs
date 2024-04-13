@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// A simple object pool for trivially constructable classes.

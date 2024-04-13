@@ -1,9 +1,9 @@
 ﻿using System;
 using HashDepot;
 using Serilog;
-using Useful;
+using Kcky.Useful;
 
-namespace Core.Utility;
+namespace Kcky.GameNewt.Utility;
 
 /// <summary>
 /// Owner a specific game state, keeps its index, provides methods for updating, checksums and serialization.

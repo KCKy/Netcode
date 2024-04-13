@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Two-dimensional vector over a generic field.

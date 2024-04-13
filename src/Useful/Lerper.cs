@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Provides information about the state of a lerper.

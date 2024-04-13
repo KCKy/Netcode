@@ -1,6 +1,6 @@
-﻿using Core.Utility;
+﻿using Kcky.GameNewt.Utility;
 
-namespace Core.Providers;
+namespace Kcky.GameNewt.Providers;
 
 /// <summary>
 /// Default implementation of <see cref="IServerInputPredictor{TServerInput,TGameState}"/>.

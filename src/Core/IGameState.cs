@@ -1,6 +1,6 @@
 ﻿using MemoryPack;
 
-namespace Core;
+namespace Kcky.GameNewt;
 
 /// <summary>
 /// The game state. Holds all required information for the deterministic update.

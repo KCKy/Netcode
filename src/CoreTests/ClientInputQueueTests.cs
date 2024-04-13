@@ -1,8 +1,8 @@
 using System;
-using Core.DataStructures;
-using Core.Providers;
+using Kcky.GameNewt.DataStructures;
+using Kcky.GameNewt.Providers;
 
-namespace CoreTests;
+namespace Kcky.GameNewt.Tests;
 
 /// <summary>
 /// Tests for <see cref="ClientInputQueue{TClientInput}"/>.

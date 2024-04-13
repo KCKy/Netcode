@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Buffers;
-using DefaultTransport.Dispatcher;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransportTests;
+namespace Kcky.GameNewt.Transport.Default.Tests;
 
 /// <summary>
 /// Tests for <see cref="PacketAggregator"/>.

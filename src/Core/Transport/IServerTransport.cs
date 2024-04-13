@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Core.Transport;
+namespace Kcky.GameNewt.Transport;
 
 /// <summary>
 /// The server transport layer of the framework. Provides abstraction over management of connected clients and receiving and sending client messages.

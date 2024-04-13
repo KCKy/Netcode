@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Numerics;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// 64 bit fixed point number with 32 bits for the fractional part.

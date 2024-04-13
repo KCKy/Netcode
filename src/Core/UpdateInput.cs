@@ -1,7 +1,7 @@
 ﻿using System;
 using MemoryPack;
 
-namespace Core;
+namespace Kcky.GameNewt;
 
 /// <summary>
 /// Holds all input information for a single state update.

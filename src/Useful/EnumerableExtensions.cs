@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Extensions for <see cref="IEnumerable{T}"/>.

@@ -2,9 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
-using Useful;
 
-namespace Core.Timing;
+namespace Kcky.GameNewt.Timing;
 
 /// <summary>
 /// The default <see cref="SpeedController"/> implementation.
@@ -14,7 +13,7 @@ namespace Core.Timing;
 /// From purely theoretical point of view the desired delta is only being approached.
 /// However, this technique does not overshoot and converges close enough to the desired delta in a short time.
 /// </remarks>
-public class SpeedController : ISpeedController
+class SpeedController : ISpeedController
 {
     readonly Clock clock_ = new();
 

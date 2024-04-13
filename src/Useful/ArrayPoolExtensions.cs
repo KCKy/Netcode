@@ -2,7 +2,7 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Utility extension methods for <see cref="ArrayPool{T}"/>.

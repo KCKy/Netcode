@@ -1,4 +1,4 @@
-﻿namespace Core.Providers;
+﻿namespace Kcky.GameNewt.Providers;
 
 /// <summary>
 /// Default implementation of <see cref="IClientInputPredictor{TClientInput}"/>.

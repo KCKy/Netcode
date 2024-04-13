@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DefaultTransport.IpTransport;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Thrown when a connection is being closed due to the ender side ending the connection.

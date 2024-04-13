@@ -1,12 +1,11 @@
 ﻿using System;
-using Core.Transport;
 using System.Buffers;
-using Core.Utility;
+using Kcky.GameNewt.Utility;
 using MemoryPack;
 using Serilog;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransport.Dispatcher;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Implementation for the server-side part of the default transport protocol (<see cref="IServerSender"/>, <see cref="IServerReceiver"/>)

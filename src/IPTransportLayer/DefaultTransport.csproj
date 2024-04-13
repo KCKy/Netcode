@@ -1,14 +1,47 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>KCKy.GameNewt.DefaultTransport</Title>
+    <PackageId>Kcky.GameNewt.DefaultTransport</PackageId>
+    <Authors>KCKy</Authors>
+    <PackageProjectUrl>https://github.com/KCKy/Netcode</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KCKy/Netcode</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>transport,netcode,library,game,dispatcher</PackageTags>
+    <PackageIcon>logo_128.png</PackageIcon>
+    <Description>The default transport layer for GameNewt.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <IsAotCompatible>True</IsAotCompatible>
+    <IsTrimmable>False</IsTrimmable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <IsAotCompatible>True</IsAotCompatible>
+    <IsTrimmable>False</IsTrimmable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj" />
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>DefaultTransportTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\misc\logo_128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\GameNewt.csproj" />
   </ItemGroup>
 
 </Project>

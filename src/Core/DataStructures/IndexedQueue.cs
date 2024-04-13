@@ -1,13 +1,13 @@
 ﻿using System.Collections.Generic;
 using System;
 
-namespace Core.DataStructures;
+namespace Kcky.GameNewt.DataStructures;
 
 /// <summary>
 /// A queue where elements are indexed and may be random accessed.
 /// </summary>
 /// <typeparam name="T">The type of the contained elements.</typeparam>
-public sealed class IndexedQueue<T>
+sealed class IndexedQueue<T>
 {
     readonly Dictionary<long, T> indexToElement_ = new();
 

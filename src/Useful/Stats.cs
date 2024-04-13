@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Used for calculating the minimum of last <see cref="Length"/> entries in a series.

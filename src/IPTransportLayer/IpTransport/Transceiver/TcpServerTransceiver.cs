@@ -4,9 +4,9 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransport.IpTransport;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Extends usability of <see cref="TcpClientTransceiver"/> to the server.

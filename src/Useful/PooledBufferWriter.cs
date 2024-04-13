@@ -2,7 +2,7 @@
 using System.Buffers;
 using System.Numerics;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Implementation of <see cref="IBufferWriter{T}"></see> which uses <see cref="ArrayPool{T}.Shared"></see> to allocate new buffers.

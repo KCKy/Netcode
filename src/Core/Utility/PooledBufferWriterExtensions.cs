@@ -1,8 +1,8 @@
 ﻿using System;
 using MemoryPack;
-using Useful;
+using Kcky.Useful;
 
-namespace Core.Utility;
+namespace Kcky.GameNewt.Utility;
 
 /// <summary>
 /// Extensions for <see cref="PooledBufferWriter{T}"/>.

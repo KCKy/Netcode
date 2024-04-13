@@ -1,4 +1,4 @@
-﻿namespace Core;
+﻿namespace Kcky.GameNewt;
 
 /// <summary>
 /// Result of a single state update.

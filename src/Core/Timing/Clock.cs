@@ -3,15 +3,15 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
-using Useful;
+using Kcky.Useful;
 
-namespace Core.Timing;
+namespace Kcky.GameNewt.Timing;
 
 /// <summary>
 /// A clock which periodically raises an event.
 /// Creates a timing thread, which uses passive waiting.
 /// </summary>
-public sealed class Clock
+sealed class Clock
 {
     /// <summary>
     /// Is evenly called on a clock tick. Provides delta time in seconds.

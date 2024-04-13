@@ -6,9 +6,9 @@ using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransport.IpTransport;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Implements sending and receiving messages over a UDP socket for the server.

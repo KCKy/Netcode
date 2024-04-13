@@ -1,10 +1,10 @@
-﻿using Core.DataStructures;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading;
+using Kcky.GameNewt.DataStructures;
 using Serilog;
 
-namespace Core.Timing;
+namespace Kcky.GameNewt.Timing;
 
 sealed class DelayCalculator<TG, TC, TS>
     where TG : IGameState<TC, TS>

@@ -1,4 +1,4 @@
-﻿namespace Core.Providers;
+﻿namespace Kcky.GameNewt.Providers;
 
 /// <summary>
 /// Client-side component responsible for providing specific client's input into the state update.

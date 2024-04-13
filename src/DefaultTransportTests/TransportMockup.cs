@@ -4,10 +4,9 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Core.Transport;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransportTests;
+namespace Kcky.GameNewt.Transport.Default.Tests;
 
 sealed class MockClientTransport : IClientTransport
 {

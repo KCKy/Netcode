@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransport.Dispatcher;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Helper structure for aggregation of data generated over time into packets.
@@ -11,7 +11,7 @@ namespace DefaultTransport.Dispatcher;
 /// <example>
 /// Instead of sending the information just for time <c>t</c>, we send it for times <c>[t - n, t]</c>, this way some packet loss is acceptable.
 /// </example>
-public sealed class PacketAggregator
+sealed class PacketAggregator
 {
     readonly Queue<Memory<byte>> aggregatedPackets_;
     int sum_;

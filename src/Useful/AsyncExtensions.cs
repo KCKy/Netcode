@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Extensions which provide awaitability to <see cref="CancellationToken"/>.

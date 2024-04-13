@@ -1,8 +1,7 @@
 ﻿using System.Linq;
-using Core;
 using MemoryPack;
 
-namespace CoreTests;
+namespace Kcky.GameNewt.Tests;
 
 [MemoryPackable]
 sealed partial class MockStructure

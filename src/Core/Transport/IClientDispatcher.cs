@@ -1,7 +1,6 @@
 ﻿using System;
 
-namespace Core.Transport;
-
+namespace Kcky.GameNewt.Transport;
 
 /// <summary>
 /// Implements the client-side sending and receiving binary messages.

@@ -3,11 +3,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.Transport;
 using Serilog;
-using Useful;
+using Kcky.Useful;
 
-namespace DefaultTransport.IpTransport;
+namespace Kcky.GameNewt.Transport.Default;
 
 /// <summary>
 /// Implementation of the client transport over TCP/UDP. The client for <see cref="IpServerTransport"/>.

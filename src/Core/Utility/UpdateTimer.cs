@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Serilog;
 
-namespace Core.Utility;
+namespace Kcky.GameNewt.Utility;
 
 /// <summary>
 /// Timer to measure and log state update times.

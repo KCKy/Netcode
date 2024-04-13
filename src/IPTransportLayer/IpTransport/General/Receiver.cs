@@ -1,43 +1,41 @@
 ﻿using System;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 
-namespace DefaultTransport.IpTransport
+namespace Kcky.GameNewt.Transport.Default;
+
+struct Receiver<TIn>
 {
-    struct Receiver<TIn>
+    readonly IReceiveProtocol<TIn> protocol_;
+    readonly ILogger logger_ = Log.ForContext<Receiver<TIn>>();
+
+    public Receiver(IReceiveProtocol<TIn> protocol)
     {
-        readonly IReceiveProtocol<TIn> protocol_;
-        readonly ILogger logger_ = Log.ForContext<Receiver<TIn>>();
+        protocol_ = protocol;
+    }
 
-        public Receiver(IReceiveProtocol<TIn> protocol)
+    public event Action<TIn>? OnMessage;
+
+    public async Task RunAsync(CancellationToken cancellation)
+    {
+        try
         {
-            protocol_ = protocol;
+            while (true)
+            {
+                TIn message = await protocol_.ReceiveAsync(cancellation);
+                OnMessage?.Invoke(message);
+            }
         }
-
-        public event Action<TIn>? OnMessage;
-
-        public async Task RunAsync(CancellationToken cancellation)
+        catch (OperationCanceledException)
         {
-            try
-            {
-                while (true)
-                {
-                    TIn message = await protocol_.ReceiveAsync(cancellation);
-                    OnMessage?.Invoke(message);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                logger_.Debug("Receiver was canceled.");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                logger_.Error(ex, "Receiver failed.");
-                throw;
-            }
+            logger_.Debug("Receiver was canceled.");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger_.Error(ex, "Receiver failed.");
+            throw;
         }
     }
 }

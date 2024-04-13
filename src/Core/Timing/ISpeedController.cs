@@ -2,14 +2,14 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Core.Timing;
+namespace Kcky.GameNewt.Timing;
 
 /// <summary>
 /// Controls update frequency of the games predict loop to stay ahead of the server
 /// (to have time to send inputs) while keeping minimum latency.
 /// This structure shall be thread safe.
 /// </summary>
-public interface ISpeedController
+interface ISpeedController
 {
     /// <summary>
     /// Is evenly called on a clock tick.
@@ -34,7 +34,7 @@ public interface ISpeedController
     double CurrentTps { get; }
 
     /// <summary>
-    /// Current delay from the server, the controller will modify current tps to so <see cref="CurrentTps"/> would approach this value.
+    /// Current delay from the server, the controller will modify <see cref="CurrentTps"/> so this value would approach <see cref="TargetDelta"/>.
     /// </summary>
     double CurrentDelta { get; set; }
 

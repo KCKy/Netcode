@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Net;
 
-namespace Useful;
+namespace Kcky.Useful;
 
 /// <summary>
 /// Provides utility command line methods for simple CLI.
