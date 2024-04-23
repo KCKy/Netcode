@@ -45,6 +45,18 @@ public interface IServer
     void Terminate();
 }
 
+/// <summary>
+/// Used to initialize the game state before the game begins.
+/// May be undeterministic as it is called only for the server and the resulting state is replicated to clients.
+/// </summary>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
+/// <param name="state">Borrow of the game state to be modified.</param>
+public delegate void InitStateDelegate<TClientInput, TServerInput, TGameState>(TGameState state)
+    where TGameState : class, IGameState<TClientInput, TServerInput>, new()
+    where TClientInput : class, new()
+    where TServerInput : class, new();
 
 /// <summary>
 /// The main server class. Takes care of collecting inputs of clients,
@@ -61,7 +73,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 {
     readonly ILogger logger_ = Log.ForContext<Server<TClientInput, TServerInput, TGameState>>();
 
-    // Locking the holder stop RW/WR conflicts and correct init behaviour (WW does not happen due to tickMutex)
+    // Locking the holder to stop RW/WR conflicts and correct init behaviour (WW does not happen due to tickMutex)
     readonly StateHolder<TClientInput, TServerInput, TGameState> holder_ = new();
 
     readonly Clock clock_ = new();
@@ -138,6 +150,11 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// <inheritdoc/>
     public bool TraceFrameTime { get; init; }
 
+    /// <summary>
+    /// Invoked once when the server starts.
+    /// May be used to modify the initial authoritative game state.
+    /// </summary>
+    public event InitStateDelegate<TClientInput, TServerInput, TGameState>? OnStateInit; 
 
     /// <inheritdoc/>
     public async Task RunAsync()
@@ -154,6 +171,9 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
             clock_.TargetTps = TGameState.DesiredTickRate;
             clock_.OnTick += Tick;
         }
+
+        lock (holder_)
+            OnStateInit?.Invoke(holder_.State);
 
         await clock_.RunAsync(clockCancellation_.Token);
     }

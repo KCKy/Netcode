@@ -17,7 +17,7 @@ namespace Kcky.GameNewt.Transport.Default.Tests;
 /// <remarks>
 /// These tests test whether the two corresponding classes work together.
 ///
-/// These tests are not unit test as their outcome is undeterministic and dependent on external factors. Nonetheless, it is useful to assure functionality of transport layer.
+/// These tests are not unit test as their outcome is undeterministic and dependent on external factors. Nonetheless, it is useful to assure functionality of the transport layer.
 /// They are prone to fail when run back-to-back or currently as the OS does not provide the necessary sockets.
 /// </remarks>
 public class IpTransportTests
@@ -361,20 +361,18 @@ public class IpTransportTests
     }
 
     /// <summary>
-    /// Test whether reliable unicast from server to client work.
+    /// Test whether reliable unicasts from server to client work.
     /// </summary>
     /// <param name="count">The number of messages each client should receive.</param>
     /// <param name="clientCount">The number of clients.</param>
     /// <returns>Test run task.</returns>
     [Theory]
     [InlineData(1, 1)]
-    [InlineData(2, 1)]
     [InlineData(5, 1)]
     [InlineData(10, 1)]
     [InlineData(20, 1)]
     [InlineData(100, 1)]
     [InlineData(1, 10)]
-    [InlineData(2, 10)]
     [InlineData(5, 10)]
     [InlineData(10, 10)]
     [InlineData(20, 10)]

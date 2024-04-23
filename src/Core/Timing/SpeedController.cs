@@ -79,7 +79,6 @@ class SpeedController : ISpeedController
 
     void Update()
     {
-        // We need to catch up / lose difference "distance-seconds"
         double difference =  targetDelta_ - currentDelta_;
         double deltaSpeedBase = Math.Abs(difference) / targetNeighborhood_;
 
