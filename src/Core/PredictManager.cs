@@ -80,8 +80,6 @@ sealed class PredictManager<TC, TS, TG>
     // Displaying is exclusive to the predict update.
     public required IDisplayer<TG> Displayer { private get; set; }
     
-    public required DelayCalculator<TG, TC, TS> DelayCalculator { private get; set; }
-
     /// <summary>
     /// Initialize the predict manager to be able to receive inputs.
     /// </summary>
@@ -100,8 +98,6 @@ sealed class PredictManager<TC, TS, TG>
 
         lock (clientInputs_)
             clientInputs_.Set(frame + 1);
-
-        DelayCalculator.Init(frame);
 
         predictQueue_.Clear();
 
@@ -305,12 +301,6 @@ sealed class PredictManager<TC, TS, TG>
             long used = clientInputs_.Add(localInput);
             Debug.Assert(frame == used);
         }
-
-        {
-            long used = DelayCalculator.Tick();
-            Debug.Assert(frame == used);
-        }
-
 
         // Send
         Sender.SendInput(frame, localInput);

@@ -6,10 +6,10 @@ using System.Numerics;
 namespace Kcky.Useful;
 
 /// <summary>
-/// Used for calculating the minimum of last <see cref="Length"/> entries in a series.
+/// Used for calculating a statistic of last <see cref="Length"/> entries in a series.
 /// </summary>
 /// <typeparam name="T">The type of value, which will be kept track of.</typeparam>
-public struct MinimumWindowed<T> where T : struct, IComparisonOperators<T, T, bool>, IMinMaxValue<T>
+public sealed class IntegrateWindowed<T>
 {
     readonly Queue<T> queue_;
 
@@ -23,7 +23,7 @@ public struct MinimumWindowed<T> where T : struct, IComparisonOperators<T, T, bo
     /// </summary>
     /// <param name="length">The length of the window to calculate minimum from.</param>
     /// <exception cref="ArgumentOutOfRangeException">If <paramref name="length"/> is non-positive.</exception>
-    public MinimumWindowed(int length)
+    public IntegrateWindowed(int length)
     {
         if (length <= 0)
             throw new ArgumentOutOfRangeException(nameof(length), length, "The length of the window must be positive.");
@@ -33,17 +33,25 @@ public struct MinimumWindowed<T> where T : struct, IComparisonOperators<T, T, bo
     }
 
     /// <summary>
+    /// The statistic to be calculated over the window.
+    /// </summary>
+    /// <remarks>
+    /// Is minimum by default.
+    /// </remarks>
+    public Func<IEnumerable<T>, T> Statistic { get; set; } = value => value.Min()!;
+
+    /// <summary>
     /// Add next value from the series.
     /// </summary>
     /// <param name="value">The current value.</param>
-    /// <returns>The current minimum from the latest window of size <see cref="Length"/>.</returns>
+    /// <returns>The current statistic from the latest window of size <see cref="Length"/>.</returns>
     public T Add(T value)
     {
         queue_.Enqueue(value);
         if (queue_.Count > Length)
             queue_.Dequeue();
         
-        return queue_.Min();
+        return Statistic(queue_);
     }
 }
 

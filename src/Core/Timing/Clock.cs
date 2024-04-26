@@ -24,7 +24,7 @@ sealed class Clock
     long clockQuantumTicks_ = TicksPerMs * 15;
 
     /// <summary>
-    /// The smallest time period of sleep to requested from the OS.
+    /// The smallest time period of sleep to be requested from the OS.
     /// </summary>
     /// <remarks>
     /// On some operating systems (like sleep) calling sleep on a too small value results in sleeping for an undesirably long amount of time.
@@ -34,22 +34,6 @@ sealed class Clock
     {
         get => TimeSpan.FromSeconds(clockQuantumTicks_ / (double)Stopwatch.Frequency);
         set => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
-    }
-
-    
-    long maxWaitTime_ = TicksPerMs * 100;
-
-    /// <summary>
-    /// The smallest time period of sleep to requested from the OS.
-    /// </summary>
-    /// <remarks>
-    /// On some operating systems (like sleep) calling sleep on a too small value results in sleeping for an undesirably long amount of time.
-    /// In these cases it is desirable to yield instead.
-    /// </remarks>
-    public TimeSpan MaxWaitTime
-    {
-        get => TimeSpan.FromSeconds(maxWaitTime_ / (double)Stopwatch.Frequency);
-        set => maxWaitTime_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
     }
 
     /// <summary>
@@ -118,7 +102,7 @@ sealed class Clock
                 continue;
             }
 
-            long wait = Math.Clamp(remaining - clockQuantumTicks_, 0, maxWaitTime_);
+            long wait = Math.Max(remaining - clockQuantumTicks_, 0);
             Thread.Sleep((int)(wait / TicksPerMs));
         }
     }

@@ -18,7 +18,7 @@ namespace Kcky.GameNewt.Transport.Default.Tests;
 /// These tests test whether the two corresponding classes work together.
 ///
 /// These tests are not unit test as their outcome is undeterministic and dependent on external factors. Nonetheless, it is useful to assure functionality of the transport layer.
-/// They are prone to fail when run back-to-back or currently as the OS does not provide the necessary sockets.
+/// They are prone to fail when run back-to-back or currently.
 /// </remarks>
 public class IpTransportTests
 {

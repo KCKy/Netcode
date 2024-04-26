@@ -2,8 +2,8 @@
 using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
+using GameNewt.Timing;
 using Kcky.GameNewt.Providers;
-using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
@@ -58,11 +58,6 @@ public interface IClient
     double CurrentTps { get; }
 
     /// <summary>
-    /// Current delay from the server (ignoring latency), the client will modify <see cref="CurrentTps"/> so this value would approach <see cref="TargetDelta"/>.
-    /// </summary>
-    double CurrentDelta { get; }
-
-    /// <summary>
     /// The target TPS of the client clock, the clock should as closely match this TPS while spacing the ticks evenly.
     /// </summary>
     public double TargetTps { get; }
@@ -92,17 +87,14 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     where TGameState : class, IGameState<TClientInput, TServerInput>, new()
     where TClientInput : class, new()
     where TServerInput : class, new()
-
 {
     readonly StateHolder<TClientInput, TServerInput, TGameState> authStateHolder_ = new(); // Mutex used to stop RW/WR/WW conflicts.
     readonly PredictManager<TClientInput, TServerInput, TGameState> predictManager_;
-    readonly CancellationTokenSource clockCancellation_ = new();
+    readonly CancellationTokenSource clientCancellation_ = new();
     readonly object terminationMutex_ = new(); // Assures atomicity of start and termination operations.
     readonly UpdateTimer timer_ = new();
 
     readonly ILogger logger_ = Log.ForContext<Client<TClientInput, TServerInput, TGameState>>();
-
-    readonly DelayCalculator<TGameState, TClientInput, TServerInput> delayCalculator_;
 
     readonly IClientDispatcher dispatcher_;
 
@@ -111,15 +103,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     bool initiated_ = false;
     bool identified_ = false;
 
-    /// <summary>
-    /// The time to smooth changes in predict simulation speed over.
-    /// Higher value yields less drastic changes, but the client may take time to recover from a lag spike.
-    /// </summary>
-    public double SmoothingTime
-    {
-        get => speedController_.SmoothingTime;
-        set => speedController_.SmoothingTime = value;
-    }
+    readonly SynchronizedClock clock_;
+
 
     readonly IDisplayer<TGameState> displayer_ = new DefaultDisplayer<TGameState>();
 
@@ -167,17 +152,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     {
         dispatcher_ = dispatcher;
 
-        speedController_ = new SpeedController()
-        {
-            TargetTps = TGameState.DesiredTickRate,
-            TargetNeighborhood = 1 / TGameState.DesiredTickRate,
-        };
-
-        delayCalculator_ = new DelayCalculator<TGameState, TClientInput, TServerInput>()
-        {
-            UsedSpeedController = speedController_
-        };
-
         predictManager_ = new PredictManager<TClientInput, TServerInput, TGameState>
         {
             Displayer = displayer_,
@@ -185,32 +159,40 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             ServerInputPredictor = new DefaultServerInputPredictor<TServerInput, TGameState>(),
             ClientInputProvider = new DefaultClientInputProvider<TClientInput>(),
             AuthState = authStateHolder_,
-            Sender = dispatcher_,
-            DelayCalculator = delayCalculator_
+            Sender = dispatcher_
+        };
+
+        clock_ = new SynchronizedClock()
+        {
+            TargetTps = TGameState.DesiredTickRate
         };
 
         SetHandlers();
+    }
+
+    void SetDelayHandler(long frame, double delay)
+    {
+        clock_.SetDelayHandler(frame, delay - TargetDelta);
     }
 
     void SetHandlers()
     {
         dispatcher_.OnAddAuthInput += AddAuthoritativeInput;
         dispatcher_.OnInitialize += Initialize;
-        dispatcher_.OnSetDelay += delayCalculator_.SetDelay;
+        dispatcher_.OnSetDelay += SetDelayHandler;
         dispatcher_.OnStart += Start;
-        delayCalculator_.OnDelayChanged += UpdateDelay;
+        clock_.OnTick += predictManager_.Tick;
     }
 
     void UnsetHandlers()
     {
         dispatcher_.OnAddAuthInput -= AddAuthoritativeInput;
         dispatcher_.OnInitialize -= Initialize;
-        dispatcher_.OnSetDelay -= delayCalculator_.SetDelay;
+        dispatcher_.OnSetDelay -= SetDelayHandler;
         dispatcher_.OnStart -= Start;
-        delayCalculator_.OnDelayChanged -= UpdateDelay;
+        clock_.OnTick -= predictManager_.Tick;
     }
 
-    void UpdateDelay(double delay) => speedController_.CurrentDelta = delay;
 
     /// <inheritdoc/>
     public long Id { get; private set; } = long.MaxValue;
@@ -238,16 +220,13 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     public long PredictFrame => predictManager_.Frame;
 
     /// <inheritdoc/>
-    public double TargetDelta => speedController_.TargetDelta;
+    public double TargetDelta { get; init; } = 0.05;
 
     /// <inheritdoc/>
-    public double CurrentTps => speedController_.CurrentTps;
+    public double CurrentTps => clock_.CurrentTps;
 
     /// <inheritdoc/>
-    public double CurrentDelta => speedController_.CurrentDelta;
-
-    /// <inheritdoc/>
-    public double TargetTps => speedController_.TargetTps;
+    public double TargetTps => clock_.TargetTps;
 
     /// <inheritdoc/>
     public async Task RunAsync()
@@ -262,11 +241,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
         logger_.Information("The client is starting.");
 
-        try
-        {
-            await speedController_.RunAsync(clockCancellation_.Token);
-        }
-        catch (OperationCanceledException) { }
+        await clientCancellation_.Token;
     }
 
 
@@ -283,11 +258,9 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             terminated_ = true;
 
             dispatcher_.Disconnect();
-
-            predictManager_.Stop();
-            speedController_.OnTick -= predictManager_.Tick;
-            clockCancellation_.Cancel();
             UnsetHandlers();
+            predictManager_.Stop();
+            clientCancellation_.Cancel();
         }
     }
 
@@ -313,7 +286,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     }
 
     bool stateInitiated_ = false; // Used to assure invalid auth state updates don't happen before initiation.
-    readonly ISpeedController speedController_;
 
     void Update(UpdateInput<TClientInput, TServerInput> input, Span<byte> serializedInput, long? checksum, long inputFrame)
     {
@@ -339,8 +311,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             logger_.Verbose("Authorized frame {Frame}", frame);
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
-
-        delayCalculator_.Update();
     }
 
     void Authorize(Memory<byte> serializedInput, long? checksum, long frame)
@@ -365,17 +335,17 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         {
             if (identified_ || terminated_ || !started_)
                 return;
+            identified_ = true;
 
             logger_.Debug("Client received id {Id}", id);
 
-            identified_ = true;
 
             Id = id;
             predictManager_.LocalId = id;
             displayer_.Init(id);
 
             if (initiated_ && identified_)
-                speedController_.OnTick += predictManager_.Tick;
+                clock_.RunAsync(clientCancellation_.Token).AssureNoFault();
         }
     }
 
@@ -427,10 +397,11 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             InitializeAuthState(frame, authState);
             InitializePredictState(frame, predictState);
+            clock_.Initialize(frame); 
             
             // Run
             if (initiated_ && identified_)
-                speedController_.OnTick += predictManager_.Tick;
+                clock_.RunAsync(clientCancellation_.Token).AssureNoFault();
         }
     }
 
