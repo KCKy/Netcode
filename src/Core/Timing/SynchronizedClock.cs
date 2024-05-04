@@ -5,19 +5,28 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kcky.GameNewt.DataStructures;
 using Kcky.GameNewt.Timing;
+using Kcky.GameNewt.Transport;
 using Kcky.Useful;
 using Serilog;
 
 namespace GameNewt.Timing;
 
+/// <summary>
+/// A clock which keeps itself synchronized to a distant clock.
+/// </summary>
 sealed class SynchronizedClock
 {
     readonly object mutex_ = new();
     readonly Clock internalClock_ = new();
-
     readonly ILogger logger_ = Log.ForContext<SynchronizedClock>();
-
     readonly double targetTps_;
+
+    /// <summary>
+    /// The desired number of clock ticks per second.
+    /// </summary>
+    /// <remarks>
+    /// May be momentarily modified to resynchronize the clock.
+    /// </remarks>
     public double TargetTps
     {
         get => targetTps_;
@@ -28,18 +37,42 @@ sealed class SynchronizedClock
         }
     }
 
+    /// <summary>
+    /// To account for jitter the clock works over a window of latencies.
+    /// This value determines the number of frames for this window.
+    /// </summary>
+    public int SamplingWindow
+    {
+        get => normalizedDelays_.Length;
+        init => normalizedDelays_ = new(value);
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
     public SynchronizedClock()
     {
         internalClock_.OnTick += TickHandler;
+        TargetTps = 1;
     }
 
+    /// <summary>
+    /// Called on each clock tick.
+    /// </summary>
     public event Action? OnTick;
 
     long beginFrame_;
     long beginTime_;
 
+    /// <summary>
+    /// The current TPS of the clock.
+    /// </summary>
     public double CurrentTps { get; private set; } = 0;
     
+    /// <summary>
+    /// Initialize the clock.
+    /// </summary>
+    /// <param name="frame">The frame the clock should be at, i.e. the next tick would be for frame + 1.</param>
     public void Initialize(long frame)
     {
         lock (mutex_)
@@ -50,6 +83,12 @@ sealed class SynchronizedClock
         }
     }
 
+    /// <summary>
+    /// Start the clock.
+    /// <see cref="Initialize"/> needs to be called beforehand.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         lock (mutex_)
@@ -74,16 +113,26 @@ sealed class SynchronizedClock
 
     readonly IntegrateWindowed<double> normalizedDelays_ = new(20)
     {
-        Statistic = static values => values.Max()
+        Statistic = static values => values.Min()
     };
 
-    double GetNormalizationOffset(long frame, long time)
+
+    double GetOffset(long targetFrame, long targetTime, long sourceFrame, long sourceTime)
     {
-        double supposedTime = (beginFrame_ - frame) / TargetTps;
-        double actualTime = (beginTime_ - time) / (double)Stopwatch.Frequency;
+        double supposedTime = (targetFrame - sourceFrame) / TargetTps;
+        double actualTime = (targetTime - sourceTime) /  (double) Stopwatch.Frequency;
         return supposedTime - actualTime;
     }
 
+    double GetOffset(double targetFrame, long targetTime, double sourceFrame, long sourceTime)
+    {
+        double supposedTime = (targetFrame - sourceFrame) / TargetTps;
+        double actualTime = (targetTime - sourceTime) / (double) Stopwatch.Frequency;
+        return supposedTime - actualTime;
+    }
+
+    double GetNormalizationOffset(long frame, long time) => GetOffset(beginFrame_, beginTime_, frame, time);
+    
     double CalculateCurrentFrameProgression(long frameStartTime, long currentTime)
     {
         return (currentTime - frameStartTime) * internalClock_.TargetTps / Stopwatch.Frequency;
@@ -93,11 +142,9 @@ sealed class SynchronizedClock
     {
         long latestFrame = timingQueue_.LastIndex;
         long latestFrameTime = timingQueue_.Last;
-
         double currentFrame = latestFrame + CalculateCurrentFrameProgression(latestFrameTime, currentTime);
-        double supposedTime = (currentFrame - beginFrame_) / TargetTps;
-        double actualTime = (currentTime - beginTime_) / (double)Stopwatch.Frequency;
-        return supposedTime - actualTime;
+
+        return GetOffset(currentFrame, currentTime, beginFrame_, beginTime_);
     }
 
     double currentWorstCase_ = 0;
@@ -122,6 +169,13 @@ sealed class SynchronizedClock
         }
     }
 
+    /// <summary>
+    /// Inform the clock about a measured delay from the distant clock for a given frame.
+    /// Ideal delay is zero.
+    /// For more see <see cref="SetDelayDelegate"/>.
+    /// </summary>
+    /// <param name="frame">The frame the delay belongs to.</param>
+    /// <param name="delay">The delay amount. Negative value means the clock should catch up.</param>
     public void SetDelayHandler(long frame, double delay)
     {
         lock (mutex_)
