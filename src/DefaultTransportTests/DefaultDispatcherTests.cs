@@ -83,7 +83,7 @@ public sealed class DefaultDispatcherTests
             client.SendInput(cur, cur);
         }
 
-        client.Disconnect();
+        clientTransport.Terminate();
 
         Assert.Equal(1, remove);
         Assert.Equal(1, add);
@@ -149,7 +149,7 @@ public sealed class DefaultDispatcherTests
 
         long currentFrame = startFrame + 1;
 
-        client.OnAddAuthInput += (frame, input, checksum) =>
+        client.OnAuthoritativeInput += (frame, input, checksum) =>
         {
             lock (mutex)
             {
@@ -183,7 +183,7 @@ public sealed class DefaultDispatcherTests
         {
             long cur = startFrame + i;
             server.SendAuthoritativeInput(cur, cur, cur);
-            server.InputAuthored(id, cur, TimeSpan.Zero);
+            server.SetDelay(id, cur, TimeSpan.Zero);
         }
 
         server.Kick(id);

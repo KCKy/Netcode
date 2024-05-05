@@ -50,13 +50,13 @@ public interface IServerSender
     /// <param name="id">The id of the client to rec</param>
     /// <param name="frame"></param>
     /// <param name="difference"></param>
-    void InputAuthored(long id, long frame, TimeSpan difference);
+    void SetDelay(long id, long frame, TimeSpan difference);
 
     /// <summary>
     /// Send authoritative input for given state update.
     /// </summary>
     /// <remarks>
-    /// See <see cref="AddAuthInputDelegate"/> for more.
+    /// See <see cref="AuthoritativeInputDelegate"/> for more.
     /// </remarks>
     /// <typeparam name="TPayload">The type of auth input structure, defined by the application protocol.</typeparam>
     /// <param name="frame">The frame of the state update.</param>
@@ -69,7 +69,7 @@ public interface IServerSender
 /// Message of an input for particular frame from a single client (unreliable).
 /// </summary>
 /// <remarks>
-/// This input is unreliable and therefore can be received whenever and event multiple times.
+/// This input is unreliable and therefore can be received whenever and even multiple times.
 /// </remarks>
 /// <param name="id">The id of client this input was received from.</param>
 /// <param name="frame">The frame of the state update the input belongs to.</param>

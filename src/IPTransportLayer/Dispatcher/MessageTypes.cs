@@ -11,7 +11,7 @@ enum MessageType : byte
     ServerInitialize = 1,
     
     /// <summary>
-    /// Corresponds to <see cref="DefaultServerDispatcher.InputAuthored"/>.
+    /// Corresponds to <see cref="DefaultServerDispatcher.SetDelay"/>.
     /// </summary>
     ServerAuthorize = 2,
 

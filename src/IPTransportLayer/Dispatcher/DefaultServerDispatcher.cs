@@ -160,7 +160,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
     }
 
     /// <inheritdoc/>
-    public void InputAuthored(long id, long frame, TimeSpan difference)
+    public void SetDelay(long id, long frame, TimeSpan difference)
     {
         /*
          * Packet format:

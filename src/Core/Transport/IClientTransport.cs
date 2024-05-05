@@ -15,7 +15,7 @@ public interface IClientTransport : IClientInTransport, IClientOutTransport { }
 /// <summary>
 /// A message from the server to the client.
 /// </summary>
-/// <param name="packet">Move of the received packet (pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
+/// <param name="packet">Move of the received packet (shall be pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
 
 public delegate void ClientMessageEvent(Memory<byte> packet);
 
@@ -56,7 +56,7 @@ public interface IClientOutTransport
     /// <summary>
     /// Send a reliable message to the server. 
     /// </summary>
-    /// <param name="message">Move of the packet to be sent (pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
+    /// <param name="message">Move of the packet to be sent (shall be pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
     /// <remarks>The packet should have leading space as defined by <see cref="ReliableMessageHeader"/>.</remarks>
     void SendReliable(Memory<byte> message);
 
@@ -76,7 +76,7 @@ public interface IClientOutTransport
     /// <summary>
     /// Sends an unreliable message to the server. The server may not receive this message due to packet loss.
     /// </summary>
-    /// <param name="message">Move of the packet to be sent (pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
+    /// <param name="message">Move of the packet to be sent (shall be pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
     /// <remarks>The packet should have leading space as defined by <see cref="UnreliableMessageHeader"/>.</remarks>
     void SendUnreliable(Memory<byte> message);
 }

@@ -48,7 +48,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
     public event InitializeDelegate? OnInitialize;
     
     /// <inheritdoc/>
-    public event AddAuthInputDelegate? OnAddAuthInput;
+    public event AuthoritativeInputDelegate? OnAuthoritativeInput;
     
     /// <inheritdoc/>
     public event SetDelayDelegate? OnSetDelay;
@@ -155,14 +155,11 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         long? checksum = header.ReadNullableLong();
         var input = message[headerLength..];
 
-        OnAddAuthInput?.Invoke(frame, input, checksum); // Transfer memory ownership to the client
+        OnAuthoritativeInput?.Invoke(frame, input, checksum); // Transfer memory ownership to the client
         
         lock (aggregator_)
             aggregator_.Pop(frame);
     }
-
-    /// <inheritdoc/>
-    public void Disconnect() => outTransport_.Terminate();
     
     readonly PooledBufferWriter<byte> inputBuffer_ = new();
     internal const int InputStructHeader = sizeof(long) + sizeof(int);

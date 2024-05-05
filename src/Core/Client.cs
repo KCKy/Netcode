@@ -177,7 +177,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     void SetHandlers()
     {
-        dispatcher_.OnAddAuthInput += AddAuthoritativeInput;
+        dispatcher_.OnAuthoritativeInput += AddAuthoritativeInput;
         dispatcher_.OnInitialize += Initialize;
         dispatcher_.OnSetDelay += SetDelayHandler;
         dispatcher_.OnStart += Start;
@@ -186,7 +186,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     void UnsetHandlers()
     {
-        dispatcher_.OnAddAuthInput -= AddAuthoritativeInput;
+        dispatcher_.OnAuthoritativeInput -= AddAuthoritativeInput;
         dispatcher_.OnInitialize -= Initialize;
         dispatcher_.OnSetDelay -= SetDelayHandler;
         dispatcher_.OnStart -= Start;
@@ -257,7 +257,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             terminated_ = true;
 
-            dispatcher_.Disconnect();
             UnsetHandlers();
             predictManager_.Stop();
             clientCancellation_.Cancel();

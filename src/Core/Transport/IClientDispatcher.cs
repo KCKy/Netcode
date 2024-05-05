@@ -17,14 +17,6 @@ public interface IClientDispatcher : IClientSender, IClientReceiver  { }
 public interface IClientSender
 {
     /// <summary>
-    /// Disconnect from the server and terminate the connection (reliable).
-    /// </summary>
-    /// <remarks>
-    /// Some messages might be cancelled some still sent
-    /// </remarks>
-    void Disconnect();
-
-    /// <summary>
     /// Send the clients input for a particular frame (unreliable).
     /// </summary>
     /// <remarks>
@@ -60,7 +52,7 @@ public delegate void InitializeDelegate(long frame, Memory<byte> state);
 /// <param name="frame">The frame of the resulting state update i.e. the state id produced by using this input on previous state.</param>
 /// <param name="input">Move of the serialized auth input structure (pooled from <see cref="T:ArrayPool{byte}.Shared"/>).</param>
 /// <param name="checksum">Optional checksum for the resulting state.</param>
-public delegate void AddAuthInputDelegate(long frame, Memory<byte> input, long? checksum);
+public delegate void AuthoritativeInputDelegate(long frame, Memory<byte> input, long? checksum);
 
 /// <summary>
 /// Set delay message (unreliable) tells how much ahead a given input of this client was received by the server before the corresponding state update.
@@ -100,7 +92,7 @@ public interface IClientReceiver
     /// <summary>
     /// Notification for the auth input message.
     /// </summary>
-    event AddAuthInputDelegate OnAddAuthInput;
+    event AuthoritativeInputDelegate OnAuthoritativeInput;
     
     /// <summary>
     /// Notification for the set delay message.

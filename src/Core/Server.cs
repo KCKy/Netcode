@@ -113,7 +113,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// </summary>
     public IClientInputPredictor<TClientInput> ClientInputPredictor
     {
-        init => inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate, value, dispatcher_.InputAuthored);
+        init => inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate, value, dispatcher_.SetDelay);
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     public Server(IServerDispatcher dispatcher)
     {
         dispatcher_ = dispatcher;
-        inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate, new DefaultClientInputPredictor<TClientInput>(), dispatcher_.InputAuthored);
+        inputQueue_ = new ClientInputQueue<TClientInput>(TGameState.DesiredTickRate, new DefaultClientInputPredictor<TClientInput>(), dispatcher_.SetDelay);
         SetHandlers();
     }
 
