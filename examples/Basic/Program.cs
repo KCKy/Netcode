@@ -38,7 +38,6 @@ class Program
 
         Task result = await Task.WhenAny(server.RunAsync(), transport.RunAsync());
 
-        transport.Terminate();
         server.Terminate();
 
         await result;

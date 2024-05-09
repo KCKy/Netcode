@@ -239,4 +239,10 @@ public class IpServerTransport : IServerTransport
         if (idToConnection_.TryGetValue(id, out ConnectedClient? client))
             client.Cancellation.Cancel();
     }
+
+    /// <summary>
+    /// Terminate the server transport.
+    /// All current clients will be disconnected and the transport shall stop sending/receiving messages.
+    /// </summary>
+    public void Terminate() => cancellationSource_.Cancel();
 }

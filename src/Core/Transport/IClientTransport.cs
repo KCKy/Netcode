@@ -41,11 +41,6 @@ public interface IClientInTransport
 public interface IClientOutTransport
 {
     /// <summary>
-    /// Kick the connection. The client will disconnect and the whole transport will close.
-    /// </summary>
-    void Terminate();
-
-    /// <summary>
     /// The amount of bytes of unused leading space reliable packets should have.
     /// </summary>
     /// <remarks>

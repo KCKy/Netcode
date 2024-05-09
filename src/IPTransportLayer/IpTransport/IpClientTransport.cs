@@ -39,7 +39,10 @@ public sealed class IpClientTransport : IClientTransport
         target_ = target;
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Terminate the client transport.
+    /// The client will disconnect and the transport shall stop sending/receiving messages.
+    /// </summary>
     public void Terminate() => cancellationSource_.Cancel();
 
     int hasStarted_ = 0;
