@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Buffers;
+using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
 using Serilog;
 using Kcky.Useful;
 
-namespace Kcky.GameNewt.Transport.Default;
+namespace Kcky.GameNewt.Dispatcher.Default;
 
 /// <summary>
 /// Implementation for the server-side part of the default transport protocol (<see cref="IServerSender"/>, <see cref="IServerReceiver"/>)
@@ -38,26 +39,26 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
     }
 
     /// <inheritdoc/>
-    public void Kick(long id) => transport_.Terminate(id);
+    public void Kick(int id) => transport_.Kick(id);
 
     /// <inheritdoc/>
     public event AddInputDelegate? OnAddInput;
     
     /// <inheritdoc/>
-    public event Action<long> OnAddClient
+    public event Action<int> OnAddClient
     {
         add => transport_.OnClientJoin += value;
         remove => transport_.OnClientJoin -= value;
     }
     
     /// <inheritdoc/>
-    public event Action<long> OnRemoveClient
+    public event Action<int> OnRemoveClient
     {
         add => transport_.OnClientFinish += value;
         remove => transport_.OnClientFinish -= value;
     }
 
-    void HandleMessage(long id, Memory<byte> message)
+    void HandleMessage(int id, Memory<byte> message)
     {
         if (message.IsEmpty)
         {
@@ -81,7 +82,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
         }
     }
 
-    void HandleClientInput(long id, Memory<byte> owner)
+    void HandleClientInput(int id, Memory<byte> owner)
     {
         var message = owner.Span;
         const int headerLength = DefaultClientDispatcher.InputStructHeader;
@@ -126,8 +127,8 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
 
     // Initialize
     readonly PooledBufferWriter<byte> initializeBuffer_ = new();
-    internal const int InitializeHeader = sizeof(long) * 2;
-    Memory<byte> ConstructInitialize<TInitializePayload>(long id, long frame, TInitializePayload payload)
+    internal const int InitializeHeader = sizeof(int) + sizeof(long);
+    Memory<byte> ConstructInitialize<TInitializePayload>(int id, long frame, TInitializePayload payload)
     {
         WriteMessageHeader(initializeBuffer_, reliableHeader_, MessageType.ServerInitialize);
         initializeBuffer_.Write(id);
@@ -137,13 +138,13 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
     }
 
     /// <inheritdoc/>
-    public void Initialize<TPayload>(long id, long frame, TPayload payload)
+    public void Initialize<TPayload>(int id, long frame, TPayload payload)
     {
         /*
          * Packet format:
-         * [ Reliable Message Header ] [ Message Type: byte ] [ ID: long ] [ Frame: long ] [ Payload: byte[] ]
+         * [ Reliable Message Header ] [ Message Type: byte ] [ ID: int ] [ Frame: long ] [ Payload: byte[] ]
          */
-
+        
         var message = ConstructInitialize(id, frame, payload);
         transport_.SendReliable(message, id);
     }
@@ -160,7 +161,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
     }
 
     /// <inheritdoc/>
-    public void SetDelay(long id, long frame, TimeSpan difference)
+    public void SetDelay(int id, long frame, TimeSpan difference)
     {
         /*
          * Packet format:

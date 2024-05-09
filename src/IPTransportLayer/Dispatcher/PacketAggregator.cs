@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using Kcky.Useful;
 
-namespace Kcky.GameNewt.Transport.Default;
+namespace Kcky.GameNewt.Dispatcher.Default;
 
 /// <summary>
 /// Helper structure for aggregation of data generated over time into packets.

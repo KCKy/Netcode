@@ -41,7 +41,7 @@ public interface IClientInTransport
 public interface IClientOutTransport
 {
     /// <summary>
-    /// Terminate the connection. The client will disconnect and the whole transport will close.
+    /// Kick the connection. The client will disconnect and the whole transport will close.
     /// </summary>
     void Terminate();
 
@@ -57,7 +57,7 @@ public interface IClientOutTransport
     /// Send a reliable message to the server. 
     /// </summary>
     /// <param name="message">Move of the packet to be sent (shall be pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
-    /// <remarks>The packet should have leading space as defined by <see cref="ReliableMessageHeader"/>.</remarks>
+    /// <remarks>The packet should have leading unused space as defined by <see cref="ReliableMessageHeader"/>.</remarks>
     void SendReliable(Memory<byte> message);
 
     /// <summary>
@@ -77,6 +77,6 @@ public interface IClientOutTransport
     /// Sends an unreliable message to the server. The server may not receive this message due to packet loss.
     /// </summary>
     /// <param name="message">Move of the packet to be sent (shall be pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
-    /// <remarks>The packet should have leading space as defined by <see cref="UnreliableMessageHeader"/>.</remarks>
+    /// <remarks>The packet should have leading unused space as defined by <see cref="UnreliableMessageHeader"/>.</remarks>
     void SendUnreliable(Memory<byte> message);
 }

@@ -9,7 +9,7 @@ public struct UpdateOutput
     /// <summary>
     /// All ids of clients whose connection will be terminated after this frame update.
     /// </summary>
-    public long[]? ClientsToTerminate;
+    public int[]? ClientsToTerminate;
 
     /// <summary>
     /// Whether this frame update was the last and the server shall stop.

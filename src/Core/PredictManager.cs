@@ -69,7 +69,7 @@ sealed class PredictManager<TC, TS, TG>
     /// <remarks>
     /// This shall be set exactly once before <see cref="InformAuthInput"/> or <see cref="Tick"/> is called.
     /// </remarks>
-    public long LocalId { private get; set; }
+    public int LocalId { private get; set; }
     
     // This object is exclusive to predict.
     public required IClientInputProvider<TC> ClientInputProvider { private get; set; }
@@ -366,7 +366,7 @@ sealed class PredictManager<TC, TS, TG>
     {
         // Terminated players are going to be predicted as well, but the game state update should ignore the removed player.
 
-        long localId = LocalId;
+        int localId = LocalId;
 
         int length = clientInputs.Length;
         for (int i = 0; i < length; i++)

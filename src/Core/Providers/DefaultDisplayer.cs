@@ -14,5 +14,5 @@ public class DefaultDisplayer<TGameState> : IDisplayer<TGameState>
     public void AddPredict(long frame, TGameState gameState) { }
     
     /// <inheritdoc/>
-    public void Init(long id) { }
+    public void Init(int id) { }
 }

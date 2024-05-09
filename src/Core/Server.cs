@@ -85,11 +85,17 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
     readonly IServerDispatcher dispatcher_;
 
-    readonly object terminationMutex_ = new(); // Assures atomicity of start and termination operations.
+    readonly object stateMutex_ = new(); // Assures atomicity of start and termination operations.
     readonly object tickMutex_ = new(); // Assures tick updates are atomic.
+    enum ServerState
+    {
+        NotStarted,
+        Started,
+        Terminated
+    }
 
-    bool started_ = false;
-    bool terminated_ = false;
+    ServerState serverState_ = ServerState.NotStarted;
+
     bool updatingEnded_ = false;
 
     /// <summary>
@@ -159,15 +165,17 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// <inheritdoc/>
     public async Task RunAsync()
     {
-        lock (terminationMutex_)
+        lock (stateMutex_)
         {
-            if (terminated_)
-                throw new InvalidOperationException("The server has been terminated.");
+            switch (serverState_)
+            {
+                case ServerState.Terminated:
+                    throw new InvalidOperationException("The server has been terminated.");
+                case ServerState.Started:
+                    throw new InvalidOperationException("The server has already been started.");
+            }
 
-            if (started_)
-                throw new InvalidOperationException("The server has already been started.");
-
-            started_ = true;
+            serverState_ = ServerState.Started;
             clock_.TargetTps = TGameState.DesiredTickRate;
             clock_.OnTick += Tick;
         }
@@ -181,12 +189,11 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// <inheritdoc/>
     public void Terminate()
     {
-        lock (terminationMutex_)
+        lock (stateMutex_)
         {
-            if (terminated_)
+            if (serverState_ == ServerState.Terminated)
                 return;
 
-            terminated_ = true;
             clock_.OnTick -= Tick;
             clockCancellation_.Cancel();
             authInputWriter_.Dispose();
@@ -206,12 +213,12 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         return new(clientInput, serverInput);
     }
 
-    void HandleKicking(long[]? clientsToKick)
+    void HandleKicking(int[]? clientsToKick)
     {
         if (clientsToKick is not { Length: > 0 } toTerminate)
             return;
 
-        foreach (long client in toTerminate)
+        foreach (int client in toTerminate)
             dispatcher_.Kick(client);
     }
 
@@ -271,7 +278,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         }
     }
 
-    void AddClient(long id)
+    void AddClient(int id)
     {
         inputQueue_.AddClient(id);
         long frame;
@@ -287,7 +294,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         logger_.Debug("Initialized {Id} for {Frame}.", id, frame);
     }
 
-    void AddInput(long id, long frame, ReadOnlySpan<byte> serializedInput)
+    void AddInput(int id, long frame, ReadOnlySpan<byte> serializedInput)
     {
         var input = MemoryPackSerializer.Deserialize<TClientInput>(serializedInput);
 
@@ -300,7 +307,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         inputQueue_.AddInput(id, frame, input);
     }
 
-    void FinishClient(long id)
+    void FinishClient(int id)
     {
         logger_.Debug("Client {Id} disconnected.", id);
         inputQueue_.RemoveClient(id);

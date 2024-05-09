@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using Kcky.GameNewt.Dispatcher.Default;
 using Kcky.Useful;
 
 namespace Kcky.GameNewt.Transport.Default.Tests;

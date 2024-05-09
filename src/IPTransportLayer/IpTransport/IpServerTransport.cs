@@ -17,10 +17,9 @@ class ConnectedClient
     public readonly TcpClientTransceiver ClientTransceiver;
     public IPEndPoint UdpTarget;
     public readonly CancellationTokenSource Cancellation;
-    public readonly long Id;
+    public readonly int Id;
 
-    public ConnectedClient(TcpClientTransceiver clientTransceiver, IPEndPoint target,
-        CancellationTokenSource cancellation, long id)
+    public ConnectedClient(TcpClientTransceiver clientTransceiver, IPEndPoint target, CancellationTokenSource cancellation, int id)
     {
         ClientTransceiver = clientTransceiver;
         UdpTarget = target;
@@ -53,26 +52,26 @@ public class IpServerTransport : IServerTransport
     /// <inheritdoc/>
     public event ServerMessageEvent? OnReliableMessage;
 
-    void HandleUdpReceive((Memory<byte> message, long id) value) => OnUnreliableMessage?.Invoke(value.id, value.message);
+    void HandleUdpReceive((Memory<byte> message, int id) value) => OnUnreliableMessage?.Invoke(value.id, value.message);
     
     /// <inheritdoc/>
     public event ServerMessageEvent? OnUnreliableMessage;
 
     /// <inheritdoc/>
-    public event Action<long>? OnClientJoin;
+    public event Action<int>? OnClientJoin;
 
     /// <inheritdoc/>
-    public event Action<long>? OnClientFinish;
+    public event Action<int>? OnClientFinish;
     
-    readonly ConcurrentDictionary<long, ConnectedClient> idToConnection_ = new();
-    readonly BagMessages<(Memory<byte> payload, long? id)> udpMessages_ = new();
+    readonly ConcurrentDictionary<int, ConnectedClient> idToConnection_ = new();
+    readonly BagMessages<(Memory<byte> payload, int? id)> udpMessages_ = new();
     readonly CancellationTokenSource cancellationSource_ = new();
 
-    readonly QueueMessages<(Memory<byte>, long?)> tcpMessages_ = new();
+    readonly QueueMessages<(Memory<byte>, int?)> tcpMessages_ = new();
 
     readonly ILogger logger_ = Log.ForContext<IpServerTransport>();
     
-    void RemoveClient(long id)
+    void RemoveClient(int id)
     {
         if (!idToConnection_.TryRemove(id, out _))
             throw new InvalidOperationException("Client was not present.");
@@ -91,7 +90,7 @@ public class IpServerTransport : IServerTransport
     /// </summary>
     public int Port { get; private set; } = 0;
 
-    async Task RunClientAsync(TcpClient client, long id)
+    async Task RunClientAsync(TcpClient client, int id)
     {
         if (client.Client.RemoteEndPoint is not IPEndPoint target || client.TryGetStream() is not { } stream)
         {
@@ -111,7 +110,7 @@ public class IpServerTransport : IServerTransport
 
         Receiver<Memory<byte>> receiver = new(layer);
         
-        long idCapture = id;
+        int idCapture = id;
         receiver.OnMessage += m => OnReliableMessage?.Invoke(idCapture, m);
 
         OnClientJoin?.Invoke(id);
@@ -132,16 +131,16 @@ public class IpServerTransport : IServerTransport
         }
     }
 
-    ValueTask SendInitIdAsync(NetworkStream stream, long id, CancellationToken cancellation)
+    ValueTask SendInitIdAsync(NetworkStream stream, int id, CancellationToken cancellation)
     {
-        Memory<byte> idRaw = new byte[sizeof(long)];
+        Memory<byte> idRaw = new byte[sizeof(int)];
         Bits.Write(id, idRaw.Span);
         return stream.WriteAsync(idRaw, cancellation);
     }
 
     async Task ManageConnectionsAsync(TcpListener listener, CancellationToken cancellation)
     {
-        for (long id = 1; ; id++)
+        for (int id = 1; ; id++)
         {
             TcpClient client = await listener.AcceptTcpClientAsync(cancellation);
             RunClientAsync(client, id).AssureNoFault();
@@ -182,9 +181,9 @@ public class IpServerTransport : IServerTransport
         UdpServerTransceiver udpTransceiver = new(udp, idToConnection_);
         TcpServerTransceiver tcpServerTransceiver = new(idToConnection_);
 
-        Receiver<(Memory<byte>, long)> udpReceiver = new(udpTransceiver);
-        Sender<BagMessages<(Memory<byte>, long?)>, (Memory<byte>, long?)> udpMemorySender = new(udpTransceiver, udpMessages_);
-        Sender<QueueMessages<(Memory<byte>, long?)>, (Memory<byte>, long?)> tcpMemorySender = new(tcpServerTransceiver,  tcpMessages_);
+        Receiver<(Memory<byte>, int)> udpReceiver = new(udpTransceiver);
+        Sender<BagMessages<(Memory<byte>, int?)>, (Memory<byte>, int?)> udpMemorySender = new(udpTransceiver, udpMessages_);
+        Sender<QueueMessages<(Memory<byte>, int?)>, (Memory<byte>, int?)> tcpMemorySender = new(tcpServerTransceiver,  tcpMessages_);
 
         udpReceiver.OnMessage += HandleUdpReceive;
         
@@ -211,7 +210,7 @@ public class IpServerTransport : IServerTransport
     }
 
     /// <inheritdoc/>
-    public void Terminate() => cancellationSource_.Cancel();
+    public void Kick() => cancellationSource_.Cancel();
 
     /// <inheritdoc/>
     public int ReliableMessageHeader => TcpServerTransceiver.HeaderSize;
@@ -220,7 +219,7 @@ public class IpServerTransport : IServerTransport
     public void SendReliable(Memory<byte> message) => tcpMessages_.Post((message, null));
     
     /// <inheritdoc/>
-    public void SendReliable(Memory<byte> message, long id) => tcpMessages_.Post((message, id));
+    public void SendReliable(Memory<byte> message, int id) => tcpMessages_.Post((message, id));
 
     /// <inheritdoc/>
     public int UnreliableMessageHeader => UdpServerTransceiver.HeaderSize;
@@ -232,10 +231,10 @@ public class IpServerTransport : IServerTransport
     public void SendUnreliable(Memory<byte> message) => udpMessages_.Post((message, null));
     
     /// <inheritdoc/>
-    public void SendUnreliable(Memory<byte> message, long id) => udpMessages_.Post((message, id));
+    public void SendUnreliable(Memory<byte> message, int id) => udpMessages_.Post((message, id));
 
     /// <inheritdoc/>
-    public void Terminate(long id)
+    public void Kick(int id)
     {
         if (idToConnection_.TryGetValue(id, out ConnectedClient? client))
             client.Cancellation.Cancel();

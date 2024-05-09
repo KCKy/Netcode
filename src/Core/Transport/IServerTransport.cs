@@ -19,7 +19,7 @@ public interface IServerTransport : IServerInTransport, IServerOutTransport { }
 /// <param name="id">The id of the client the message is from.</param>
 /// <param name="packet">Move of the received packet (pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
 
-public delegate void ServerMessageEvent(long id, Memory<byte> packet);
+public delegate void ServerMessageEvent(int id, Memory<byte> packet);
 
 /// <summary>
 /// The receiving part of <see cref="IServerTransport"/>.
@@ -39,12 +39,12 @@ public interface IServerInTransport
     /// <summary>
     /// Event which is invoked when a new client connects to the server. The id of the connection is passed.
     /// </summary>
-    event Action<long> OnClientJoin;
+    event Action<int> OnClientJoin;
 
     /// <summary>
     /// Event which is invoked when a new client disconnects from the server due to any reason. The id of the just ended connection is passed.
     /// </summary>
-    event Action<long> OnClientFinish;
+    event Action<int> OnClientFinish;
 }
 
 /// <summary>
@@ -73,7 +73,7 @@ public interface IServerOutTransport
     /// <param name="message">Move of the packet to be sent (pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
     /// <remarks>The packet should have leading space as defined by <see cref="ReliableMessageHeader"/>.</remarks>
     /// <param name="id">The id of the client to send the message to. For an ID of a disconnected client the method will do nothing.</param>
-    void SendReliable(Memory<byte> message, long id);
+    void SendReliable(Memory<byte> message, int id);
 
     /// <summary>
     /// The amount of bytes of unused leading space unreliable packets should have.
@@ -101,16 +101,16 @@ public interface IServerOutTransport
     /// <param name="message">Move of the packet to be sent (pooled from <see cref="T:ArrayPool{byte}.Shared"/>)</param>
     /// <remarks>The packet should have leading space as defined by <see cref="UnreliableMessageHeader"/>.</remarks>
     /// <param name="id">The id of the client to send the message to. For an ID of a disconnected client the method will do nothing.</param>
-    void SendUnreliable(Memory<byte> message, long id);
+    void SendUnreliable(Memory<byte> message, int id);
 
     /// <summary>
     /// Terminate the connection of a given client. They will be forcefully disconnected.
     /// </summary>
     /// <param name="id">The id of the client to disconnect.</param>
-    void Terminate(long id);
+    void Kick(int id);
     
     /// <summary>
-    /// Terminate the server. All client will be disconnected and the whole server transport will close.
+    /// Kick the server. All client will be disconnected and the whole server transport will close.
     /// </summary>
-    void Terminate();
+    void Kick();
 }

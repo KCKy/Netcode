@@ -43,7 +43,7 @@ public interface ILerperInfo
 ///     // State update code here
 /// 
 ///     Entity entity = // ...
-///     long entityId = entity.Id;
+///     int entityId = entity.Id;
 ///
 ///     lerper_.AddEntity(entityId, entity);
 ///
@@ -75,9 +75,9 @@ public interface ILerperInfo
 /// <typeparam name="T">The type of the state to be interpolated.</typeparam>
 public sealed class Lerper<T> : ILerperInfo
 {
-    record struct Frame(Dictionary<long, T> IdToEntity, float Length);
+    record struct Frame(Dictionary<int, T> IdToEntity, float Length);
 
-    readonly Pool<Dictionary<long, T>> dictPool_ = new();
+    readonly Pool<Dictionary<int, T>> dictPool_ = new();
 
     readonly ConcurrentQueue<Frame> frames_ = new();
 
@@ -90,7 +90,7 @@ public sealed class Lerper<T> : ILerperInfo
     /// </summary>
     /// <param name="id">Unique id of the entity.</param>
     /// <param name="value">State of the entity.</param>
-    public void AddEntity(long id, T value) => collectedFrame_.IdToEntity.Add(id, value);
+    public void AddEntity(int id, T value) => collectedFrame_.IdToEntity.Add(id, value);
 
     /// <summary>
     /// End current frame generation. Puts the collected frame onto the interpolation queue. Starts collection of the next frame.
@@ -189,9 +189,9 @@ public sealed class Lerper<T> : ILerperInfo
         }
     }
 
-    void DrawProper(float t, Dictionary<long, T> idToTarget, EntityDraw onEntityDraw)
+    void DrawProper(float t, Dictionary<int, T> idToTarget, EntityDraw onEntityDraw)
     {
-        foreach ((long id, T from) in currentFrame_.IdToEntity)
+        foreach ((int id, T from) in currentFrame_.IdToEntity)
         {
             if (!idToTarget.TryGetValue(id, out T? target))
                 continue;

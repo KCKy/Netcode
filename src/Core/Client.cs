@@ -20,7 +20,7 @@ public interface IClient
     /// <summary>
     /// The id of the client.
     /// </summary>
-    long Id { get; }
+    int Id { get; }
 
     /// <summary>
     /// 
@@ -91,17 +91,22 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     readonly StateHolder<TClientInput, TServerInput, TGameState> authStateHolder_ = new(); // Mutex used to stop RW/WR/WW conflicts.
     readonly PredictManager<TClientInput, TServerInput, TGameState> predictManager_;
     readonly CancellationTokenSource clientCancellation_ = new();
-    readonly object terminationMutex_ = new(); // Assures atomicity of start and termination operations.
+    readonly object stateMutex_ = new(); // Assures atomicity of start and termination operations.
     readonly UpdateTimer timer_ = new();
 
     readonly ILogger logger_ = Log.ForContext<Client<TClientInput, TServerInput, TGameState>>();
 
     readonly IClientDispatcher dispatcher_;
 
-    bool started_ = false;
-    bool terminated_ = false;
-    bool initiated_ = false;
-    bool identified_ = false;
+    enum ClientState
+    {
+        NotStarted,
+        Started,
+        Initiated,
+        Terminated
+    }
+
+    ClientState clientState_ = ClientState.NotStarted;
 
     readonly SynchronizedClock clock_;
 
@@ -180,7 +185,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         dispatcher_.OnAuthoritativeInput += AddAuthoritativeInput;
         dispatcher_.OnInitialize += Initialize;
         dispatcher_.OnSetDelay += SetDelayHandler;
-        dispatcher_.OnStart += Start;
         clock_.OnTick += predictManager_.Tick;
     }
 
@@ -189,13 +193,12 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         dispatcher_.OnAuthoritativeInput -= AddAuthoritativeInput;
         dispatcher_.OnInitialize -= Initialize;
         dispatcher_.OnSetDelay -= SetDelayHandler;
-        dispatcher_.OnStart -= Start;
         clock_.OnTick -= predictManager_.Tick;
     }
 
 
     /// <inheritdoc/>
-    public long Id { get; private set; } = long.MaxValue;
+    public int Id { get; private set; } = int.MaxValue;
 
     /// <inheritdoc/>
     public bool TraceState { get; set; }
@@ -231,12 +234,17 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// <inheritdoc/>
     public async Task RunAsync()
     {
-        lock (terminationMutex_)
+        lock (stateMutex_)
         {
-            if (started_ || terminated_)
-                return;
+            switch (clientState_)
+            {
+                case ClientState.Terminated:
+                    throw new InvalidOperationException("The client has been terminated.");
+                case ClientState.Started or ClientState.Initiated:
+                    throw new InvalidOperationException("The client has already been started.");
+            }
 
-            started_ = true;
+            clientState_ = ClientState.Started;
         }
 
         logger_.Information("The client is starting.");
@@ -248,14 +256,14 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// <inheritdoc/>
     public void Terminate()
     {
-        lock (terminationMutex_)
+        lock (stateMutex_)
         {
-            if (terminated_)
+            if (clientState_ == ClientState.Terminated)
                 return;
 
             logger_.Information("The client is being terminated.");
 
-            terminated_ = true;
+            clientState_ = ClientState.Terminated;
 
             UnsetHandlers();
             predictManager_.Stop();
@@ -328,26 +336,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             timer_.End(frame);
     }
 
-    void Start(long id)
-    {
-        lock (terminationMutex_)
-        {
-            if (identified_ || terminated_ || !started_)
-                return;
-            identified_ = true;
-
-            logger_.Debug("Client received id {Id}", id);
-
-
-            Id = id;
-            predictManager_.LocalId = id;
-            displayer_.Init(id);
-
-            if (initiated_ && identified_)
-                clock_.RunAsync(clientCancellation_.Token).AssureNoFault();
-        }
-    }
-
     (TGameState authState, TGameState predictState) DeserializeStates(Memory<byte> serializedState)
     {
         var span = serializedState.Span;
@@ -381,26 +369,29 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         predictManager_.Init(frame, predictState);
     }
 
-    void Initialize(long frame, Memory<byte> serializedState)
+    void Initialize(int id, long frame, Memory<byte> serializedState)
     {
-        lock (terminationMutex_)
+        lock (stateMutex_)
         {
-            if (initiated_ || terminated_ || !started_)
+            if (clientState_ != ClientState.Started)
                 return;
 
-            initiated_ = true;
+            clientState_ = ClientState.Initiated;
 
+            logger_.Debug("Client received id {Id}", id);
             logger_.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
 
             (TGameState authState, TGameState predictState) = DeserializeStates(serializedState);
 
             InitializeAuthState(frame, authState);
             InitializePredictState(frame, predictState);
-            clock_.Initialize(frame); 
-            
-            // Run
-            if (initiated_ && identified_)
-                clock_.RunAsync(clientCancellation_.Token).AssureNoFault();
+
+            Id = id;
+            predictManager_.LocalId = id;
+            displayer_.Init(id);
+
+            clock_.Initialize(frame);
+            clock_.RunAsync(clientCancellation_.Token).AssureNoFault();
         }
     }
 

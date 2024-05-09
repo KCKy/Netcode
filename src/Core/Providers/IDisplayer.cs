@@ -16,7 +16,7 @@ public interface IDisplayer<in TGameState>
     /// Called when the client is initialized (if on the is client-side).
     /// </summary>
     /// <param name="id">The id of the client. May be used to determine, which data corresponds to the local client.</param>
-    public void Init(long id);
+    public void Init(int id);
     
     /// <summary>
     /// Add current authoritative frame.

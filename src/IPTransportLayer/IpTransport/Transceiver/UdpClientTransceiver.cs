@@ -26,15 +26,15 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 
     readonly ILogger logger_ = Log.ForContext<UdpClientTransceiver>();
 
-    public UdpClientTransceiver(Socket client, IPEndPoint target, long id)
+    public UdpClientTransceiver(Socket client, IPEndPoint target, int id)
     {
         client_ = client;
         target_ = target;
-        id_ = new byte[sizeof(long)];
+        id_ = new byte[sizeof(int)];
         Bits.Write(id, id_.Span);
     }
 
-    public const int HeaderSize = sizeof(long);
+    public const int HeaderSize = sizeof(int);
 
     public async ValueTask<Memory<byte>> ReceiveAsync(CancellationToken cancellation)
     {

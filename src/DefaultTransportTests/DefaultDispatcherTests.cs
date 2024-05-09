@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using Kcky.GameNewt.Dispatcher.Default;
 using MemoryPack;
 using Kcky.Useful;
 
@@ -23,7 +24,7 @@ public sealed class DefaultDispatcherTests
     [Theory]
     [InlineData(1, 1, 10, false)]
     [InlineData(1, 1, 10, true)]
-    public void ClientSendTest(long id, long startFrame, long frameCount, bool respond)
+    public void ClientSendTest(int id, long startFrame, long frameCount, bool respond)
     {
         MockClientTransport clientTransport = new(id);
 
@@ -98,7 +99,7 @@ public sealed class DefaultDispatcherTests
     /// <param name="frameCount">The last frame to send.</param>
     [Theory]
     [InlineData(1, 1, 10)]
-    public void ClientReceiveTest(long id, long startFrame, int frameCount)
+    public void ClientReceiveTest(int id, long startFrame, int frameCount)
     {
         MockClientTransport clientTransport = new(id);
 
@@ -126,19 +127,12 @@ public sealed class DefaultDispatcherTests
             lock (mutex) remove++;
         };
 
-        int started = 0;
         int initialized = 0;
         int delay = 0;
 
-        client.OnStart += _ =>
+        client.OnInitialize += (_, frame, raw) =>
         {
-            lock (mutex)
-                started++;
-        };
-
-        client.OnInitialize += (frame, raw) =>
-        {
-            var data = MemoryPackSerializer.Deserialize<long>(raw.Span);
+            var data = MemoryPackSerializer.Deserialize<int>(raw.Span);
             ArrayPool<byte>.Shared.Return(raw);
 
             Assert.Equal(frame, data);

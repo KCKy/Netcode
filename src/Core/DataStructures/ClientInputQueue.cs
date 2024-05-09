@@ -14,7 +14,7 @@ namespace Kcky.GameNewt.DataStructures;
 /// <param name="id">The ID of the client the input belongs to.</param>
 /// <param name="frame">The frame index of the frame the input is for.</param>
 /// <param name="difference">The difference of the corresponding frame update time and the input receive time.</param>
-delegate void InputAuthoredDelegate(long id, long frame, TimeSpan difference);
+delegate void InputAuthoredDelegate(int id, long frame, TimeSpan difference);
 
 /// <summary>
 /// Receives all client input to the server. Constructs authoritative client update inputs <see cref="UpdateClientInfo{TClientInput}"/>.
@@ -58,8 +58,8 @@ where TClientInput : class, new()
         }
     }
 
-    readonly Dictionary<long, SingleClientQueue> idToInputs_ = new();
-    readonly List<long> removedClients_ = new();
+    readonly Dictionary<int, SingleClientQueue> idToInputs_ = new();
+    readonly List<int> removedClients_ = new();
 
     readonly double ticksPerSecond_;
     readonly IClientInputPredictor<TClientInput> predictor_;
@@ -102,7 +102,7 @@ where TClientInput : class, new()
     /// </summary>
     /// <param name="id">The id of the client.</param>
     /// <exception cref="ArgumentException">If client with given id has already been added.</exception>
-    public void AddClient(long id)
+    public void AddClient(int id)
     {
         lock (mutex_)
         {
@@ -121,7 +121,7 @@ where TClientInput : class, new()
     /// </summary>
     /// <param name="id">The id of the client.</param>
     /// <exception cref="ArgumentException">If the client id is not in the collection.</exception>
-    public void RemoveClient(long id)
+    public void RemoveClient(int id)
     {
         lock (mutex_)
         {
@@ -144,7 +144,7 @@ where TClientInput : class, new()
     /// <param name="id">ID of the client.</param>
     /// <param name="frame">Frame number to which the input corresponds.</param>
     /// <param name="input">The input.</param>
-    public void AddInput(long id, long frame, TClientInput input)
+    public void AddInput(int id, long frame, TClientInput input)
     {
         lock (mutex_)
         {
@@ -200,7 +200,7 @@ where TClientInput : class, new()
             var span = frame.Span;
 
             int i = 0;
-            foreach ((long id, SingleClientQueue queue) in idToInputs_)
+            foreach ((int id, SingleClientQueue queue) in idToInputs_)
             {
                 long? timestamp = queue.WriteUpdateInfo(nextFrame, ref span[i]);
                 span[i].Id = id;
@@ -217,7 +217,7 @@ where TClientInput : class, new()
                 i++;
             }
 
-            foreach (long id in removedClients_)
+            foreach (int id in removedClients_)
             {
                 span[i] = new(id, new(), true);
                 i++;

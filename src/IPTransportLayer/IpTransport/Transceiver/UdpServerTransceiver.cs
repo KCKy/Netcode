@@ -14,14 +14,14 @@ namespace Kcky.GameNewt.Transport.Default;
 /// Implements sending and receiving messages over a UDP socket for the server.
 /// Designed to work with <see cref="IPendingMessages{T}"/> and <see cref="Receiver{T}"/>.
 /// </summary>
-sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (Memory<byte> payload, long? id)>
+sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (Memory<byte> payload, int? id)>
 {
     readonly Socket client_;
     readonly IPEndPoint ipPoint_ = new(IPAddress.Loopback, 0);
-    readonly ConcurrentDictionary<long, ConnectedClient> idToConnection_;
+    readonly ConcurrentDictionary<int, ConnectedClient> idToConnection_;
     readonly ILogger logger_ = Log.ForContext<UdpServerTransceiver>();
 
-    public UdpServerTransceiver(Socket client, ConcurrentDictionary<long, ConnectedClient> idToConnection)
+    public UdpServerTransceiver(Socket client, ConcurrentDictionary<int, ConnectedClient> idToConnection)
     {
         client_ = client;
         idToConnection_ = idToConnection;
@@ -31,10 +31,10 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
 
     public const int ConnectionResetByPeer = 10054;
 
-    public async ValueTask<(Memory<byte> payload, long id)> ReceiveAsync(CancellationToken cancellation)
+    public async ValueTask<(Memory<byte> payload, int id)> ReceiveAsync(CancellationToken cancellation)
     {
         var buffer = ArrayPool<byte>.Shared.RentMemory(Udp.MaxDatagramSize);
-        const int headerSize = sizeof(long);
+        const int headerSize = sizeof(int);
 
         while (true)
         {
@@ -75,7 +75,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
 
             logger_.Verbose("It came from {MemorySender}.", sender);
 
-            long id = Bits.ReadLong(buffer[..headerSize].Span);
+            int id = Bits.ReadInt(buffer[..headerSize].Span);
 
             if (!idToConnection_.TryGetValue(id, out ConnectedClient? client))
             {
@@ -120,9 +120,9 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, long id), (
         return task;
     }
 
-    public async ValueTask SendAsync((Memory<byte> payload, long? id) value, CancellationToken cancellation)
+    public async ValueTask SendAsync((Memory<byte> payload, int? id) value, CancellationToken cancellation)
     {
-        (var payload, long? id) = value;
+        (var payload, int? id) = value;
 
         if (id is {} valid)
         {

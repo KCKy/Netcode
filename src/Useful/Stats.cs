@@ -61,7 +61,7 @@ public sealed class IntegrateWindowed<T>
 /// </summary>
 public struct TimeWeightedAverage
 {
-    double last_ = float.NaN;
+    double last_ = double.NaN;
     double sum_ = 0;
     double weight_ = 0;
 
@@ -103,7 +103,7 @@ public struct TimeWeightedAverage
 /// </summary>
 public struct Average
 {
-    double last_ = float.NaN;
+    double last_ = double.NaN;
     double sum_ = 0;
     double weight_ = 0;
     long count_ = 0;

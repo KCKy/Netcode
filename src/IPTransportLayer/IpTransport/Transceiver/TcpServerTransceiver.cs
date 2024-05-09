@@ -12,13 +12,13 @@ namespace Kcky.GameNewt.Transport.Default;
 /// Extends usability of <see cref="TcpClientTransceiver"/> to the server.
 /// Designed to work with <see cref="IPendingMessages{T}"/> and <see cref="Receiver{T}"/>.
 /// </summary>
-sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id)>
+sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, int? id)>
 {
-    readonly ConcurrentDictionary<long, ConnectedClient> idToConnection_;
+    readonly ConcurrentDictionary<int, ConnectedClient> idToConnection_;
 
     readonly ILogger logger_ = Log.ForContext<TcpServerTransceiver>();
 
-    public TcpServerTransceiver(ConcurrentDictionary<long, ConnectedClient> clients)
+    public TcpServerTransceiver(ConcurrentDictionary<int, ConnectedClient> clients)
     {
         idToConnection_ = clients;
     }
@@ -38,9 +38,9 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, long? id
         }
     }
 
-    public async ValueTask SendAsync((Memory<byte> memory, long? id) value, CancellationToken cancellation)
+    public async ValueTask SendAsync((Memory<byte> memory, int? id) value, CancellationToken cancellation)
     {
-        (var message, long? id) = value;
+        (var message, int? id) = value;
 
         if (id is not { } clientId)
         {

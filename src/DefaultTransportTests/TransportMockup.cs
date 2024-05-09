@@ -17,9 +17,9 @@ sealed class MockClientTransport : IClientTransport
     internal void InvokeUnreliable(Memory<byte> message) => OnUnreliableMessage?.Invoke(message[UnreliableMessageHeader..]);
     
     MockServerTransport? transport_;
-    internal readonly long Id;
+    internal readonly int Id;
 
-    public MockClientTransport(long id)
+    public MockClientTransport(int id)
     {
         Id = id;
     }
@@ -41,16 +41,16 @@ sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTrans
 {
     public event ServerMessageEvent? OnReliableMessage;
     public event ServerMessageEvent? OnUnreliableMessage;
-    public event Action<long>? OnClientJoin;
-    public event Action<long>? OnClientFinish;
+    public event Action<int>? OnClientJoin;
+    public event Action<int>? OnClientFinish;
 
-    internal void InvokeReliable(long id, Memory<byte> message)
+    internal void InvokeReliable(int id, Memory<byte> message)
     {
         if (idToClient_.TryGetValue(id, out _))
             OnReliableMessage?.Invoke(id, message);
     }
 
-    internal void InvokeUnreliable(long id, Memory<byte> message)
+    internal void InvokeUnreliable(int id, Memory<byte> message)
     {
         if (idToClient_.TryGetValue(id, out _))
             OnUnreliableMessage?.Invoke(id, message);
@@ -62,13 +62,13 @@ sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTrans
             OnClientJoin?.Invoke(client.Id);
     }
 
-    internal void InvokeFinish(long id)
+    internal void InvokeFinish(int id)
     {
         if (idToClient_.TryRemove(id, out _))
             OnClientFinish?.Invoke(id);
     }
 
-    readonly ConcurrentDictionary<long, MockClientTransport> idToClient_ = new();
+    readonly ConcurrentDictionary<int, MockClientTransport> idToClient_ = new();
 
     public void Add(MockClientTransport client)
     {
@@ -91,7 +91,7 @@ sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTrans
         ArrayPool<byte>.Shared.Return(message);
     }
 
-    public void SendReliable(Memory<byte> message, long id)
+    public void SendReliable(Memory<byte> message, int id)
     {
         if (idToClient_.TryGetValue(id, out var client))
             client.InvokeReliable(message[ReliableMessageHeader..]);
@@ -109,14 +109,14 @@ sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTrans
         ArrayPool<byte>.Shared.Return(message);
     }
 
-    public void SendUnreliable(Memory<byte> message, long id)
+    public void SendUnreliable(Memory<byte> message, int id)
     {
         if (idToClient_.TryGetValue(id, out var client))
             client.InvokeUnreliable(message[UnreliableMessageHeader..]);
     }
 
-    public void Terminate(long id) => InvokeFinish(id);
-    public void Terminate() => throw new InvalidOperationException();
+    public void Kick(int id) => InvokeFinish(id);
+    public void Kick() => throw new InvalidOperationException();
 
     public IEnumerator<MockClientTransport> GetEnumerator() => (from p in idToClient_ select p.Value).GetEnumerator();
 
@@ -141,20 +141,20 @@ sealed class SingleServerMockTransport : IServerTransport
 {
     public event ServerMessageEvent? OnReliableMessage;
     public event ServerMessageEvent? OnUnreliableMessage;
-    public void InvokeReliable(long id, Memory<byte> message) => OnReliableMessage?.Invoke(id, message);
-    public void InvokeUnreliable(long id, Memory<byte> message) => OnUnreliableMessage?.Invoke(id, message);
+    public void InvokeReliable(int id, Memory<byte> message) => OnReliableMessage?.Invoke(id, message);
+    public void InvokeUnreliable(int id, Memory<byte> message) => OnUnreliableMessage?.Invoke(id, message);
 
-    public event Action<long>? OnClientJoin;
-    public event Action<long>? OnClientFinish;
-    public void InvokeJoin(long id) => OnClientJoin?.Invoke(id);
-    public void InvokeFinish(long id) => OnClientFinish?.Invoke(id);
+    public event Action<int>? OnClientJoin;
+    public event Action<int>? OnClientFinish;
+    public void InvokeJoin(int id) => OnClientJoin?.Invoke(id);
+    public void InvokeFinish(int id) => OnClientFinish?.Invoke(id);
     public int ReliableMessageHeader { get; init; } = 0;
     public void SendReliable(Memory<byte> message) => throw new InvalidOperationException();
-    public void SendReliable(Memory<byte> message, long id) => throw new InvalidOperationException();
+    public void SendReliable(Memory<byte> message, int id) => throw new InvalidOperationException();
     public int UnreliableMessageHeader { get; init; } = 0;
     public int UnreliableMessageMaxLength { get; } = int.MaxValue;
     public void SendUnreliable(Memory<byte> message) => throw new InvalidOperationException();
-    public void SendUnreliable(Memory<byte> message, long id) => throw new InvalidOperationException();
-    public void Terminate(long id) => throw new InvalidOperationException();
-    public void Terminate() => throw new InvalidOperationException();
+    public void SendUnreliable(Memory<byte> message, int id) => throw new InvalidOperationException();
+    public void Kick(int id) => throw new InvalidOperationException();
+    public void Kick() => throw new InvalidOperationException();
 }

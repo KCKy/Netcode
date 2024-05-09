@@ -1,4 +1,4 @@
-﻿namespace Kcky.GameNewt.Transport.Default;
+﻿namespace Kcky.GameNewt.Dispatcher.Default;
 
 /// <summary>
 /// Message types of the default transport protocol, backed by the single byte message ID.

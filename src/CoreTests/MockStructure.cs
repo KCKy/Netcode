@@ -25,7 +25,7 @@ sealed partial class MockStructure
 
 static class MockStructureExtensions
 {
-    public static void Assert(this in UpdateClientInfo<MockStructure> info, long id, MockStructure structure, bool terminated)
+    public static void Assert(this in UpdateClientInfo<MockStructure> info, int id, MockStructure structure, bool terminated)
     {
         Xunit.Assert.Equal(id, info.Id);
         Xunit.Assert.True(MemoryPackSerializer.Serialize(structure).SequenceEqual(MemoryPackSerializer.Serialize(info.Input)));

@@ -24,7 +24,7 @@ public interface IServerSender
     /// ID of already disconnect client will do nothing. Unused ID is undefined behaviour.
     /// </remarks>
     /// <param name="id">ID of the client to kick.</param>
-    void Kick(long id);
+    void Kick(int id);
 
     /// <summary>
     /// Initialize given client with given serialized state for a frame.
@@ -39,7 +39,7 @@ public interface IServerSender
     /// <param name="id">The ID of the client to send to. Invalid ID will do nothing.</param>
     /// <param name="frame">The frame of the state belongs to.</param>
     /// <param name="payload">Read only borrow of the state structure to be serialized.</param>
-    void Initialize<TPayload>(long id, long frame, TPayload payload);
+    void Initialize<TPayload>(int id, long frame, TPayload payload);
 
     /// <summary>
     /// Authorize that a given input from a client has been received and specify, how ahead it was before the state update.
@@ -50,7 +50,7 @@ public interface IServerSender
     /// <param name="id">The id of the client to rec</param>
     /// <param name="frame"></param>
     /// <param name="difference"></param>
-    void SetDelay(long id, long frame, TimeSpan difference);
+    void SetDelay(int id, long frame, TimeSpan difference);
 
     /// <summary>
     /// Send authoritative input for given state update.
@@ -74,7 +74,7 @@ public interface IServerSender
 /// <param name="id">The id of client this input was received from.</param>
 /// <param name="frame">The frame of the state update the input belongs to.</param>
 /// <param name="input">Read only borrow of the serialized input.</param>
-public delegate void AddInputDelegate(long id, long frame, ReadOnlySpan<byte> input);
+public delegate void AddInputDelegate(int id, long frame, ReadOnlySpan<byte> input);
 
 /// <summary>
 /// Notifies about server-targeted messages of the application protocol.
@@ -92,10 +92,10 @@ public interface IServerReceiver
     /// <summary>
     /// Signalled when a client connects, their ID is passed.
     /// </summary>
-    event Action<long> OnAddClient;
+    event Action<int> OnAddClient;
 
     /// <summary>
     /// Signalled when a client disconnects (kicked, network failure, by choice), their ID is passed.
     /// </summary>
-    event Action<long> OnRemoveClient;
+    event Action<int> OnRemoveClient;
 }

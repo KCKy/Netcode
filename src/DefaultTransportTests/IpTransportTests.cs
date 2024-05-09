@@ -106,7 +106,7 @@ public class IpTransportTests
 
         Log.Information("[Test] Terminating server.");
 
-        server.Terminate();
+        server.Kick();
 
         try
         {
@@ -142,7 +142,7 @@ public class IpTransportTests
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
         IpServerTransport server = new(endPoint);
 
-        ConcurrentDictionary<long, byte> joined = new();
+        ConcurrentDictionary<int, byte> joined = new();
 
         server.OnClientJoin += id => Assert.True(joined.TryAdd(id, 0));
         server.OnClientFinish += id => Assert.True(joined.TryRemove(id, out _));
@@ -165,7 +165,7 @@ public class IpTransportTests
         Assert.Equal(clientCount, joined.Count);
 
         foreach (var client in joined)
-            server.Terminate(client.Key);
+            server.Kick(client.Key);
 
         bool serverEnded = false;
 
@@ -176,7 +176,7 @@ public class IpTransportTests
 
         Log.Information("[Test] Terminating server.");
 
-        server.Terminate();
+        server.Kick();
 
         try
         {
@@ -272,7 +272,7 @@ public class IpTransportTests
         Log.Information("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
-        server.Terminate();
+        server.Kick();
 
         await Task.Delay(100);
     }
@@ -307,7 +307,7 @@ public class IpTransportTests
             await serverTask;
         
         object readingLock = new();
-        Dictionary<long, int> idToExpectedValue = new();
+        Dictionary<int, int> idToExpectedValue = new();
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
         var clients = ConstructClients(target, clientCount).ToArray();
@@ -355,7 +355,7 @@ public class IpTransportTests
         Log.Information("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
-        server.Terminate();
+        server.Kick();
 
         await Task.Delay(100);
     }
@@ -381,7 +381,7 @@ public class IpTransportTests
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
         IpServerTransport server = new(endPoint);
 
-        List<long> clientIds = new();
+        List<int> clientIds = new();
 
         server.OnClientJoin += id =>
         {
@@ -452,7 +452,7 @@ public class IpTransportTests
         Log.Information("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
-        server.Terminate();
+        server.Kick();
 
         await Task.Delay(100);
     }
@@ -545,7 +545,7 @@ public class IpTransportTests
         Log.Information("[Test] TERMINATING ALL.");
 
         TerminateClients(clients);
-        server.Terminate();
+        server.Kick();
 
         await Task.Delay(100);
     }
@@ -634,7 +634,7 @@ public class IpTransportTests
         Log.Information("[Test] TERMINATING ALL.");
 
         TerminateClients(clients);
-        server.Terminate();
+        server.Kick();
 
         await Task.Delay(100);
     }

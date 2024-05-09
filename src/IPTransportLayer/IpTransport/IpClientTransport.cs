@@ -79,9 +79,9 @@ public sealed class IpClientTransport : IClientTransport
         // TODO: to remedy this packet signing should be employed (e.g. some secret hashing function of the packet id or so)
         // but for purposes of demonstration this method works.
 
-        Memory<byte> idRaw = new byte[sizeof(long)];
+        Memory<byte> idRaw = new byte[sizeof(int)];
         await stream.ReadExactlyAsync(idRaw, cancellation);
-        long id = Bits.ReadLong(idRaw.Span);
+        int id = Bits.ReadInt(idRaw.Span);
 
         return (tcp, udp, new(stream), new(udp, target_, id));
     }

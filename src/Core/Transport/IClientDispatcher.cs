@@ -29,18 +29,14 @@ public interface IClientSender
 }
 
 /// <summary>
-/// Start message (reliable) informs the client of their unique ID, to distinguish their data from other clients in the state.
-/// </summary>
-/// <param name="id">The unique ID of this client connection valid for the rest of the server's lifetime. </param>
-public delegate void StartDelegate(long id);
-
-/// <summary>
 /// Initialization message for the client (reliable). Contains a whole state for a given frame.
 /// This way a late-joining client does not have to receive all inputs since the state for frame 0.
+/// Also informs the client of their unique ID, to distinguish their data from other clients in the state.
 /// </summary>
+/// <param name="id">The unique ID of this client connection valid for the rest of the server's lifetime. </param>
 /// <param name="frame">The frame id of the state.</param>
 /// <param name="state">Move of the serialized state (pooled from <see cref="T:ArrayPool{byte}.Shared"/>).</param>
-public delegate void InitializeDelegate(long frame, Memory<byte> state);
+public delegate void InitializeDelegate(int id, long frame, Memory<byte> state);
 
 /// <summary>
 /// Auth input message (reliable) is sent to the client for each state update after the initial state message.
@@ -79,11 +75,6 @@ public delegate void SetDelayDelegate(long frame, double delay);
 /// </remarks>
 public interface IClientReceiver
 {
-    /// <summary>
-    /// Notification for the start message.
-    /// </summary>
-    event StartDelegate OnStart;
-    
     /// <summary>
     /// Notification for the initialize message.
     /// </summary>

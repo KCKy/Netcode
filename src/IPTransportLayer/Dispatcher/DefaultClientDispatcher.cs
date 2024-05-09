@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Buffers;
+using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
 using Serilog;
 using Kcky.Useful;
 
-namespace Kcky.GameNewt.Transport.Default;
+namespace Kcky.GameNewt.Dispatcher.Default;
 
 /// <summary>
 /// Implementation for the client-side part of the default transport protocol (<see cref="IClientSender"/>, <see cref="IClientReceiver"/>)
@@ -41,8 +42,6 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         transport.OnReliableMessage += HandleMessage;
     }
 
-    /// <inheritdoc/>
-    public event StartDelegate? OnStart;
     
     /// <inheritdoc/>
     public event InitializeDelegate? OnInitialize;
@@ -97,13 +96,12 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         var header = message.Span[..headerLength];
         
-        long id = header.ReadLong();
+        int id = header.ReadInt();
         long frame = header.ReadLong();
 
         var state = message[headerLength..];
         
-        OnStart?.Invoke(id);
-        OnInitialize?.Invoke(frame, state); // Transfer memory ownership to the client
+        OnInitialize?.Invoke(id, frame, state); // Transfer memory ownership to the client
     }
 
     void HandleServerAuthorize(Memory<byte> message)
