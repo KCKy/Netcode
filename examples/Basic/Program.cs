@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Kcky.GameNewt.Client;
+using Kcky.GameNewt.Dispatcher.Default;
 using Kcky.GameNewt.Server;
 using Kcky.GameNewt.Transport.Default;
 
@@ -38,6 +39,7 @@ class Program
 
         Task result = await Task.WhenAny(server.RunAsync(), transport.RunAsync());
 
+        transport.Terminate();
         server.Terminate();
 
         await result;

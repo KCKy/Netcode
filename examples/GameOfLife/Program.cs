@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using Kcky.GameNewt.Client;
+using Kcky.GameNewt.Dispatcher.Default;
 using Kcky.GameNewt.Server;
 using Kcky.GameNewt.Transport.Default;
 using Serilog;

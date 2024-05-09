@@ -44,7 +44,7 @@ sealed class Displayer : SfmlDisplayer<GameState>
             return;
         latestPredict_ = frame;
 
-        foreach ((long id, IEntity entity) in gameState.GetEntities(predictWriter_))
+        foreach ((int id, IEntity entity) in gameState.GetEntities(predictWriter_))
             if (entity.IsPredicted(Id))
                 predictLerper_.AddEntity(id, entity);
 
@@ -57,7 +57,7 @@ sealed class Displayer : SfmlDisplayer<GameState>
             return;
         latestAuth_ = frame;
 
-        foreach ((long id, IEntity entity) in gameState.GetEntities(predictWriter_))
+        foreach ((int id, IEntity entity) in gameState.GetEntities(predictWriter_))
             if (!entity.IsPredicted(Id))
                 authLerper_.AddEntity(id, entity);
 

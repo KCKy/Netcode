@@ -21,7 +21,7 @@ public abstract class SfmlDisplayer<T> : IDisplayer<T>
     /// <summary>
     /// The ID of this client, populated before <see cref="OnInit"/> is invoked.
     /// </summary>
-    public long Id = long.MinValue;
+    public int Id = int.MinValue;
 
     IClient? client_;
 
@@ -96,7 +96,7 @@ public abstract class SfmlDisplayer<T> : IDisplayer<T>
     protected readonly DebugInfo DebugInfo = new();
 
     /// <inheritdoc/>
-    public void Init(long id)
+    public void Init(int id)
     {
         Id = id;
         OnInit();

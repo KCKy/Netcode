@@ -11,13 +11,13 @@ namespace TopDownShooter.Game;
 [MemoryPackable]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
-    [MemoryPackInclude] SortedDictionary<long, ClientInfo> idToClientInfo_ = new();
-    [MemoryPackInclude] long lastConnected_ = long.MinValue;
-    [MemoryPackInclude] long entityCounter_ = 0;
+    [MemoryPackInclude] SortedDictionary<int, ClientInfo> idToClientInfo_ = new();
+    [MemoryPackInclude] int lastConnected_ = int.MinValue;
+    [MemoryPackInclude] int entityCounter_ = 0;
 
-    public IEnumerable<(long Id, IEntity Entity)> GetEntities(PooledBufferWriter<byte> copyWriter)
+    public IEnumerable<(int Id, IEntity Entity)> GetEntities(PooledBufferWriter<byte> copyWriter)
     {
-        foreach ((long id, ClientInfo info) in idToClientInfo_)
+        foreach ((int id, ClientInfo info) in idToClientInfo_)
         {
             if (info.Avatar is not { } avatar)
                 continue;
@@ -32,7 +32,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     PlayerAvatar? UpdatePlayerAvatar(UpdateClientInfo<ClientInput> info)
     {
-        (long id, ClientInput input, bool disconnected) = info;
+        (int id, ClientInput input, bool disconnected) = info;
         
         if (!idToClientInfo_.TryGetValue(id, out ClientInfo? client))
         {

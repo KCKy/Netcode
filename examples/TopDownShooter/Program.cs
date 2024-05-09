@@ -8,6 +8,7 @@ using Kcky.GameNewt.Server;
 using Kcky.GameNewt.Transport.Default;
 using Serilog;
 using System;
+using Kcky.GameNewt.Dispatcher.Default;
 using Serilog.Events;
 
 namespace TopDownShooter;

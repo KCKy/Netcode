@@ -4,7 +4,7 @@ namespace Basic;
 
 class Displayer : IDisplayer<GameState>
 {
-    long localId_ = -1;
+    int localId_ = -1;
 
     public Displayer()
     {
@@ -12,7 +12,7 @@ class Displayer : IDisplayer<GameState>
         Console.SetCursorPosition(0, 0);
     }
 
-    public void Init(long id)
+    public void Init(int id)
     {
         localId_ = id;
     }
@@ -24,13 +24,13 @@ class Displayer : IDisplayer<GameState>
         Console.WriteLine($"My ID: {localId_} Frame: {frame} Player: {gameState.IdToPlayer.Count}");
 
         var idToPlayer = gameState.IdToPlayer;
-        long[,] flags = gameState.PlacedFlags;
+        int[,] flags = gameState.PlacedFlags;
 
         for (int y = 0; y < GameState.MapSize; y++)
         {
             for (int x = 0; x < GameState.MapSize; x++)
             {
-                long value = flags[x, y];
+                int value = flags[x, y];
                 switch (value)
                 {
                     case 0:
@@ -44,7 +44,7 @@ class Displayer : IDisplayer<GameState>
             Console.WriteLine();
         }
 
-        foreach ((long playerId, PlayerInfo info) in idToPlayer)
+        foreach ((int playerId, PlayerInfo info) in idToPlayer)
         {
             Console.SetCursorPosition(info.X, info.Y + 1);
             if (playerId == localId_)

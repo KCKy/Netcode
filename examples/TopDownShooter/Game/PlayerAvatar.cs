@@ -45,7 +45,7 @@ partial struct Position
 sealed partial class PlayerAvatar : IEntity
 {
     [MemoryPackInclude]
-    long id_;
+    int id_;
 
     [MemoryPackInclude]
     Position position_ = new();
@@ -54,10 +54,10 @@ sealed partial class PlayerAvatar : IEntity
     Vec2<Fixed> velocity_;
 
     [MemoryPackInclude]
-    long entityId_;
+    int entityId_;
 
     [MemoryPackInclude]
-    long playerId_;
+    int playerId_;
 
     [MemoryPackConstructor]
     PlayerAvatar() { }
@@ -67,7 +67,7 @@ sealed partial class PlayerAvatar : IEntity
         return Position.ToString();
     }
 
-    public PlayerAvatar(long entityId, long playerId)
+    public PlayerAvatar(int entityId, int playerId)
     {
         entityId_ = entityId;
         playerId_ = playerId;
@@ -171,7 +171,7 @@ sealed partial class PlayerAvatar : IEntity
         Draw(displayer.Window, position - origin);
     }
 
-    public bool IsPredicted(long localId) => playerId_ == localId;
+    public bool IsPredicted(int localId) => playerId_ == localId;
 
-    public long EntityId => entityId_;
+    public int EntityId => entityId_;
 }

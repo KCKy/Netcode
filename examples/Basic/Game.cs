@@ -27,19 +27,19 @@ partial class ServerInput;
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
     [MemoryPackInclude]
-    long[,] placedFlags_;
+    int[,] placedFlags_;
 
     [MemoryPackInclude]
-    SortedDictionary<long, PlayerInfo> idToPlayer_;
+    SortedDictionary<int, PlayerInfo> idToPlayer_;
 
-    public SortedDictionary<long, PlayerInfo> IdToPlayer => idToPlayer_;
-    public long[,] PlacedFlags => placedFlags_;
+    public SortedDictionary<int, PlayerInfo> IdToPlayer => idToPlayer_;
+    public int[,] PlacedFlags => placedFlags_;
 
     public const int MapSize = 10;
 
     public GameState()
     {
-        placedFlags_ = new long[MapSize, MapSize];
+        placedFlags_ = new int[MapSize, MapSize];
         idToPlayer_ = new();
     }
 
@@ -58,7 +58,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
     {
         foreach (var clientInputInfo in updateInputs.ClientInputInfos.Span)
         {
-            long id = clientInputInfo.Id;
+            int id = clientInputInfo.Id;
             ClientInput input = clientInputInfo.Input;
             bool terminated = clientInputInfo.Terminated;
 

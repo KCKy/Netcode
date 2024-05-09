@@ -6,5 +6,5 @@ namespace TopDownShooter.Display;
 interface IEntity
 {
    void DrawLerped(Displayer displayer, Vector2f origin, IEntity to, float t);
-   bool IsPredicted(long localId);
+   bool IsPredicted(int localId);
 }

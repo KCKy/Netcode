@@ -8,7 +8,7 @@ namespace GameOfLife;
 [MemoryPackable]
 sealed partial class PlayerAvatar : ILevelObject
 {
-    public long Id;
+    public int Id;
 
     static readonly Palette PlayerPalette = new()
     {

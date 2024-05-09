@@ -25,11 +25,11 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     public static Vector2i SpawnPoint = new(0, 0);
 
-    public SortedDictionary<long, Player> IdToPlayer = new();
+    public SortedDictionary<int, Player> IdToPlayer = new();
 
     public Level Level = new(LevelWidth, LevelHeight);
 
-    bool TrySpawnPlayer(long id, Player player)
+    bool TrySpawnPlayer(int id, Player player)
     {
         ref ILevelObject? spawn = ref Level[SpawnPoint];
 
@@ -46,7 +46,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         return true;
     }
 
-    public void UpdatePlayer(long id, Player player)
+    public void UpdatePlayer(int id, Player player)
     {
         if (player.Position is not { } oldPos)
             throw new ArgumentException("Player has not spawned yet.", nameof(player));
@@ -158,7 +158,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
         foreach (var clientInfo in updateInputs.ClientInputInfos.Span)
         {
-            (long id, ClientInput input, bool disconnected) = clientInfo;
+            (int id, ClientInput input, bool disconnected) = clientInfo;
 
             if (disconnected)
             {
