@@ -22,11 +22,15 @@ namespace Kcky.GameNewt.Transport.Default.Tests;
 /// </remarks>
 public class IpTransportTests
 {
-    static IEnumerable<IpClientTransport> ConstructClients(IPEndPoint endPoint, int count) =>
-        from endpoint in Enumerable.Repeat(endPoint, count) select new IpClientTransport(endpoint);
+    static IpClientTransport[] ConstructClients(IPEndPoint endPoint, int count)
+    {
+        return (from endpoint in Enumerable.Repeat(endPoint, count) select new IpClientTransport(endpoint)).ToArray();
+    }
 
-    static IEnumerable<Task> RunClients(IEnumerable<IpClientTransport> clients) =>
-        from client in clients select client.RunAsync();
+    static Task[] RunClients(IEnumerable<IpClientTransport> clients)
+    {
+        return (from client in clients select client.RunAsync()).ToArray();
+    }
 
     static void TerminateClients(IEnumerable<IpClientTransport> clients)
     {
@@ -40,7 +44,7 @@ public class IpTransportTests
     /// <param name="output">Output for logging.</param>
     public IpTransportTests(ITestOutputHelper output)
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Debug().CreateLogger();
+        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Verbose().CreateLogger();
     }
     
     /// <summary>
@@ -75,10 +79,10 @@ public class IpTransportTests
             await serverTask;
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
-        var clients = ConstructClients(target, clientCount).ToArray();
-        var clientTasks = RunClients(clients).ToArray();
+        var clients = ConstructClients(target, clientCount);
+        var clientTasks = RunClients(clients);
         
-        await Task.Delay(clientCount * 100);
+        await Task.Delay(150);
 
         Log.Debug("[Test] Terminating clients.");
 
@@ -100,7 +104,7 @@ public class IpTransportTests
             }
         }
 
-        await Task.Delay(clientCount * 10);
+        await Task.Delay(20);
 
         Assert.Equal(clientCount, properlyEnded);
 
@@ -120,7 +124,7 @@ public class IpTransportTests
         Assert.True(joined.IsEmpty);
         Assert.Equal(1 + clientCount, properlyEnded);
         
-        await Task.Delay(100);
+        await Task.Delay(20);
     }
 
     /// <summary>
@@ -155,10 +159,10 @@ public class IpTransportTests
             await serverTask;
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
-        var clients = ConstructClients(target, clientCount).ToArray();
-        var clientTasks = RunClients(clients).ToArray();
+        var clients = ConstructClients(target, clientCount);
+        var clientTasks = RunClients(clients);
         
-        await Task.Delay(clientCount * 100);
+        await Task.Delay(150);
 
         Log.Debug("[Test] Kicking clients.");
 
@@ -172,7 +176,7 @@ public class IpTransportTests
         foreach (var task in clientTasks)
             await task;
 
-        await Task.Delay(clientCount * 10);
+        await Task.Delay(20);
 
         Log.Information("[Test] Terminating server.");
 
@@ -190,9 +194,8 @@ public class IpTransportTests
         Assert.True(joined.IsEmpty);
         Assert.True(serverEnded);
         
-        await Task.Delay(100);
+        await Task.Delay(20);
     }
-
 
     /// <summary>
     /// Test whether reliable messages from client to server work.
@@ -246,10 +249,10 @@ public class IpTransportTests
         };
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
-        var clients = ConstructClients(target, clientCount).ToArray();
-        _ = RunClients(clients).Count();
+        var clients = ConstructClients(target, clientCount);
+        RunClients(clients);
         
-        await Task.Delay(count * clientCount * 50);
+        await Task.Delay(150);
         
         for (int i = 1; i <= count; i++)
         {
@@ -261,7 +264,7 @@ public class IpTransportTests
             }
         }
 
-        await Task.Delay(clientCount * count * 50);
+        await Task.Delay(20);
 
         Assert.Equal(clientCount, idToExpectedValue.Count);
         foreach (int expected in idToExpectedValue.Values)
@@ -274,7 +277,7 @@ public class IpTransportTests
         TerminateClients(clients);
         server.Kick();
 
-        await Task.Delay(100);
+        await Task.Delay(20);
     }
 
     /// <summary>
@@ -310,8 +313,8 @@ public class IpTransportTests
         Dictionary<int, int> idToExpectedValue = new();
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
-        var clients = ConstructClients(target, clientCount).ToArray();
-        _ = RunClients(clients).Count();
+        var clients = ConstructClients(target, clientCount);
+        RunClients(clients);
 
         foreach ((int index, var client) in clients.WithIndexes())
         {
@@ -335,7 +338,7 @@ public class IpTransportTests
             };
         }
         
-        await Task.Delay(clientCount * 50);
+        await Task.Delay(10);
         
         for (int i = 1; i <= count; i++)
         {
@@ -344,7 +347,7 @@ public class IpTransportTests
             server.SendReliable(mem);
         }
 
-        await Task.Delay(clientCount * count * 50);
+        await Task.Delay(150);
 
         Assert.Equal(clientCount, idToExpectedValue.Count);
         foreach (int expected in idToExpectedValue.Values)
@@ -357,9 +360,9 @@ public class IpTransportTests
         TerminateClients(clients);
         server.Kick();
 
-        await Task.Delay(100);
+        await Task.Delay(20);
     }
-
+    
     /// <summary>
     /// Test whether reliable unicasts from server to client work.
     /// </summary>
@@ -400,7 +403,7 @@ public class IpTransportTests
         Dictionary<long, int> idToExpectedValue = new();
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
-        var clients = ConstructClients(target, clientCount).ToArray();
+        var clients = ConstructClients(target, clientCount);
         
         foreach ((int index, var client) in clients.WithIndexes())
         {
@@ -432,16 +435,15 @@ public class IpTransportTests
         
         for (int i = 1; i <= count; i++)
         {
-            var mem = ArrayPool<byte>.Shared.RentMemory(sizeof(int));
-            Bits.Write(i, mem.Span);
-
             foreach (var id in clientIds)
+            {
+                var mem = ArrayPool<byte>.Shared.RentMemory(sizeof(int));
+                Bits.Write(i, mem.Span);
                 server.SendReliable(mem, id);
-
-            await Task.Delay(1);
+            }
         }
 
-        await Task.Delay(clientCount * count * 50);
+        await Task.Delay(150);
 
         Assert.Equal(clientCount, idToExpectedValue.Count);
         foreach (int expected in idToExpectedValue.Values)
@@ -454,7 +456,7 @@ public class IpTransportTests
         TerminateClients(clients);
         server.Kick();
 
-        await Task.Delay(100);
+        await Task.Delay(20);
     }
 
     /// <summary>
@@ -491,13 +493,13 @@ public class IpTransportTests
 
         if (serverTask.IsCompleted)
             await serverTask;
-        
+
         object readingLock = new();
         Dictionary<long, int> idToResponses = new();
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
-        var clients = ConstructClients(target, clientCount).ToArray();
-        
+        var clients = ConstructClients(target, clientCount);
+
         foreach ((int index, var client) in clients.WithIndexes())
         {
             int indexCapture = index;
@@ -517,8 +519,8 @@ public class IpTransportTests
             };
         }
 
-        _ = RunClients(clients).Count();
-        
+        RunClients(clients);
+
         await Task.Delay(10);
 
 
@@ -532,7 +534,7 @@ public class IpTransportTests
             }
         }
 
-        await Task.Delay(pingCount * clientCount * 50);
+        await Task.Delay(150);
 
         Assert.Equal(clientCount, idToResponses.Count);
 
@@ -547,7 +549,7 @@ public class IpTransportTests
         TerminateClients(clients);
         server.Kick();
 
-        await Task.Delay(100);
+        await Task.Delay(20);
     }
 
     /// <summary>
@@ -566,20 +568,20 @@ public class IpTransportTests
     {
         IPEndPoint endPoint = new(IPAddress.Loopback, 0);
         IpServerTransport server = new(endPoint);
-        
+
         Task serverTask = server.RunAsync();
 
         await Task.Delay(10);
 
         if (serverTask.IsCompleted)
             await serverTask;
-        
+
         object readingLock = new();
         Dictionary<long, int> idToMessages = new();
 
         IPEndPoint target = new(IPAddress.Loopback, server.Port);
-        var clients = ConstructClients(target, clientCount).ToArray();
-        
+        var clients = ConstructClients(target, clientCount);
+
         foreach ((int index, var client) in clients.WithIndexes())
         {
             int indexCapture = index;
@@ -599,8 +601,8 @@ public class IpTransportTests
             };
         }
 
-        _ = RunClients(clients).Count();
-        
+        RunClients(clients);
+
         await Task.Delay(10);
 
         foreach (var client in clients)
@@ -609,7 +611,7 @@ public class IpTransportTests
             client.SendUnreliable(mem);
         }
 
-        await Task.Delay(10);
+        await Task.Delay(150);
 
         Memory<byte> template = new byte[server.UnreliableMessageHeader + sizeof(int)];
         Bits.Write(42, template.Span[server.UnreliableMessageHeader..]);
@@ -621,7 +623,7 @@ public class IpTransportTests
             server.SendUnreliable(mem);
         }
 
-        await Task.Delay(pingCount * clientCount * 50);
+        await Task.Delay(150);
 
         Assert.Equal(clientCount, idToMessages.Count);
 
@@ -636,6 +638,6 @@ public class IpTransportTests
         TerminateClients(clients);
         server.Kick();
 
-        await Task.Delay(100);
+        await Task.Delay(20);
     }
 }
