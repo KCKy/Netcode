@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Kcky.GameNewt.DataStructures;
 using Kcky.GameNewt.Providers;
-using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
@@ -49,6 +48,12 @@ sealed class PredictManager<TC, TS, TG>
     ///
 
     // Mutex of this object shall be held when the holder or input is checked or updated to assure atomicity and validity.
+    readonly StateHolder<TC, TS, TG> newPredictState_ = new StateHolder<TC, TS, TG>();
+    UpdateInput<TC, TS> newPredictInput_ = UpdateInput<TC, TS>.Empty;
+    bool isReplaced_ = false;
+    //
+
+    //
     readonly StateHolder<TC, TS, TG> predictState_ = new StateHolder<TC, TS, TG>();
     UpdateInput<TC, TS> predictInput_ = UpdateInput<TC, TS>.Empty;
     //
@@ -90,11 +95,8 @@ sealed class PredictManager<TC, TS, TG>
     /// <param name="state">The state to initialize with.</param>
     public void Init(long frame, TG state)
     {
-        lock (predictState_)
-        {
-            predictState_.Frame = frame;
-            predictState_.State = state;
-        }
+        predictState_.Frame = frame;
+        predictState_.State = state;
 
         lock (clientInputs_)
             clientInputs_.Set(frame + 1);
@@ -102,21 +104,6 @@ sealed class PredictManager<TC, TS, TG>
         predictQueue_.Clear();
 
         logger_.Debug("Initiated predict state.");
-    }
-
-    /// <summary>
-    /// The current frame of predict simulation.
-    /// </summary>
-    /// <remarks>
-    /// This method is thread safe.
-    /// </remarks>
-    public long Frame
-    {
-        get
-        {
-            lock (predictState_)
-                return predictState_.Frame;
-        }
     }
 
     /// <summary>
@@ -199,18 +186,18 @@ sealed class PredictManager<TC, TS, TG>
 
     long TryReplace(long replacementIndex, long frame, UpdateInput<TC, TS> input)
     {
-        lock (predictState_)
+        lock (newPredictState_)
         {
-            long difference = predictState_.Frame - frame;
+            long difference = newPredictState_.Frame - frame;
 
             if (difference != 0)
                 return difference;
 
-            Debug.Assert(predictState_.Frame == replacementState_.Frame);
+            Debug.Assert(newPredictState_.Frame == replacementState_.Frame);
 
             // Replacement was successful
-            (replacementState_.State, predictState_.State) = (predictState_.State, replacementState_.State);
-            predictInput_ = input;
+            (replacementState_.State, newPredictState_.State) = (newPredictState_.State, replacementState_.State);
+            newPredictInput_ = input;
 
             lock (replacementMutex_)
                 if (currentReplacement_ <= replacementIndex)
@@ -276,7 +263,7 @@ sealed class PredictManager<TC, TS, TG>
                 case < 0:
                     logger_.Warning(
                         "Predict state is behind replacement state. This should happen only on startup. {Replacement} {Predict}",
-                        replacementState_.Frame, predictState_.Frame);
+                        replacementState_.Frame, newPredictState_.Frame);
                     return;
             }
 
@@ -305,35 +292,44 @@ sealed class PredictManager<TC, TS, TG>
         // Send
         Sender.SendInput(frame, localInput);
 
-        // Modify
-        logger_.Verbose("Updating predict at frame {frame}.", frame);
-            
-        lock (predictState_)
+        lock (newPredictState_)
         {
-            // Predict other input
-            PredictClientInput(predictInput_.ClientInputInfos.Span, localInput);
-            ServerInputPredictor.PredictInput(ref predictInput_.ServerInput, predictState_.State);
-            
-            // Update
-            predictState_.Update(predictInput_);
-
-            // Display
-            Displayer.AddPredict(frame, predictState_.State);
-
-            // Save prediction input if this timeline is not stale
-            MemoryPackSerializer.Serialize(predictInputWriter_, predictInput_);
-
-            lock (replacementMutex_)
+            if (isReplaced_)
             {
-                if (!activeReplacement_)
-                {
-                    var serialized = predictInputWriter_.ExtractAndReplace();
-                    predictQueue_.Enqueue(serialized);
-                }
-                else
-                {
-                    predictInputWriter_.Reset();
-                }
+                Debug.Assert(newPredictState_.Frame == predictState_.Frame);
+                (newPredictState_.State, predictState_.State) = (predictState_.State, newPredictState_.State);
+                predictInput_ = newPredictInput_;
+                isReplaced_ = false;
+            }
+
+            newPredictState_.Frame = frame;
+        }
+
+        logger_.Verbose("Updating predict at frame {frame}.", frame);
+
+        // Predict other input
+        PredictClientInput(predictInput_.ClientInputInfos.Span, localInput);
+        ServerInputPredictor.PredictInput(ref predictInput_.ServerInput, predictState_.State);
+        
+        // Update
+        predictState_.Update(predictInput_);
+
+        // Display
+        Displayer.AddPredict(frame, predictState_.State);
+
+        // Save prediction input if this timeline is not stale
+        MemoryPackSerializer.Serialize(predictInputWriter_, predictInput_);
+
+        lock (replacementMutex_)
+        {
+            if (!activeReplacement_)
+            {
+                var serialized = predictInputWriter_.ExtractAndReplace();
+                predictQueue_.Enqueue(serialized);
+            }
+            else
+            {
+                predictInputWriter_.Reset();
             }
         }
     }
