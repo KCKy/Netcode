@@ -4,48 +4,35 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using Kcky.Useful;
+using System.Collections.Generic;
 
 namespace Kcky.GameNewt.Timing;
 
 /// <summary>
 /// A clock which periodically raises an event.
-/// Creates a timing thread, which uses passive waiting.
+/// Expects <see cref="Update"/> to be called often to check for clock ticks.
 /// </summary>
-sealed class Clock
+sealed class Clock : IClock
 {
-    /// <summary>
-    /// Is evenly called on a clock tick. Provides delta time in seconds.
-    /// </summary>
+    /// <inheritdoc/>
     public event Action? OnTick;
     
-    volatile int targetPeriod_;
+    long targetPeriod_;
     double targetTps_;
-    static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
-    long clockQuantumTicks_ = TicksPerMs * 15;
+    long last_;
+    long tickSum_;
+    long tickCount_;
 
-    /// <summary>
-    /// The smallest time period of sleep to be requested from the OS.
-    /// </summary>
-    /// <remarks>
-    /// On some operating systems (like sleep) calling sleep on a too small value results in sleeping for an undesirably long amount of time.
-    /// In these cases it is desirable to yield instead.
-    /// </remarks>
-    public TimeSpan ClockQuantum
-    {
-        get => TimeSpan.FromSeconds(clockQuantumTicks_ / (double)Stopwatch.Frequency);
-        set => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
-    }
+    CancellationToken cancelToken_ = new(true);
 
-    /// <summary>
-    /// The target TPS of the clock, the clock should as closely match this TPS while spacing the ticks evenly.
-    /// </summary>
+    /// <inheritdoc/>
     public double TargetTps
     {
         get => targetTps_;
         set
         {
             double period = 1 / value * Stopwatch.Frequency;
-            targetPeriod_ = (int)Math.Clamp(period, 1, int.MaxValue);
+            targetPeriod_ = (long)Math.Clamp(period, 1, long.MaxValue);
             logger_.Verbose("New clock target period: {Period}", targetPeriod_);
             targetTps_ = value;
         }
@@ -59,51 +46,39 @@ sealed class Clock
     {
         if (!Stopwatch.IsHighResolution)
             throw new PlatformNotSupportedException("Platform does not support precision timing.");
-
         TargetTps = 1;
     }
 
     readonly ILogger logger_ = Log.ForContext<Clock>();
 
-    void TimerThread(object? cancelTokenRaw)
+
+    /// <summary>
+    /// The update method of the clock.
+    /// Should be called regularly to check for clock ticks.
+    /// <returns>The time the next clock tick will be in.</returns>
+    /// </summary>
+    public long Update()
     {
-        CancellationToken cancelToken = (CancellationToken)cancelTokenRaw!;
-
-        long tickSum = 0;
-        long tickCount = 0;
-
-        long last = Stopwatch.GetTimestamp();
+        if (cancelToken_.IsCancellationRequested)
+            return long.MaxValue;
 
         while (true)
         {
             long current = Stopwatch.GetTimestamp();
-            long delta = current - last;
-            long period = targetPeriod_;
+            long delta = current - last_;
+            long remaining = targetPeriod_ - delta;
 
-            if (cancelToken.IsCancellationRequested)
-                return;
+            if (remaining > 0)
+                return remaining;
+            
+            last_ = current + remaining;
 
-            long remaining = period - delta;
+            double freq = Stopwatch.Frequency;
+            tickSum_ += delta;
+            tickCount_++;
 
-            if (remaining <= 0)
-            {
-                last = current + remaining;
-
-                {
-                    double freq = Stopwatch.Frequency;
-                    tickSum += delta;
-                    tickCount++;
-
-                    logger_.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, (double)tickSum / tickCount / freq);
-
-                    OnTick?.Invoke();
-                }
-
-                continue;
-            }
-
-            long wait = Math.Max(remaining - clockQuantumTicks_, 0);
-            Thread.Sleep((int)(wait / TicksPerMs));
+            logger_.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, (double)tickSum_ / tickCount_ / freq);
+            OnTick?.Invoke();
         }
     }
 
@@ -114,11 +89,9 @@ sealed class Clock
     /// <returns>Infinite task which may be cancelled which represents the clock lifetime.</returns>
     public async Task RunAsync(CancellationToken cancelToken = new())
     {
-        Thread thread = new(TimerThread)
-        {
-            Priority = ThreadPriority.Highest
-        };
-        thread.Start(cancelToken);
+        last_ = Stopwatch.GetTimestamp();
+        cancelToken_ = cancelToken;
+
         await cancelToken;
         throw new OperationCanceledException();
     }

@@ -17,7 +17,7 @@ namespace GameNewt.Timing;
 sealed class SynchronizedClock
 {
     readonly object mutex_ = new();
-    readonly Clock internalClock_ = new();
+    readonly IClock internalClock_;
     readonly ILogger logger_ = Log.ForContext<SynchronizedClock>();
     readonly double targetTps_;
 
@@ -49,9 +49,11 @@ sealed class SynchronizedClock
 
     /// <summary>
     /// Constructor.
+    /// <param name="clock">IClock instance to use for tick measuring.</param>
     /// </summary>
-    public SynchronizedClock()
+    public SynchronizedClock(IClock clock)
     {
+        internalClock_ = clock;
         internalClock_.OnTick += TickHandler;
         TargetTps = 1;
     }

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GameNewt.Timing;
 using Kcky.GameNewt.Providers;
+using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
@@ -110,7 +111,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     readonly SynchronizedClock clock_;
 
-
     readonly IDisplayer<TGameState> displayer_ = new DefaultDisplayer<TGameState>();
 
     /// <summary>
@@ -149,11 +149,30 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         init => predictManager_.ServerInputPredictor = value;
     }
 
+    Action updateAction_ = () => { };
+    IClock GetTimingClock(bool useOwnThread)
+    {
+        if (useOwnThread)
+            return new ThreadClock();
+        
+        Clock clock = new();
+        updateAction_ = () => clock.Update();
+        return clock;
+    }
+
+    /// <summary>
+    /// Update the client.
+    /// Shall be called frequently to update the simulation.
+    /// </summary>
+    public void Update() => updateAction_.Invoke();
+
+
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="dispatcher">Sender to use for sending messages the server.</param>
-    public Client(IClientDispatcher dispatcher)
+    /// <param name="useOwnThread"></param>
+    public Client(IClientDispatcher dispatcher, bool useOwnThread = true)
     {
         dispatcher_ = dispatcher;
 
@@ -167,7 +186,10 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             Sender = dispatcher_
         };
 
-        clock_ = new SynchronizedClock()
+
+        IClock internalClock = GetTimingClock(useOwnThread);
+
+        clock_ = new SynchronizedClock(internalClock)
         {
             TargetTps = TGameState.DesiredTickRate
         };

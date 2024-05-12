@@ -76,7 +76,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     // Locking the holder to stop RW/WR conflicts and correct init behaviour (WW does not happen due to tickMutex)
     readonly StateHolder<TClientInput, TServerInput, TGameState> holder_ = new();
 
-    readonly Clock clock_ = new();
+    readonly ThreadClock clock_ = new();
     readonly CancellationTokenSource clockCancellation_ = new();
 
     readonly IServerInputProvider<TServerInput, TGameState> inputProvider_ = new DefaultServerInputProvider<TServerInput, TGameState>();

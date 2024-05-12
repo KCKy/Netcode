@@ -64,7 +64,7 @@ public sealed class ClockTests
     /// <param name="output">Output for logging.</param>
     public ClockTests(ITestOutputHelper output)
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Debug().CreateLogger();
+        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Verbose().CreateLogger();
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ public sealed class ClockTests
     [InlineData(10d, 2, 0.001, 0.0005)]
     public async Task Basic(double time, double tps, double meanError, double deviationError)
     {
-        Clock clock = new()
+        ThreadClock clock = new()
         {
             TargetTps = tps
         };
@@ -98,9 +98,9 @@ public sealed class ClockTests
 
         CancellationTokenSource cancellation = new();
 
-        Task clockTask = clock.RunAsync(cancellation.Token);
         stats.Start();
-
+        Task clockTask = clock.RunAsync(cancellation.Token);
+        
         await Task.WhenAny(clockTask, Task.Delay(TimeSpan.FromSeconds(time), cancellation.Token));
 
         Assert.False(clockTask.IsCompleted);
@@ -117,9 +117,8 @@ public sealed class ClockTests
 
         (double meanDelta, double deltaDeviation) = stats.GetStats();
 
+        Log.Information("Mean: {Mean} Deviation: {Deviation}", meanDelta, deltaDeviation);
         Assert.InRange(meanDelta, period - meanError, period + meanError);
         Assert.InRange(deltaDeviation, -deviationError, deviationError);
-
-        Log.Information("Mean: {Mean} Deviation: {Deviation}", meanDelta, deltaDeviation);
     }
 }
