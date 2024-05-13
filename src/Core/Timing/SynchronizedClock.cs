@@ -95,7 +95,7 @@ sealed class SynchronizedClock
     {
         lock (mutex_)
         {
-            logger_.Debug("Started sync-clock.");
+            logger_.Debug("ServerStarted sync-clock.");
             beginTime_ = Stopwatch.GetTimestamp();
             TickHandlerUnsafe();
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using GameNewt.Timing;
@@ -8,72 +9,43 @@ using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Client;
 
-/// <summary>
-/// Provides common API of the client usable across games.
-/// </summary>
-public interface IClient
+static partial class ClientLogMessages
 {
-    /// <summary>
-    /// The id of the client.
-    /// </summary>
-    int Id { get; }
+    [LoggerMessage(LogLevel.Information, "Finished client state update for {Frame} resulting in state: {SerializedState}")]
+    internal static partial void ClientTraceState(this ILogger logger, long frame, ReadOnlySpan<byte> serializedState);
 
-    /// <summary>
-    /// 
-    /// </summary>
-    bool TraceState { get; set; }
+    [LoggerMessage(LogLevel.Debug, "The client has started.")]
+    internal static partial void ClientStarted(this ILogger logger);
 
-    /// <summary>
-    /// Whether to check if checksums provided by the server match with the states on the client side (server needs to have checksum enabled as well).
-    /// </summary>
-    bool UseChecksum { get; set; }
+    [LoggerMessage(LogLevel.Debug, "The client has been kicked from the game.")]
+    internal static partial void ClientKicked(this ILogger logger);
 
-    /// <summary>
-    /// Whether to trace time, how much took to update each frame, in the log.
-    /// </summary>
-    bool TraceFrameTime { get; init; }
+    [LoggerMessage(LogLevel.Debug, "The client has been signalled to terminate.")]
+    internal static partial void ClientTerminated(this ILogger logger);
+
+    [LoggerMessage(LogLevel.Trace, "The client has received delay info for frame {Frame} with value {Delay}.")]
+    internal static partial void ClientDelayInfo(this ILogger logger, long frame, double delay);
     
-    /// <summary>
-    /// The latest authoritative frame the client has computed.
-    /// </summary>
-    long AuthFrame { get; }
+    [LoggerMessage(LogLevel.Critical, "The client has detected a desync from the server for frame {Frame} ({ActualSum} != {ExpectedSum})! The diverged state: {SerializedState} has resulted from input {SerializedInput}")]
+    internal static partial void ClientDesyncDetected(this ILogger logger, long frame, long actualSum, long expectedSum, ReadOnlySpan<byte> serializedState,  ReadOnlySpan<byte> serializedInput);
 
-    /// <summary>
-    /// The latest predict frame the client has computed i.e. the frame the clients perception of the game is at.
-    /// </summary>
-    long PredictFrame { get; }
-    
-    /// <summary>
-    /// Number of seconds, how much the client should be ahead from the server (ignoring latency).
-    /// </summary>
-    double TargetDelta { get; }
-    
-    /// <summary>
-    /// Returns the predict loop TPS, could be slightly off from the server loop to catch up/slow down.
-    /// </summary>
-    double CurrentTps { get; }
+    [LoggerMessage(LogLevel.Trace, "The client authoritative state for frame {Frame} has been verified.")]
+    internal static partial void ClientChecksumVerified(this ILogger logger, long frame);
 
-    /// <summary>
-    /// The target TPS of the client clock, the clock should as closely match this TPS while spacing the ticks evenly.
-    /// </summary>
-    public double TargetTps { get; }
+    [LoggerMessage(LogLevel.Trace, "The client has begun the next tick for frame.")]
+    internal static partial void ClientBeganAuthFrame(this ILogger logger);
 
-    /// <summary>
-    /// Begin the client. Starts the update controller for predict, input collection, and server communication.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">If the client has already been started or terminated.</exception>
-    /// <returns>Task representing the client's runtime. When the client crashes the task will be faulted. If the client is stopped it will be cancelled.</returns>
-    Task RunAsync();
-    
-    /// <summary>
-    /// Stops the client. Predict updates will stop.
-    /// </summary>
-    void Terminate();
+    [LoggerMessage(LogLevel.Trace, "The client has completed the tick for frame {Frame}.")]
+    internal static partial void ClientCompletedAuthFrame(this ILogger logger, long frame);
+
+    [LoggerMessage(LogLevel.Debug, "Client tick for frame {Frame} took {Time}.")]
+    internal static partial void ClientAuthFrameTime(this ILogger logger, long frame, TimeSpan time);
 }
 
 /// <summary>
@@ -93,9 +65,9 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     readonly PredictManager<TClientInput, TServerInput, TGameState> predictManager_;
     readonly CancellationTokenSource clientCancellation_ = new();
     readonly object stateMutex_ = new(); // Assures atomicity of start and termination operations.
-    readonly UpdateTimer timer_ = new();
+    long tickStartStamp_;
 
-    readonly ILogger logger_ = Log.ForContext<Client<TClientInput, TServerInput, TGameState>>();
+    readonly ILogger logger_;
 
     readonly IClientDispatcher dispatcher_;
 
@@ -138,7 +110,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// </summary>
     public IClientInputPredictor<TClientInput> ClientInputPredictor
     {
-        init => predictManager_.InputPredictor = value;
+        init => predictManager_.ClientInputPredictor = value;
     }
 
     /// <summary>
@@ -149,8 +121,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         init => predictManager_.ServerInputPredictor = value;
     }
 
-    Action updateAction_ = () => { };
-    IClock GetTimingClock(bool useOwnThread)
+    Action updateAction_ = () => throw new InvalidOperationException("The client uses its own thread. Update is not supported. To use update disable useOwnThread in the constructor.");
+    IClock GetTimingClock(bool useOwnThread = false)
     {
         if (useOwnThread)
             return new ThreadClock();
@@ -164,32 +136,36 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// Update the client.
     /// Shall be called frequently to update the simulation.
     /// </summary>
-    public void Update() => updateAction_.Invoke();
-
+    /// <returns>
+    /// The prediction game state, which is valid until this method is called again.
+    /// </returns>
+    /// <remarks>
+    /// The game state may not be available until the client is fully connected.
+    /// </remarks>
+    public TGameState? Update()
+    {
+        updateAction_.Invoke();
+        return predictManager_.State;
+    }
 
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="dispatcher">Sender to use for sending messages the server.</param>
-    /// <param name="useOwnThread"></param>
-    public Client(IClientDispatcher dispatcher, bool useOwnThread = true)
+    /// <param name="useOwnThread">Whether the client should use its own thread for updating.</param>
+    /// <param name="loggerFactory">Optional logger factory to use for logging client events.</param>
+    public Client(IClientDispatcher dispatcher, bool useOwnThread = true, ILoggerFactory? loggerFactory = null)
     {
+        loggerFactory ??= NullLoggerFactory.Instance;
+        logger_ = loggerFactory.CreateLogger<Client<TClientInput, TServerInput, TGameState>>();
+
         dispatcher_ = dispatcher;
 
-        predictManager_ = new PredictManager<TClientInput, TServerInput, TGameState>
-        {
-            Displayer = displayer_,
-            InputPredictor = new DefaultClientInputPredictor<TClientInput>(),
-            ServerInputPredictor = new DefaultServerInputPredictor<TServerInput, TGameState>(),
-            ClientInputProvider = new DefaultClientInputProvider<TClientInput>(),
-            AuthState = authStateHolder_,
-            Sender = dispatcher_
-        };
-
+        predictManager_ = new (authStateHolder_, dispatcher, loggerFactory);
 
         IClock internalClock = GetTimingClock(useOwnThread);
 
-        clock_ = new SynchronizedClock(internalClock)
+        clock_ = new(internalClock)
         {
             TargetTps = TGameState.DesiredTickRate
         };
@@ -199,6 +175,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     void SetDelayHandler(long frame, double delay)
     {
+        logger_.ClientDelayInfo(frame, delay);
         clock_.SetDelayHandler(frame, delay - TargetDelta);
     }
 
@@ -218,7 +195,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         clock_.OnTick -= predictManager_.Tick;
     }
 
-
     /// <inheritdoc/>
     public int Id { get; private set; } = int.MaxValue;
 
@@ -227,9 +203,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     /// <inheritdoc/>
     public bool UseChecksum { get; set; }
-
-    /// <inheritdoc/>
-    public bool TraceFrameTime { get; init; }
 
     /// <inheritdoc/>
     public long AuthFrame
@@ -269,11 +242,10 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             clientState_ = ClientState.Started;
         }
 
-        logger_.Information("The client is starting.");
+        logger_.ClientStarted();
 
         await clientCancellation_.Token;
     }
-
 
     /// <inheritdoc/>
     public void Terminate()
@@ -283,9 +255,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             if (clientState_ == ClientState.Terminated)
                 return;
 
-            logger_.Information("The client is being terminated.");
-
             clientState_ = ClientState.Terminated;
+            logger_.ClientTerminated();
 
             UnsetHandlers();
             predictManager_.Stop();
@@ -293,30 +264,27 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         }
     }
 
-    void AssertChecksum(long? checksum)
+    void AssertChecksum(long frame, ReadOnlySpan<byte> serializedInput, long? checksum)
     {
         if (!UseChecksum || checksum is not { } check)
             return;
         
-        var serialized = Memory<byte>.Empty;
-        if (TraceState)
-            serialized = authStateHolder_.Serialize();
-
         long actual = authStateHolder_.GetChecksum();
+
         if (actual != check)
         {
-            logger_.Fatal("Desync detected {ActualSum} != {ExpectedSum} - {State}.", actual, check, serialized);
+            var serialized = authStateHolder_.Serialize();
+            logger_.ClientDesyncDetected(frame, actual, check, serialized.Span, serializedInput);
+            ArrayPool<byte>.Shared.Return(serialized);
             throw new InvalidOperationException("The auth state has diverged from the server.");
         }
 
-        logger_.Verbose( "State has a correct checksum.");
-
-        ArrayPool<byte>.Shared.Return(serialized);
+        logger_.ClientChecksumVerified(frame);
     }
 
     bool stateInitiated_ = false; // Used to assure invalid auth state updates don't happen before initiation.
 
-    void Update(UpdateInput<TClientInput, TServerInput> input, Span<byte> serializedInput, long? checksum, long inputFrame)
+    void Update(UpdateInput<TClientInput, TServerInput> input, ReadOnlySpan<byte> serializedInput, long? checksum, long inputFrame)
     {
         lock (authStateHolder_)
         {
@@ -324,38 +292,47 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             if (!stateInitiated_ || frame < inputFrame)
             {
-                logger_.Warning("Given old undesired input of frame {Frame} for auth update {Index}. Skipping.", inputFrame, frame);
+                logger_.LogWarning("Given old undesired input of frame {Frame} for auth update {Index}. Skipping.", inputFrame, frame);
                 return;
             }
             
             if (frame > inputFrame)
             {
-                logger_.Fatal("Given newer input of frame {Frame} before receiving for auth update {Index}.", inputFrame, frame);
+                logger_.LogCritical("Given newer input of frame {Frame} before receiving for auth update {Index}.", inputFrame, frame);
                 throw new ArgumentException("Given invalid frame for auth update.", nameof(inputFrame));
             }
 
             authStateHolder_.Update(input);
-            AssertChecksum(checksum);
+            AssertChecksum(frame, serializedInput, checksum);
             displayer_.AddAuthoritative(frame, authStateHolder_.State);
-            logger_.Verbose("Authorized frame {Frame}", frame);
+            
             predictManager_.InformAuthInput(serializedInput, frame, input);
         }
     }
 
     void Authorize(Memory<byte> serializedInput, long? checksum, long frame)
     {
-        if (TraceFrameTime)
-            timer_.Start();
+        bool traceTime = logger_.IsEnabled(LogLevel.Information);
 
+        if (traceTime)
+        {
+            tickStartStamp_ = Stopwatch.GetTimestamp();
+        }
+
+        logger_.ClientBeganAuthFrame();
         var inputSpan = serializedInput.Span;
         var input = MemoryPackSerializer.Deserialize<UpdateInput<TClientInput, TServerInput>>(inputSpan);
 
         Update(input, inputSpan, checksum, frame);
             
         ArrayPool<byte>.Shared.Return(serializedInput);
+        logger_.ClientCompletedAuthFrame(frame);
 
-        if (TraceFrameTime)
-            timer_.End(frame);
+        if (traceTime)
+        {
+            TimeSpan tickTime = Stopwatch.GetElapsedTime(tickStartStamp_);
+            logger_.ClientAuthFrameTime(frame, tickTime);
+        }
     }
 
     (TGameState authState, TGameState predictState) DeserializeStates(Memory<byte> serializedState)
@@ -366,7 +343,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             
         if (authState is null || predictState is null)
         {
-            logger_.Fatal("The state is invalid.");
+            logger_.LogCritical("Received invalid init state.");
             throw new ArgumentException("Received invalid init state.", nameof(serializedState));
         }
         
@@ -400,8 +377,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             clientState_ = ClientState.Initiated;
 
-            logger_.Debug("Client received id {Id}", id);
-            logger_.Debug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
+            logger_.LogDebug("Client received id {Id}", id);
+            logger_.LogDebug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
 
             (TGameState authState, TGameState predictState) = DeserializeStates(serializedState);
 
@@ -419,7 +396,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     void AddAuthoritativeInput(long frame, Memory<byte> input, long? checksum)
     {
-        logger_.Verbose("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
+        logger_.LogTrace("Received auth input for frame {Frame} with checksum {CheckSum}.", frame, checksum);
         Authorize(input, checksum, frame);
     }
 }

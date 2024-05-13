@@ -60,7 +60,7 @@ public sealed class DebugInfo
                $"Current TPS: {Client?.CurrentTps:0.00}\n" +
                $"Target TPS: {Client?.TargetTps:0.00}\n" +
                $"Target Delta: {Client?.TargetDelta:0.00}\n" +
-               $"TraceState: {Client?.TraceState}\n" +
+               $"ServerTraceState: {Client?.TraceState}\n" +
                $"Checksum: {Client?.UseChecksum}\n" +
                $"TraceTime: {Client?.TraceFrameTime}\n";
     }

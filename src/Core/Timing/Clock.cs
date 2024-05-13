@@ -2,9 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 using Kcky.Useful;
-using System.Collections.Generic;
 
 namespace Kcky.GameNewt.Timing;
 
@@ -20,8 +18,6 @@ sealed class Clock : IClock
     long targetPeriod_;
     double targetTps_;
     long last_;
-    long tickSum_;
-    long tickCount_;
 
     CancellationToken cancelToken_ = new(true);
 
@@ -33,7 +29,6 @@ sealed class Clock : IClock
         {
             double period = 1 / value * Stopwatch.Frequency;
             targetPeriod_ = (long)Math.Clamp(period, 1, long.MaxValue);
-            logger_.Verbose("New clock target period: {Period}", targetPeriod_);
             targetTps_ = value;
         }
     }
@@ -48,10 +43,7 @@ sealed class Clock : IClock
             throw new PlatformNotSupportedException("Platform does not support precision timing.");
         TargetTps = 1;
     }
-
-    readonly ILogger logger_ = Log.ForContext<Clock>();
-
-
+    
     /// <summary>
     /// The update method of the clock.
     /// Should be called regularly to check for clock ticks.
@@ -73,11 +65,6 @@ sealed class Clock : IClock
             
             last_ = current + remaining;
 
-            double freq = Stopwatch.Frequency;
-            tickSum_ += delta;
-            tickCount_++;
-
-            logger_.Verbose("Tick took {Time:F5} s (Avg: {Avg:F5} s).", delta / freq, (double)tickSum_ / tickCount_ / freq);
             OnTick?.Invoke();
         }
     }

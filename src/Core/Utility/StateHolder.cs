@@ -1,6 +1,5 @@
 ﻿using System;
 using HashDepot;
-using Serilog;
 using Kcky.Useful;
 
 namespace Kcky.GameNewt.Utility;

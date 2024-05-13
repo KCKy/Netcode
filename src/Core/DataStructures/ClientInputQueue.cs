@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Kcky.GameNewt.Providers;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.DataStructures;
 
@@ -72,11 +72,13 @@ where TClientInput : class, new()
     /// <param name="tps">The TPS the game should run at. Used for input delay calculations.</param>
     /// <param name="predictor">Input predictor for client inputs. Used as a substitute when input of a client are not received in time.</param>
     /// <param name="onInputAuthored">Raised when given client input is being authored.</param>
-    public ClientInputQueue(double tps, IClientInputPredictor<TClientInput> predictor, InputAuthoredDelegate onInputAuthored)
+    /// <param name="loggerFactory">Logger factory to use for logging events.</param>
+    public ClientInputQueue(double tps, IClientInputPredictor<TClientInput> predictor, InputAuthoredDelegate onInputAuthored, ILoggerFactory loggerFactory)
     {
         ticksPerSecond_ = tps;
         predictor_ = predictor;
         inputAuthored_ = onInputAuthored;
+        logger_ = loggerFactory.CreateLogger<ClientInputQueue<TClientInput>>();
     }
 
     readonly InputAuthoredDelegate inputAuthored_;
@@ -95,7 +97,7 @@ where TClientInput : class, new()
 
     long frame_ = -1;
 
-    readonly ILogger logger_ = Log.ForContext<ClientInputQueue<TClientInput>>();
+    readonly ILogger logger_;
 
     /// <summary>
     /// Add a client, which is from now expected to send input.
@@ -108,11 +110,11 @@ where TClientInput : class, new()
         {
             if (!idToInputs_.TryAdd(id, new(predictor_)))
             {
-                logger_.Fatal("To add duplicate client {Id}", id);
+                logger_.LogCritical("To add duplicate client {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));
             }
 
-            logger_.Verbose("Added client {Id}.", id);
+            logger_.LogTrace("Added client {Id}.", id);
         }
     }
 
@@ -128,13 +130,13 @@ where TClientInput : class, new()
 
             if (!idToInputs_.Remove(id))
             {
-                logger_.Fatal("To remove non-contained {Id}", id);
+                logger_.LogCritical("To remove non-contained {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));
             }
 
             removedClients_.Add(id);
 
-            logger_.Verbose("Removed client {Id}.", id);
+            logger_.LogTrace("Removed client {Id}.", id);
         }
     }
 
@@ -152,7 +154,7 @@ where TClientInput : class, new()
 
             if (!idToInputs_.TryGetValue(id, out var clientInfo))
             {
-                logger_.Debug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
+                logger_.LogDebug("Got input from terminated client {Id} for {Frame} at {Current}..", id, frame, frame_);
                 return;
             }
 
@@ -168,14 +170,14 @@ where TClientInput : class, new()
                 TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_) - framePart;
                 inputAuthored_?.Invoke(id, frame, difference);
 
-                logger_.Debug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
+                logger_.LogDebug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
                 return;
             }
             
             if (!clientInfo.TryAdd(frame, input, now))
                 return; // The input was already received.
 
-            logger_.Verbose("Got input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
+            logger_.LogTrace("Got input from client {Id} for {Frame} at {Current}.", id, frame, frame_);
         }
     }
 
@@ -211,7 +213,7 @@ where TClientInput : class, new()
                     TimeSpan difference = Stopwatch.GetElapsedTime(value, lastFrameUpdate_);
                     inputAuthored_?.Invoke(id, nextFrame, difference);
 
-                    logger_.Verbose("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
+                    logger_.LogTrace("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
                 }
                 
                 i++;
@@ -226,7 +228,7 @@ where TClientInput : class, new()
             frame_ = nextFrame;
             removedClients_.Clear();
 
-            logger_.Verbose("Constructed authoritative frame for {FrameIndex}.", nextFrame);
+            logger_.LogTrace("Constructed authoritative frame for {FrameIndex}.", nextFrame);
 
             return frame;
         }
