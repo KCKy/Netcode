@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,41 +28,7 @@ public delegate void InitStateDelegate<TClientInput, TServerInput, TGameState>(T
     where TClientInput : class, new()
     where TServerInput : class, new();
 
-static partial class ServerLogMessages
-{
-    [LoggerMessage(LogLevel.Information, "Finished server state update for {Frame} resulting in state: {SerializedState}")]
-    internal static partial void ServerTraceState(this ILogger logger, long frame, ReadOnlySpan<byte> serializedState);
 
-    [LoggerMessage(LogLevel.Debug, "Client with id {Id} has connected to the server and has been initiated for frame {Frame}.")]
-    internal static partial void ServerClientConnected(this ILogger logger, int id, long frame);
-
-    [LoggerMessage(LogLevel.Debug, "Client with id {Id} has disconnected from the server.")]
-    internal static partial void ServerClientDisconnected(this ILogger logger, int id);
-
-    [LoggerMessage(LogLevel.Trace, "The server has received valid input from client with id {Id} for frame {Frame}: {SerializedInput}")]
-    internal static partial void ServerReceivedValidInput(this ILogger logger, int id, long frame, ReadOnlySpan<byte> serializedInput);
-
-    [LoggerMessage(LogLevel.Warning, "The server has received invalid input from client with id {Id} for frame {Frame}: {SerializedInput}")]
-    internal static partial void ServerReceivedInvalidInput(this ILogger logger, int id, long frame, ReadOnlySpan<byte> serializedInput);
-    
-    [LoggerMessage(LogLevel.Trace, "The server has begun the next tick for frame.")]
-    internal static partial void ServerBeganAuthFrame(this ILogger logger);
-
-    [LoggerMessage(LogLevel.Trace, "The server has completed the tick for frame {Frame}.")]
-    internal static partial void ServerCompletedAuthFrame(this ILogger logger, long frame);
-
-    [LoggerMessage(LogLevel.Debug, "Server tick for frame {Frame} took {Time}.")]
-    internal static partial void ServerAuthFrameTime(this ILogger logger, long frame, TimeSpan time);
-
-    [LoggerMessage(LogLevel.Debug, "The server has started.")]
-    internal static partial void ServerStarted(this ILogger logger);
-
-    [LoggerMessage(LogLevel.Debug, "The server has been signalled to end from a game rules.")]
-    internal static partial void ServerEnded(this ILogger logger);
-
-    [LoggerMessage(LogLevel.Debug, "The server has been signalled to terminate from outside.")]
-    internal static partial void ServerTerminated(this ILogger logger);
-}
 
 /// <summary>
 /// The main server class. Takes care of collecting inputs of clients,
@@ -84,7 +51,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     }
 
     // Locking the holder to stop RW/WR conflicts and correct init behaviour (WW does not happen due to tickMutex)
-    readonly StateHolder<TClientInput, TServerInput, TGameState> stateHolder_ = new();
+    readonly StateHolder<TClientInput, TServerInput, TGameState> stateHolder_;
 
     ServerState serverState_ = ServerState.NotStarted;
     readonly ThreadClock clock_ = new();
@@ -136,6 +103,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     public Server(IServerDispatcher dispatcher, ILoggerFactory? loggerFactory = null)
     {
         loggerFactory_ = loggerFactory ?? NullLoggerFactory.Instance;
+        stateHolder_ = new(loggerFactory_);
 
         logger_ = loggerFactory_.CreateLogger<Server<TClientInput, TServerInput, TGameState>>();
         dispatcher_ = dispatcher;
@@ -192,7 +160,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
         Task clockTask = clock_.RunAsync(clockCancellation_.Token);
 
-        logger_.ServerStarted();
+        logger_.LogDebug("The server has started.");
 
         return clockTask;
     }
@@ -214,7 +182,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// <inheritdoc/>
     public void Terminate()
     {
-        logger_.ServerTerminated();
+        logger_.LogDebug("The server has been signalled to terminate from outside.");
         TerminateInternal();
     }
 
@@ -237,7 +205,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
             dispatcher_.Kick(client);
     }
 
-    (UpdateOutput output, Memory<byte> trace, long? checksum) StateUpdate(UpdateInput<TClientInput, TServerInput> input)
+    (UpdateOutput output, long? checksum) StateUpdate(UpdateInput<TClientInput, TServerInput> input)
     {
         UpdateOutput output;
         lock (stateHolder_)
@@ -246,9 +214,17 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         // It is ok to release to lock earlier, as the update is atomic and the state is modified only in the update (concurrent reading is allowed).
 
         displayer_.AddAuthoritative(stateHolder_.Frame, stateHolder_.State);
-        var trace = (TraceState && logger_.IsEnabled(LogLevel.Information)) ? traceStateWriter_.MemoryPackSerialize(stateHolder_.State) : Memory<byte>.Empty;
+        
         long? checksum = SendChecksum ? stateHolder_.GetChecksum() : null;
-        return (output, trace, checksum);
+
+        if (TraceState && logger_.IsEnabled(LogLevel.Information))
+        {
+            var trace = traceStateWriter_.MemoryPackSerialize(stateHolder_.State);
+            logger_.LogInformation("Finished server state update for {Frame} resulting in state: {SerializedState}", stateHolder_.Frame, trace);
+            ArrayPool<byte>.Shared.Return(trace);
+        }
+        
+        return (output, checksum);
     }
 
     long Update()
@@ -258,10 +234,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         long frame = stateHolder_.Frame + 1;
 
         // Update
-        (UpdateOutput output, var trace, long? checksum) = StateUpdate(input);
-
-        if (!trace.IsEmpty && TraceState)
-            logger_.ServerTraceState(frame, trace.Span);
+        (UpdateOutput output, long? checksum) = StateUpdate(input);
 
         HandleKicking(output.ClientsToTerminate);
 
@@ -270,7 +243,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         if (output.ShallStop)
         {
             updatingEnded_ = true;
-            logger_.ServerEnded();
+            logger_.LogDebug("The server has been signalled to end from a game rules.");
             TerminateInternal();
         }
 
@@ -292,14 +265,14 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
                 tickStartStamp_ = Stopwatch.GetTimestamp();
             }
 
-            logger_.ServerBeganAuthFrame();
+            logger_.LogDebug("The server has begun the next tick for frame.");
             long frame = Update();
-            logger_.ServerCompletedAuthFrame(frame);
+            logger_.LogDebug("The server has completed the tick for frame {Frame}.", frame);
 
             if (traceTime)
             {
                 TimeSpan tickTime = Stopwatch.GetElapsedTime(tickStartStamp_);
-                logger_.ServerAuthFrameTime(frame, tickTime);
+                logger_.LogInformation("Server tick for frame {Frame} took {Time}.", frame, tickTime);
             }
         }
     }
@@ -320,7 +293,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     {
         inputQueue_.AddClient(id);
         long frame = InitializeClientAtomic(id);
-        logger_.ServerClientConnected(id, frame);
+        logger_.LogDebug("Client with id {Id} has connected to the server and has been initiated for frame {Frame}.", id, frame);
     }
 
     void AddInput(int id, long frame, ReadOnlySpan<byte> serializedInput)
@@ -329,18 +302,18 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
         if (input is null)
         {
-            logger_.ServerReceivedInvalidInput(id, frame, serializedInput);
+            logger_.LogWarning("The server has received valid input from client with id {Id} for frame {Frame}.", id, frame);
         }
         else
         {
             inputQueue_.AddInput(id, frame, input);
-            logger_.ServerReceivedValidInput(id, frame, serializedInput);
+            logger_.LogTrace("The server has received invalid input from client with id {Id} for frame {Frame}.", id, frame);
         }
     }
 
     void FinishClient(int id)
     {
         inputQueue_.RemoveClient(id);
-        logger_.ServerClientDisconnected(id);
+        logger_.LogDebug("Client with id {Id} has disconnected from the server.", id);
     }
 }

@@ -3,8 +3,9 @@ using System.Buffers;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Dispatcher.Default;
 
@@ -24,16 +25,19 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
     readonly int unreliableHeader_;
     readonly int unreliableMaxMessage_;
 
-    readonly ILogger logger_ = Log.ForContext<DefaultClientDispatcher>();
+    readonly ILogger logger_;
     readonly PacketAggregator aggregator_ = new();
 
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="transport">The transport which shall be used to send and receive packets.</param>
-    public DefaultClientDispatcher(IClientTransport transport)
+    /// <param name="loggerFactory">Optional logger factory for logging debug info.</param>
+    public DefaultClientDispatcher(IClientTransport transport, ILoggerFactory? loggerFactory = null)
     {
+        loggerFactory ??= NullLoggerFactory.Instance;
         outTransport_ = transport;
+        logger_ = loggerFactory.CreateLogger<DefaultClientDispatcher>();
 
         unreliableHeader_ = transport.UnreliableMessageHeader;
         unreliableMaxMessage_ = transport.UnreliableMessageMaxLength;
@@ -42,7 +46,6 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         transport.OnReliableMessage += HandleMessage;
     }
 
-    
     /// <inheritdoc/>
     public event InitializeDelegate? OnInitialize;
     
@@ -56,7 +59,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
     {
         if (message.IsEmpty)
         {
-            logger_.Error("Received invalid empty message.");
+            logger_.LogError("Received invalid empty message.");
             ArrayPool<byte>.Shared.Return(message);
             return;
         }
@@ -77,7 +80,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
                 return;
             case MessageType.ClientInput:
             default:
-                logger_.Error("Received invalid message from server: {Message} of type {Type}.", message, type);
+                logger_.LogError("Received invalid message from server: {Message} of type {Type}.", message, type);
                 ArrayPool<byte>.Shared.Return(message);
                 return;
         }
@@ -89,7 +92,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         if (message.Length < headerLength)
         {
-            logger_.Error("Received invalid initialization message: {Message}.", message);
+            logger_.LogError("Received invalid initialization message: {Message}.", message);
             ArrayPool<byte>.Shared.Return(message);
             return;
         }
@@ -110,7 +113,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         if (message.Length < headerLength)
         {
-            logger_.Error("Received invalid authorize message: {Message}.", message);
+            logger_.LogError("Received invalid authorize message: {Message}.", message);
             ArrayPool<byte>.Shared.Return(message);
             return; // Return owned memory to the pool
         }
@@ -131,7 +134,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         }
         else
         {
-            logger_.Error("Authorize message has invalid time difference: {Message} -> {Difference}.", message, difference);
+            logger_.LogError("Authorize message has invalid time difference: {Message} -> {Difference}.", message, difference);
         }
 
         ArrayPool<byte>.Shared.Return(message); // Return owned memory to the pool
@@ -143,7 +146,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         if (message.Length < headerLength)
         {
-            logger_.Error("Received invalid auth input message: {Message}.", message);
+            logger_.LogError("Received invalid auth input message: {Message}.", message);
             ArrayPool<byte>.Shared.Return(message);
             return; // Return owned memory to the pool
         }
@@ -188,7 +191,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         int fullLength = input.Length;
 
         if (fullLength > unreliableMaxMessage_)
-            logger_.Error("Client sends input message larger than assured to be deliverable: {Actual} > {Valid}", fullLength, unreliableMaxMessage_);
+            logger_.LogError("Client sends input message larger than assured to be deliverable: {Actual} > {Valid}", fullLength, unreliableMaxMessage_);
 
         /*
          * Packet format:

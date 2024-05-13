@@ -3,7 +3,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Kcky.GameNewt.Timing;
-using Serilog;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestPlatform.Utilities;
 using Xunit.Abstractions;
 
 namespace Kcky.GameNewt.Tests;
@@ -58,13 +59,15 @@ public sealed class ClockTests
         }
     }
 
+    ITestOutputHelper output_;
+
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="output">Output for logging.</param>
     public ClockTests(ITestOutputHelper output)
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Verbose().CreateLogger();
+        output_ = output;
     }
 
     /// <summary>
@@ -117,7 +120,7 @@ public sealed class ClockTests
 
         (double meanDelta, double deltaDeviation) = stats.GetStats();
 
-        Log.Information("Mean: {Mean} Deviation: {Deviation}", meanDelta, deltaDeviation);
+        output_.WriteLine($"Mean: {meanDelta} Deviation: {deltaDeviation}");
         Assert.InRange(meanDelta, period - meanError, period + meanError);
         Assert.InRange(deltaDeviation, -deviationError, deviationError);
     }

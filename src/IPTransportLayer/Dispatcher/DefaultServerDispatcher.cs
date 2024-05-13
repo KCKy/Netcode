@@ -3,8 +3,9 @@ using System.Buffers;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Dispatcher.Default;
 
@@ -21,15 +22,18 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
 
     readonly int unreliableHeader_;
     readonly int reliableHeader_;
-    readonly ILogger logger_ = Log.ForContext<DefaultServerDispatcher>();
+    readonly ILogger logger_;
 
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="transport">The transport which shall be used to send and receive packets.</param>
-    public DefaultServerDispatcher(IServerTransport transport)
+    /// <param name="loggerFactory">Optional logger factory for logging debug info.</param>
+    public DefaultServerDispatcher(IServerTransport transport, ILoggerFactory? loggerFactory = null)
     {
+        loggerFactory ??= NullLoggerFactory.Instance;
         transport_ = transport;
+        logger_ = loggerFactory.CreateLogger<DefaultClientDispatcher>();
 
         unreliableHeader_ = transport.UnreliableMessageHeader;
         reliableHeader_ = transport.ReliableMessageHeader;
@@ -62,7 +66,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
     {
         if (message.IsEmpty)
         {
-            logger_.Error("Received invalid empty message.");
+            logger_.LogError("Received invalid empty message.");
             ArrayPool<byte>.Shared.Return(message);
             return;
         }
@@ -76,7 +80,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
                 HandleClientInput(id, message);
                 return;
             default:
-                logger_.Error("Received invalid message from client {Id}: {Message} of type {Type}.", id, message, type);
+                logger_.LogError("Received invalid message from client {Id}: {Message} of type {Type}.", id, message, type);
                 ArrayPool<byte>.Shared.Return(message);
                 return;
         }
@@ -98,7 +102,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
             // We are checking if the promised message length is valid (is a natural number and does not overflow the rest of the buffer)
             if (length <= 0 || message.Length < length)
             {
-                logger_.Error("Input in aggregate has invalid specified length: {Length} > {MessageLength}.", length, message.Length);
+                logger_.LogError("Input in aggregate has invalid specified length: {Length} > {MessageLength}.", length, message.Length);
                 break;
             }
 
@@ -108,7 +112,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
         }
 
         if (message.Length != 0)
-            logger_.Error("Input aggregate has trailing data of length {Length}.", message.Length);
+            logger_.LogError("Input aggregate has trailing data of length {Length}.", message.Length);
 
         ArrayPool<byte>.Shared.Return(owner);
     }

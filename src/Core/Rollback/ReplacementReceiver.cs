@@ -1,14 +1,15 @@
 ﻿using System.Diagnostics;
 using Kcky.GameNewt.Utility;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class ReplacementReceiver<TC, TS, TG>
+sealed class ReplacementReceiver<TC, TS, TG>(ILoggerFactory loggerFactory)
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
 {
-    readonly StateHolder<TC, TS, TG> receiverHolder_ = new();
+    readonly StateHolder<TC, TS, TG> receiverHolder_ = new(loggerFactory);
     UpdateInput<TC, TS> newPredictInput_ = UpdateInput<TC, TS>.Empty;
     bool isReplaced_ = false;
 

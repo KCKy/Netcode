@@ -7,7 +7,7 @@ using Kcky.GameNewt.DataStructures;
 using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.Useful;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace GameNewt.Timing;
 
@@ -18,7 +18,7 @@ sealed class SynchronizedClock
 {
     readonly object mutex_ = new();
     readonly IClock internalClock_;
-    readonly ILogger logger_ = Log.ForContext<SynchronizedClock>();
+    readonly ILogger logger_;
     readonly double targetTps_;
 
     /// <summary>
@@ -51,8 +51,9 @@ sealed class SynchronizedClock
     /// Constructor.
     /// <param name="clock">IClock instance to use for tick measuring.</param>
     /// </summary>
-    public SynchronizedClock(IClock clock)
+    public SynchronizedClock(IClock clock, ILoggerFactory loggerFactory)
     {
+        logger_ = loggerFactory.CreateLogger<SynchronizedClock>();
         internalClock_ = clock;
         internalClock_.OnTick += TickHandler;
         TargetTps = 1;
@@ -79,7 +80,7 @@ sealed class SynchronizedClock
     {
         lock (mutex_)
         {
-            logger_.Debug("Initialized sync-clock with frame {Frame}.", frame);
+            logger_.LogDebug("Initialized sync-clock with frame {Frame}.", frame);
             beginFrame_ = frame + 1;
             timingQueue_.Set(frame + 1);
         }
@@ -95,7 +96,7 @@ sealed class SynchronizedClock
     {
         lock (mutex_)
         {
-            logger_.Debug("ServerStarted sync-clock.");
+            logger_.LogDebug("ServerStarted sync-clock.");
             beginTime_ = Stopwatch.GetTimestamp();
             TickHandlerUnsafe();
         }
@@ -157,7 +158,7 @@ sealed class SynchronizedClock
         double denormalizedWorstCase = currentWorstCase_ + offset;
         double newPeriod = Math.Max(1 / TargetTps + denormalizedWorstCase, 0);
 
-        logger_.Verbose("Updating clock speed with denormalization offset {Offset} yields period {Period}.", offset, newPeriod);
+        logger_.LogTrace("Updating clock speed with denormalization offset {Offset} yields period {Period}.", offset, newPeriod);
 
         if (newPeriod <= 0)
         {
@@ -182,7 +183,7 @@ sealed class SynchronizedClock
     {
         lock (mutex_)
         {
-            logger_.Verbose("Updating delay with frame {Frame} delay {Delay}.", frame, delay);
+            logger_.LogTrace("Updating delay with frame {Frame} delay {Delay}.", frame, delay);
 
             if (!timingQueue_.TryGet(frame, out long time))
                 return;
@@ -193,7 +194,7 @@ sealed class SynchronizedClock
             double normalizedDelay = delay + offset;
             currentWorstCase_ = normalizedDelays_.Add(normalizedDelay);
 
-            logger_.Verbose("Normalization offset {Offset} yields normalized delay {Delay} and current worst case {Case}.", offset, normalizedDelay, currentWorstCase_);
+            logger_.LogTrace("Normalization offset {Offset} yields normalized delay {Delay} and current worst case {Case}.", offset, normalizedDelay, currentWorstCase_);
             
             long currentTime = Stopwatch.GetTimestamp();
             UpdateClockSpeed(currentTime);
@@ -203,7 +204,7 @@ sealed class SynchronizedClock
     void TickHandler()
     {
         long currentTime = Stopwatch.GetTimestamp();
-        logger_.Verbose("Processing regular clock tick.");
+        logger_.LogTrace("Processing regular clock tick.");
         OnTick?.Invoke();
         
         lock (mutex_)
@@ -216,7 +217,7 @@ sealed class SynchronizedClock
     void TickHandlerUnsafe()
     {
         long currentTime = Stopwatch.GetTimestamp();
-        logger_.Verbose("Processing fake clock tick.");
+        logger_.LogTrace("Processing fake clock tick.");
         OnTick?.Invoke();
         timingQueue_.Add(currentTime);
         UpdateClockSpeed(currentTime);

@@ -16,7 +16,7 @@ sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG> authState, IClie
 
     readonly IndexedQueue<TC> clientInputs_ = new(); // This queue needs to be locked. Making new client inputs is exclusive to predict update.
 
-    readonly ReplacementCoordinator coordinator_ = new();
+    readonly ReplacementCoordinator coordinator_ = new(loggerFactory);
 
     PredictRunner<TC, TS, TG>? predictRunner_ = null;
     Replacer<TC, TS, TG>? replacer_= null;
@@ -48,10 +48,10 @@ sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG> authState, IClie
     /// <param name="state">The state to initialize with.</param>
     public void Init(long frame, TG state)
     {
-        ReplacementReceiver<TC, TS, TG> receiver = new();
+        ReplacementReceiver<TC, TS, TG> receiver = new(loggerFactory);
         predictor_ = new(ClientInputPredictor, ServerInputPredictor);
         predictRunner_ = new(ClientInputProvider, Displayer, sender, predictor_, clientInputs_, receiver, coordinator_, loggerFactory);
-        replacer_ = new(authState, coordinator_, clientInputs_, predictor_, receiver);
+        replacer_ = new(authState, coordinator_, clientInputs_, predictor_, receiver, loggerFactory);
 
         receiver.Init(frame);
         coordinator_.Init();

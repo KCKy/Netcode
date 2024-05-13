@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using Kcky.GameNewt.DataStructures;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
@@ -15,14 +15,15 @@ sealed class Replacer<TC, TS, TG>
     ReplacementCoordinator coordinator,
     IndexedQueue<TC> clientInputs,
     UpdateInputPredictor<TC, TS, TG> predictor,
-    ReplacementReceiver<TC, TS, TG> receiver)
+    ReplacementReceiver<TC, TS, TG> receiver,
+    ILoggerFactory loggerFactory)
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
 {
-    readonly StateHolder<TC, TS, TG> replacementHolder_ = new();
+    readonly StateHolder<TC, TS, TG> replacementHolder_ = new(loggerFactory);
     readonly PooledBufferWriter<byte> replacementInputWriter_ = new();
-    readonly ILogger logger_ = Log.ForContext<Replacer<TC, TS, TG>>();
+    readonly ILogger logger_ = loggerFactory.CreateLogger<Replacer<TC, TS, TG>>();
 
     public void BeginReplacement(long frame, UpdateInput<TC, TS> input)
     {
@@ -31,7 +32,7 @@ sealed class Replacer<TC, TS, TG>
 
         // As this is called synchronously from auth state update this does not need to be synchronized.
         Debug.Assert(authStateHolder.Frame == frame);
-        var authState = authStateHolder.Serialize();
+        var authState = authStateHolder.GetSerialized();
 
         ReplaceGameStateAsync(index, frame, authState, input).AssureSuccess();
     }
@@ -40,7 +41,7 @@ sealed class Replacer<TC, TS, TG>
     {
         await Task.Yield(); // Run async. in a different thread
 
-        logger_.Debug("Began replacement for frame {Frame}.", frame);
+        logger_.LogDebug("Began replacement for frame {Frame}.", frame);
 
         // Wait for earlier replacements to finish
         lock (replacementHolder_)
@@ -82,13 +83,13 @@ sealed class Replacer<TC, TS, TG>
                     return; // Replacement was done successfully.
                 case < 0:
                     long replFrame = replacementHolder_.Frame;
-                    logger_.Warning("Predict state is behind replacement state. This should happen only on startup. {Replacement} {Predict}", replFrame, replFrame + difference);
+                    logger_.LogWarning("Predict state is behind replacement state. This should happen only on startup. {Replacement} {Predict}", replFrame, replFrame + difference);
                     return;
             }
 
             // Replacement state is behind predict we need to update
 
-            logger_.Debug("Need to catchup {Updates} updates.", difference);
+            logger_.LogDebug("Need to catchup {Updates} updates.", difference);
 
             bool success = UpdateReplacementState(replacementIndex, difference, ref frame, input);
             if (!success)
@@ -132,7 +133,7 @@ sealed class Replacer<TC, TS, TG>
         if (difference == 0)
         {
             coordinator.FinishReplacement(replacementIndex);
-            logger_.Debug("Successfully replaced predict at frame {Frame}.", frame);
+            logger_.LogDebug("Successfully replaced predict at frame {Frame}.", frame);
         }
 
         return difference;

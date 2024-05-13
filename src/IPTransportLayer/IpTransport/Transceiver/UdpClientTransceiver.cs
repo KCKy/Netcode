@@ -4,8 +4,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Transport.Default;
 
@@ -23,11 +23,11 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     readonly Socket client_;
     readonly IPEndPoint target_;
     readonly Memory<byte> id_;
+    readonly ILogger logger_;
 
-    readonly ILogger logger_ = Log.ForContext<UdpClientTransceiver>();
-
-    public UdpClientTransceiver(Socket client, IPEndPoint target, int id)
+    public UdpClientTransceiver(Socket client, IPEndPoint target, int id, ILoggerFactory loggerFactory)
     {
+        logger_ = loggerFactory.CreateLogger<UdpClientTransceiver>();
         client_ = client;
         target_ = target;
         id_ = new byte[sizeof(int)];
@@ -46,12 +46,12 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 
             int length = result.ReceivedBytes;
 
-            logger_.Verbose("Received unreliable message of length {Length}.", length);
+            logger_.LogTrace("Received unreliable message of length {Length}.", length);
 
             if (result.RemoteEndPoint.Equals(target_))
                 return buffer[..length];
 
-            logger_.Debug("The unreliable message did not come from server.");
+            logger_.LogDebug("The unreliable message did not come from server.");
         } 
     }
 
@@ -59,7 +59,7 @@ sealed class UdpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     {
         id_.CopyTo(message); // Put authentication ID in the header
         await client_.SendToAsync(message, target_, cancellation);
-        logger_.Verbose("Sent unreliable message to target {Target} with length {Length}.", target_, message.Length);
+        logger_.LogTrace("Sent unreliable message to target {Target} with length {Length}.", target_, message.Length);
         ArrayPool<byte>.Shared.Return(message);
     }
 }

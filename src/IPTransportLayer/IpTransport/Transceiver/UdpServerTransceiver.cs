@@ -1,5 +1,4 @@
 ﻿using System;
-using Serilog;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
@@ -7,6 +6,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Transport.Default;
 
@@ -19,10 +19,11 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (M
     readonly Socket client_;
     readonly IPEndPoint ipPoint_ = new(IPAddress.Loopback, 0);
     readonly ConcurrentDictionary<int, ConnectedClient> idToConnection_;
-    readonly ILogger logger_ = Log.ForContext<UdpServerTransceiver>();
+    readonly ILogger logger_;
 
-    public UdpServerTransceiver(Socket client, ConcurrentDictionary<int, ConnectedClient> idToConnection)
+    public UdpServerTransceiver(Socket client, ConcurrentDictionary<int, ConnectedClient> idToConnection, ILoggerFactory loggerFactory)
     {
+        logger_ = loggerFactory.CreateLogger<UdpClientTransceiver>();
         client_ = client;
         idToConnection_ = idToConnection;
     }
@@ -50,7 +51,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (M
                 {
                     // This error seems to make no sense, it's not the servers fault the other side closed.
                     // SOURCE: https://stackoverflow.com/questions/34242622/windows-udp-sockets-recvfrom-fails-with-error-10054
-                    logger_.Warning("Received error {Code} on UDP receive.", ex.ErrorCode);
+                    logger_.LogWarning("Received error {Code} on UDP receive.", ex.ErrorCode);
                     continue;
                 }
                 
@@ -59,38 +60,38 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (M
 
             int length = result.ReceivedBytes;
 
-            logger_.Verbose("Received unreliable message of length {Length}.", length);
+            logger_.LogTrace("Received unreliable message of length {Length}.", length);
 
             if (length < headerSize)
             {
-                logger_.Verbose("The message is too short.");
+                logger_.LogTrace("The message is too short.");
                 continue;
             }
 
             if (result.RemoteEndPoint is not IPEndPoint sender)
             {
-                logger_.Verbose("It is from invalid endpoint.");
+                logger_.LogTrace("It is from invalid endpoint.");
                 continue;
             }
 
-            logger_.Verbose("It came from {MemorySender}.", sender);
+            logger_.LogTrace("It came from {MemorySender}.", sender);
 
             int id = Bits.ReadInt(buffer[..headerSize].Span);
 
             if (!idToConnection_.TryGetValue(id, out ConnectedClient? client))
             {
-                logger_.Verbose("It has invalid id {Id}", id);
+                logger_.LogTrace("It has invalid id {Id}", id);
                 continue;
             }
 
-            logger_.Verbose("It has id {Id}.", id);
+            logger_.LogTrace("It has id {Id}.", id);
 
             IPEndPoint current = client.UdpTarget;
 
             IPAddress address = current.Address;
             if (!address.Equals(sender.Address))
             {
-                logger_.Verbose("It comes from different address {Used} != {Valid}.", id, address, sender.Address);
+                logger_.LogTrace("It comes from different address {Used} != {Valid}.", id, address, sender.Address);
                 continue; // Address does not match
             }
 
@@ -106,7 +107,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (M
             {
                 // Client seems to have changed port
                 client.UdpTarget = new(address, senderPort);
-                logger_.Verbose("Different port with unreliable was used : {Used} != {Valid}. Updating.", currentPort, senderPort);
+                logger_.LogTrace("Different port with unreliable was used : {Used} != {Valid}. Updating.", currentPort, senderPort);
             }
             
             return (buffer[headerSize..length], id);
@@ -116,7 +117,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (M
     ValueTask<int> SendToTargetAsync(IPEndPoint target, Memory<byte> payload, CancellationToken cancellation)
     {
         var task = client_.SendToAsync(payload, target, cancellation);
-        logger_.Verbose("Sent unreliable message to target {Target} with length {Length}.", target, payload.Length);
+        logger_.LogTrace("Sent unreliable message to target {Target} with length {Length}.", target, payload.Length);
         return task;
     }
 
@@ -140,7 +141,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (M
             }
 
             if (!sent)
-                logger_.Verbose("Got no target to send unreliable broadcast to.");
+                logger_.LogTrace("Got no target to send unreliable broadcast to.");
         }
 
         ArrayPool<byte>.Shared.Return(value.payload);

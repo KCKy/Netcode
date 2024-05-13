@@ -10,28 +10,27 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class PredictRunner<TC, TS, TG>
-    ( IClientInputProvider<TC> clientInputProvider, 
-        IDisplayer<TG> displayer,
-        IClientSender sender,
-        UpdateInputPredictor<TC, TS, TG> predictor,
-        IndexedQueue<TC> clientInputs,
-        ReplacementReceiver<TC, TS, TG> replacementReceiver,
-        ReplacementCoordinator coordinator,
-        ILoggerFactory loggerFactory)
+sealed class PredictRunner<TC, TS, TG>(
+    IClientInputProvider<TC> clientInputProvider,
+    IDisplayer<TG> displayer,
+    IClientSender sender,
+    UpdateInputPredictor<TC, TS, TG> predictor,
+    IndexedQueue<TC> clientInputs,
+    ReplacementReceiver<TC, TS, TG> replacementReceiver,
+    ReplacementCoordinator coordinator,
+    ILoggerFactory loggerFactory)
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
 {
     readonly PooledBufferWriter<byte> predictInputWriter_ = new();
-    readonly StateHolder<TC, TS, TG> predictHolder_ = new();
+    readonly StateHolder<TC, TS, TG> predictHolder_ = new(loggerFactory);
     UpdateInput<TC, TS> predictInput_ = UpdateInput<TC, TS>.Empty;
-
     readonly ILogger logger_ = loggerFactory.CreateLogger<PredictRunner<TC, TS, TG>>();
-
     readonly object frameLock_ = new();
     
     long frame_;
+
     public long Frame
     {
         get

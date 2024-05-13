@@ -3,8 +3,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Transport.Default;
 
@@ -18,7 +19,7 @@ namespace Kcky.GameNewt.Transport.Default;
 public sealed class IpClientTransport : IClientTransport
 {
     readonly IPEndPoint target_;
-    readonly ILogger logger_ = Log.ForContext<IpClientTransport>();
+    readonly ILogger logger_;
 
     /// <summary>
     /// Connection timeout in milliseconds.
@@ -29,13 +30,17 @@ public sealed class IpClientTransport : IClientTransport
     readonly BagMessages<Memory<byte>> udpMessages_ = new();
 
     readonly CancellationTokenSource cancellationSource_ = new();
+    ILoggerFactory loggerFactory_;
 
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="target">The target address to connect to.</param>
-    public IpClientTransport(IPEndPoint target)
+    /// <param name="loggerFactory">Optional logger factory for logging debug info.</param>
+    public IpClientTransport(IPEndPoint target, ILoggerFactory? loggerFactory = null)
     {
+        loggerFactory_ = loggerFactory ?? NullLoggerFactory.Instance;
+        logger_ = loggerFactory_.CreateLogger<IpClientTransport>();
         target_ = target;
     }
 
@@ -52,7 +57,7 @@ public sealed class IpClientTransport : IClientTransport
         TcpClient tcp = new(AddressFamily.InterNetwork);
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
-        logger_.Information("Client trying to connect to {Target}.", target_);
+        logger_.LogInformation("Client trying to connect to {Target}.", target_);
 
         await Task.WhenAny(connectTask, Task.Delay(ConnectTimeoutMs, cancellation));
 
@@ -71,7 +76,7 @@ public sealed class IpClientTransport : IClientTransport
         IPEndPoint anyPoint = new(IPAddress.Any, 0);
         udp.Bind(anyPoint);
 
-        logger_.Information("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
+        logger_.LogInformation("Began tcp at {local} and udp at {UdpLocal}.", local, udp.LocalEndPoint);
 
         NetworkStream stream = tcp.GetStream();
 
@@ -86,7 +91,7 @@ public sealed class IpClientTransport : IClientTransport
         await stream.ReadExactlyAsync(idRaw, cancellation);
         int id = Bits.ReadInt(idRaw.Span);
 
-        return (tcp, udp, new(stream), new(udp, target_, id));
+        return (tcp, udp, new(stream, loggerFactory_), new(udp, target_, id, loggerFactory_));
     }
 
     /// <summary>
@@ -108,11 +113,11 @@ public sealed class IpClientTransport : IClientTransport
 
         (TcpClient tcpClient, Socket udpClient, TcpClientTransceiver tcp, UdpClientTransceiver udp) = await ConnectAsync(cancellation);
         
-        Sender<QueueMessages<Memory<byte>>, Memory<byte>> tcpMemorySender = new(tcp,  tcpMessages_);
-        Receiver<Memory<byte>> tcpReceiver = new(tcp);
+        Sender<QueueMessages<Memory<byte>>, Memory<byte>> tcpMemorySender = new(tcp,  tcpMessages_, loggerFactory_);
+        Receiver<Memory<byte>> tcpReceiver = new(tcp, loggerFactory_);
 
-        Sender<BagMessages<Memory<byte>>, Memory<byte>> udpMemorySender = new(udp, udpMessages_);
-        Receiver<Memory<byte>> udpReceiver = new(udp);
+        Sender<BagMessages<Memory<byte>>, Memory<byte>> udpMemorySender = new(udp, udpMessages_, loggerFactory_);
+        Receiver<Memory<byte>> udpReceiver = new(udp, loggerFactory_);
 
         tcpReceiver.OnMessage += InvokeReliableMessage;
         udpReceiver.OnMessage += InvokeUnreliableMessage;

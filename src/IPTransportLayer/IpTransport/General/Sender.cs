@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 
 namespace Kcky.GameNewt.Transport.Default;
 
@@ -10,20 +10,11 @@ namespace Kcky.GameNewt.Transport.Default;
 /// </summary>
 /// <typeparam name="TMessages">The type of the collection of messages.</typeparam>
 /// <typeparam name="TMessage">The type of the message.</typeparam>
-struct Sender<TMessages, TMessage>
+struct Sender<TMessages, TMessage>(ISendProtocol<TMessage> protocol, TMessages messages, ILoggerFactory loggerFactory)
     where TMessages : IPendingMessages<TMessage>
 {
-
-    readonly ISendProtocol<TMessage> protocol_;
-    readonly TMessages messages_;
-
-    readonly ILogger logger_ = Log.ForContext<Sender<TMessages, TMessage>>();
-
-    public Sender(ISendProtocol<TMessage> protocol, TMessages messages)
-    {
-        protocol_ = protocol;
-        messages_ = messages;
-    }
+    readonly TMessages messages_ = messages;
+    readonly ILogger logger_ = loggerFactory.CreateLogger<Sender<TMessages, TMessage>>();
 
     public async Task RunAsync(CancellationToken cancellation)
     {
@@ -32,18 +23,18 @@ struct Sender<TMessages, TMessage>
             while (true)
             {
                 TMessage message = await messages_.GetAsync(cancellation);
-                logger_.Verbose("Got message {Payload} to send to a remote.", message);
-                await protocol_.SendAsync(message, cancellation);
+                logger_.LogTrace("Got message {Payload} to send to a remote.", message);
+                await protocol.SendAsync(message, cancellation);
             }
         }
         catch (OperationCanceledException)
         {
-            logger_.Debug("Sender was canceled.");
+            logger_.LogDebug("Sender was canceled.");
             throw;
         }
         catch (Exception ex)
         {
-            logger_.Error(ex, "Sender failed.");
+            logger_.LogError(ex, "Sender failed.");
             throw;
         }
     }

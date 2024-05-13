@@ -1,20 +1,13 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Transport.Default;
 
-struct Receiver<TIn>
+struct Receiver<TIn>(IReceiveProtocol<TIn> protocol, ILoggerFactory loggerFactory)
 {
-    readonly IReceiveProtocol<TIn> protocol_;
-    readonly ILogger logger_ = Log.ForContext<Receiver<TIn>>();
-
-    public Receiver(IReceiveProtocol<TIn> protocol)
-    {
-        protocol_ = protocol;
-    }
-
+    readonly ILogger logger_ = loggerFactory.CreateLogger<Receiver<TIn>>();
     public event Action<TIn>? OnMessage;
 
     public async Task RunAsync(CancellationToken cancellation)
@@ -23,18 +16,18 @@ struct Receiver<TIn>
         {
             while (true)
             {
-                TIn message = await protocol_.ReceiveAsync(cancellation);
+                TIn message = await protocol.ReceiveAsync(cancellation);
                 OnMessage?.Invoke(message);
             }
         }
         catch (OperationCanceledException)
         {
-            logger_.Debug("Receiver was canceled.");
+            logger_.LogDebug("Receiver was canceled.");
             throw;
         }
         catch (Exception ex)
         {
-            logger_.Error(ex, "Receiver failed.");
+            logger_.LogDebug(ex, "Receiver failed.");
             throw;
         }
     }

@@ -4,8 +4,9 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Transport.Default;
 
@@ -15,16 +16,17 @@ namespace Kcky.GameNewt.Transport.Default;
 /// </summary>
 sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
 {
-    public TcpClientTransceiver(NetworkStream stream)
+    public TcpClientTransceiver(NetworkStream stream, ILoggerFactory loggerFactory)
     {
         stream_ = stream;
+        logger_ = loggerFactory.CreateLogger<TcpClientTransceiver>();
     }
 
     readonly NetworkStream stream_;
     
     readonly Memory<byte> readLengthBuffer_ = new byte[sizeof(int)];
 
-    readonly ILogger logger_ = Log.ForContext<TcpClientTransceiver>();
+    readonly ILogger logger_;
 
     public const int HeaderSize = 0;
 
@@ -57,7 +59,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
         await ReadAsync(readLengthBuffer_, cancellation); // Read the length of the message
         int length = Bits.ReadInt(readLengthBuffer_.Span);
 
-        logger_.Verbose("Received reliable message of length {Length}.", length);
+        logger_.LogTrace("Received reliable message of length {Length}.", length);
 
         /*
          * Message format:
@@ -87,7 +89,7 @@ sealed class TcpClientTransceiver : IProtocol<Memory<byte>, Memory<byte>>
     {
         int length = message.Length;
 
-        logger_.Verbose("Sending reliable message of length {Length}.", length);
+        logger_.LogTrace("Sending reliable message of length {Length}.", length);
 
         Bits.Write(length, writeLengthBuffer_.Span);
 

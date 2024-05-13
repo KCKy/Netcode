@@ -42,7 +42,7 @@ sealed class ReplacementCoordinator(ILoggerFactory loggerFactory)
             Debug.Assert(currentReplacement_ >= index);
             if (currentReplacement_ == index)
                 activeReplacement_ = false;
-            logger_.Debug("Replacement finished (A:{Active})", activeReplacement_);
+            logger_.LogDebug("Replacement finished (A:{Active})", activeReplacement_);
         }
     }
 

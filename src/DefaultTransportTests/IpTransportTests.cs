@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Serilog;
 using Xunit.Abstractions;
 using Kcky.Useful;
 
@@ -38,13 +37,15 @@ public class IpTransportTests
             client.Terminate();
     }
 
+    ITestOutputHelper output_;
+
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="output">Output for logging.</param>
     public IpTransportTests(ITestOutputHelper output)
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(output).MinimumLevel.Verbose().CreateLogger();
+        output_ = output;
     }
     
     /// <summary>
@@ -84,7 +85,7 @@ public class IpTransportTests
         
         await Task.Delay(150);
 
-        Log.Debug("[Test] Terminating clients.");
+        output_.WriteLine("[Test] Terminating clients.");
 
         Assert.Equal(clientCount, joined.Count);
 
@@ -108,7 +109,7 @@ public class IpTransportTests
 
         Assert.Equal(clientCount, properlyEnded);
 
-        Log.Information("[Test] Terminating server.");
+        output_.WriteLine("[Test] Terminating server.");
 
         server.Kick();
 
@@ -164,7 +165,7 @@ public class IpTransportTests
         
         await Task.Delay(150);
 
-        Log.Debug("[Test] Kicking clients.");
+        output_.WriteLine("[Test] Kicking clients.");
 
         Assert.Equal(clientCount, joined.Count);
 
@@ -178,7 +179,7 @@ public class IpTransportTests
 
         await Task.Delay(20);
 
-        Log.Information("[Test] Terminating server.");
+        output_.WriteLine("[Test] Terminating server.");
 
         server.Kick();
 
@@ -242,7 +243,7 @@ public class IpTransportTests
                     idToExpectedValue.Add(cid, expected);
                 }
 
-                Log.Information("Received {Value} from {Cid}", read, cid);
+                output_.WriteLine($"Received {read} from {cid}");
                 Assert.Equal(expected, read);
                 idToExpectedValue[cid] = expected + 1;
             }
@@ -272,7 +273,7 @@ public class IpTransportTests
             Assert.Equal(count, expected - 1);
         }
 
-        Log.Information("[Test] TERMINATING ALL.");
+        output_.WriteLine("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
         server.Kick();
@@ -355,7 +356,7 @@ public class IpTransportTests
             Assert.Equal(count, expected - 1);
         }
 
-        Log.Information("[Test] TERMINATING ALL.");
+        output_.WriteLine("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
         server.Kick();
@@ -451,7 +452,7 @@ public class IpTransportTests
             Assert.Equal(count, expected - 1);
         }
 
-        Log.Information("[Test] TERMINATING ALL.");
+        output_.WriteLine("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
         server.Kick();
@@ -541,10 +542,10 @@ public class IpTransportTests
         foreach (int responses in idToResponses.Values)
         {
             Assert.InRange(responses, pingCount * 0.5, float.PositiveInfinity);
-            Log.Information("[Test] Received {Value:F2} responses.", responses * 100f / pingCount);
+            output_.WriteLine("[Test] Received {Value:F2} responses.", responses * 100f / pingCount);
         }
 
-        Log.Information("[Test] TERMINATING ALL.");
+        output_.WriteLine("[Test] TERMINATING ALL.");
 
         TerminateClients(clients);
         server.Kick();
@@ -630,10 +631,10 @@ public class IpTransportTests
         foreach (int messages in idToMessages.Values)
         {
             Assert.InRange(messages, pingCount * 0.5, float.PositiveInfinity);
-            Log.Information("[Test] Received {Value:F2} % of responses.", messages * 100f / pingCount) ;
+            output_.WriteLine("[Test] Received {Value:F2} % of responses.", messages * 100f / pingCount) ;
         }
 
-        Log.Information("[Test] TERMINATING ALL.");
+        output_.WriteLine("[Test] TERMINATING ALL.");
 
         TerminateClients(clients);
         server.Kick();

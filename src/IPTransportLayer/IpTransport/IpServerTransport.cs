@@ -4,8 +4,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Transport.Default;
 
@@ -28,7 +29,6 @@ class ConnectedClient
     }
 }
 
-
 /// <summary>
 /// Implementation of the server transport over TCP/UDP. The server for <see cref="IpClientTransport"/>.
 /// </summary>
@@ -39,13 +39,17 @@ class ConnectedClient
 public class IpServerTransport : IServerTransport
 {
     readonly IPEndPoint local_;
+    readonly ILoggerFactory loggerFactory_;
 
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="local">The local endpoint the server shell bind to.</param>
-    public IpServerTransport(IPEndPoint local)
+    /// <param name="loggerFactory">Optional logger factory for logging debug info.</param>
+    public IpServerTransport(IPEndPoint local, ILoggerFactory? loggerFactory = null)
     {
+        loggerFactory_ = loggerFactory ?? NullLoggerFactory.Instance;
+        logger_ = loggerFactory_.CreateLogger<IpClientTransport>();
         local_ = local;
     }
 
@@ -69,7 +73,7 @@ public class IpServerTransport : IServerTransport
 
     readonly QueueMessages<(Memory<byte>, int?)> tcpMessages_ = new();
 
-    readonly ILogger logger_ = Log.ForContext<IpServerTransport>();
+    readonly ILogger logger_;
     
     void RemoveClient(int id)
     {
@@ -98,7 +102,7 @@ public class IpServerTransport : IServerTransport
             return;
         }
 
-        TcpClientTransceiver layer = new(stream);
+        TcpClientTransceiver layer = new(stream, loggerFactory_);
 
         ConnectedClient record = new(layer, target, new(), id);
         AddClient(record);
@@ -108,7 +112,7 @@ public class IpServerTransport : IServerTransport
         // Give client their identification id
         await SendInitIdAsync(stream, id, clientCancellation);
 
-        Receiver<Memory<byte>> receiver = new(layer);
+        Receiver<Memory<byte>> receiver = new(layer, loggerFactory_);
         
         int idCapture = id;
         receiver.OnMessage += m => OnReliableMessage?.Invoke(idCapture, m);
@@ -121,11 +125,11 @@ public class IpServerTransport : IServerTransport
         }
         catch (OtherSideEndedException)
         {
-            logger_.Verbose("Client with id {Id} disconnected from server.", id);
+            logger_.LogTrace("Client with id {Id} disconnected from server.", id);
         }
         finally
         {   
-            logger_.Verbose("Client with id {Id} was removed.", id);
+            logger_.LogTrace("Client with id {Id} was removed.", id);
             RemoveClient(id);
             client.Dispose();
         }
@@ -144,7 +148,7 @@ public class IpServerTransport : IServerTransport
         {
             TcpClient client = await listener.AcceptTcpClientAsync(cancellation);
             RunClientAsync(client, id).AssureNoFault();
-            logger_.Verbose("Client connected to server with id {Id}.", id);
+            logger_.LogTrace("Client connected to server with id {Id}.", id);
         }
     }
 
@@ -176,14 +180,14 @@ public class IpServerTransport : IServerTransport
 
         Port = endpoint.Port;
 
-        logger_.Information("Began server at {Local} -> {Transformed}.", local_, endpoint);
+        logger_.LogInformation("Began server at {Local} -> {Transformed}.", local_, endpoint);
         
-        UdpServerTransceiver udpTransceiver = new(udp, idToConnection_);
-        TcpServerTransceiver tcpServerTransceiver = new(idToConnection_);
+        UdpServerTransceiver udpTransceiver = new(udp, idToConnection_, loggerFactory_);
+        TcpServerTransceiver tcpServerTransceiver = new(idToConnection_, loggerFactory_);
 
-        Receiver<(Memory<byte>, int)> udpReceiver = new(udpTransceiver);
-        Sender<BagMessages<(Memory<byte>, int?)>, (Memory<byte>, int?)> udpMemorySender = new(udpTransceiver, udpMessages_);
-        Sender<QueueMessages<(Memory<byte>, int?)>, (Memory<byte>, int?)> tcpMemorySender = new(tcpServerTransceiver,  tcpMessages_);
+        Receiver<(Memory<byte>, int)> udpReceiver = new(udpTransceiver, loggerFactory_);
+        Sender<BagMessages<(Memory<byte>, int?)>, (Memory<byte>, int?)> udpMemorySender = new(udpTransceiver, udpMessages_, loggerFactory_);
+        Sender<QueueMessages<(Memory<byte>, int?)>, (Memory<byte>, int?)> tcpMemorySender = new(tcpServerTransceiver,  tcpMessages_, loggerFactory_);
 
         udpReceiver.OnMessage += HandleUdpReceive;
         

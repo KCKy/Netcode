@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
+using Microsoft.Extensions.Logging;
 using Kcky.Useful;
 
 namespace Kcky.GameNewt.Transport.Default;
@@ -16,11 +16,12 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, int? id)
 {
     readonly ConcurrentDictionary<int, ConnectedClient> idToConnection_;
 
-    readonly ILogger logger_ = Log.ForContext<TcpServerTransceiver>();
+    readonly ILogger logger_;
 
-    public TcpServerTransceiver(ConcurrentDictionary<int, ConnectedClient> clients)
+    public TcpServerTransceiver(ConcurrentDictionary<int, ConnectedClient> clients, ILoggerFactory loggerFactory)
     {
         idToConnection_ = clients;
+        logger_ = loggerFactory.CreateLogger<TcpServerTransceiver>();
     }
 
     public const int HeaderSize = 0;
@@ -33,7 +34,7 @@ sealed class TcpServerTransceiver : ISendProtocol<(Memory<byte> memory, int? id)
         }
         catch (Exception ex)
         {
-            logger_.Error(ex, "Client {Id} failed to send.", client.Id);
+            logger_.LogError(ex, "Client {Id} failed to send.", client.Id);
             client.Cancellation.Cancel();
         }
     }
