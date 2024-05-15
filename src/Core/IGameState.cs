@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt;
 
@@ -17,7 +18,7 @@ public interface IGameState<TC, TS>
     /// </summary>
     /// <param name="updateInputs">The inputs for the update. The result of this update on the state and the return value shall be purely determined by this value.</param>
     /// <returns>The result of the state update. Used for kicking clients and determining the end of the game simulation.</returns>
-    UpdateOutput Update(UpdateInput<TC, TS> updateInputs);
+    UpdateOutput Update(UpdateInput<TC, TS> updateInputs, ILogger logger);
 
     /// <summary>
     /// Number of ticks per second the game is designed to run it. Shall be a constant value across all platforms.

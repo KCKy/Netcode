@@ -542,7 +542,7 @@ public class IpTransportTests
         foreach (int responses in idToResponses.Values)
         {
             Assert.InRange(responses, pingCount * 0.5, float.PositiveInfinity);
-            output_.WriteLine("[Test] Received {Value:F2} responses.", responses * 100f / pingCount);
+            output_.WriteLine($"[Test] Received {responses * 100f / pingCount} responses.");
         }
 
         output_.WriteLine("[Test] TERMINATING ALL.");
@@ -631,7 +631,7 @@ public class IpTransportTests
         foreach (int messages in idToMessages.Values)
         {
             Assert.InRange(messages, pingCount * 0.5, float.PositiveInfinity);
-            output_.WriteLine("[Test] Received {Value:F2} % of responses.", messages * 100f / pingCount) ;
+            output_.WriteLine($"[Test] Received {messages * 100f / pingCount} % of responses.") ;
         }
 
         output_.WriteLine("[Test] TERMINATING ALL.");

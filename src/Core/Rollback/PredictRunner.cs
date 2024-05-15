@@ -24,7 +24,7 @@ sealed class PredictRunner<TC, TS, TG>(
     where TS : class, new()
 {
     readonly PooledBufferWriter<byte> predictInputWriter_ = new();
-    readonly StateHolder<TC, TS, TG> predictHolder_ = new(loggerFactory);
+    readonly StateHolder<TC, TS, TG, PredictiveStateType> predictHolder_ = new(loggerFactory);
     UpdateInput<TC, TS> predictInput_ = UpdateInput<TC, TS>.Empty;
     readonly ILogger logger_ = loggerFactory.CreateLogger<PredictRunner<TC, TS, TG>>();
     readonly object frameLock_ = new();

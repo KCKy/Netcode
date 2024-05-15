@@ -6,13 +6,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Utility;
 
+interface IStateHolderType { }
+
+struct ServerStateType : IStateHolderType { }
+struct AuthoritativeStateType : IStateHolderType { }
+struct PredictiveStateType : IStateHolderType  { }
+struct ReplacementStateType : IStateHolderType  { }
+struct MiscStateType : IStateHolderType  { }
+
 /// <summary>
 /// Owner of a specific game state, keeps its index, provides methods for updating, checksums and serialization.
 /// </summary>
-sealed class StateHolder<TC, TS, TG>(ILoggerFactory loggerFactory)
+sealed class StateHolder<TC, TS, TG, TType>(ILoggerFactory loggerFactory)
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
+    where TType: struct, IStateHolderType
 {
     public TG State
     {
@@ -32,7 +41,7 @@ sealed class StateHolder<TC, TS, TG>(ILoggerFactory loggerFactory)
     bool serialized_ = false;
     long? checksum_ = null;
     
-    readonly ILogger logger_ = loggerFactory.CreateLogger<StateHolder<TC, TS, TG>>();
+    readonly ILogger logger_ = loggerFactory.CreateLogger<StateHolder<TC, TS, TG, TType>>();
     
     public Memory<byte> GetSerialized()
     {
@@ -72,16 +81,16 @@ sealed class StateHolder<TC, TS, TG>(ILoggerFactory loggerFactory)
         checksum_ = null;
         serialized_ = false;
         writer_.Reset();
-
+        
         try
         {
-            return State.Update(input);
+            return State.Update(input, logger_);
         }
         catch (Exception ex)
         {
             logger_.LogError(ex, "State update failed with an exception!");
         }
-
+        
         return UpdateOutput.Empty;
     }
 }

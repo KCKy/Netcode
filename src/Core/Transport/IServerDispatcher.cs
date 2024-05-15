@@ -74,7 +74,7 @@ public interface IServerSender
 /// <param name="id">The id of client this input was received from.</param>
 /// <param name="frame">The frame of the state update the input belongs to.</param>
 /// <param name="input">Read only borrow of the serialized input.</param>
-public delegate void AddInputDelegate(int id, long frame, ReadOnlySpan<byte> input);
+public delegate void AddInputDelegate(int id, long frame, ReadOnlyMemory<byte> input);
 
 /// <summary>
 /// Notifies about server-targeted messages of the application protocol.

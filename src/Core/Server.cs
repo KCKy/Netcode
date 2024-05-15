@@ -28,8 +28,6 @@ public delegate void InitStateDelegate<TClientInput, TServerInput, TGameState>(T
     where TClientInput : class, new()
     where TServerInput : class, new();
 
-
-
 /// <summary>
 /// The main server class. Takes care of collecting inputs of clients,
 /// periodically updating the authoritative state based on collected input, manages clients, informs them about authoritative inputs,
@@ -51,7 +49,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     }
 
     // Locking the holder to stop RW/WR conflicts and correct init behaviour (WW does not happen due to tickMutex)
-    readonly StateHolder<TClientInput, TServerInput, TGameState> stateHolder_;
+    readonly StateHolder<TClientInput, TServerInput, TGameState, ServerStateType> stateHolder_;
 
     ServerState serverState_ = ServerState.NotStarted;
     readonly ThreadClock clock_ = new();
@@ -296,18 +294,18 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         logger_.LogDebug("Client with id {Id} has connected to the server and has been initiated for frame {Frame}.", id, frame);
     }
 
-    void AddInput(int id, long frame, ReadOnlySpan<byte> serializedInput)
+    void AddInput(int id, long frame, ReadOnlyMemory<byte> serializedInput)
     {
-        var input = MemoryPackSerializer.Deserialize<TClientInput>(serializedInput);
+        var input = MemoryPackSerializer.Deserialize<TClientInput>(serializedInput.Span);
 
         if (input is null)
         {
-            logger_.LogWarning("The server has received valid input from client with id {Id} for frame {Frame}.", id, frame);
+            logger_.LogWarning("The server has received valid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
         }
         else
         {
             inputQueue_.AddInput(id, frame, input);
-            logger_.LogTrace("The server has received invalid input from client with id {Id} for frame {Frame}.", id, frame);
+            logger_.LogTrace("The server has received invalid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
         }
     }
 

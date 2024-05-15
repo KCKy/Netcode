@@ -88,12 +88,12 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
 
     void HandleClientInput(int id, Memory<byte> owner)
     {
-        var message = owner.Span;
+        var message = owner;
         const int headerLength = DefaultClientDispatcher.InputStructHeader;
 
         while (message.Length > headerLength)
         {
-            var header = message[..headerLength];
+            var header = message.Span[..headerLength];
             long frame = header.ReadLong();
             int length = header.ReadInt();
 

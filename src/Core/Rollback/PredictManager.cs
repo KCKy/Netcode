@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG> authState, IClientSender sender, ILoggerFactory loggerFactory)
+sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG, AuthoritativeStateType> authState, IClientSender sender, ILoggerFactory loggerFactory)
     where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()

@@ -28,7 +28,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     where TClientInput : class, new()
     where TServerInput : class, new()
 {
-    readonly StateHolder<TClientInput, TServerInput, TGameState> authStateHolder_; // Mutex used to stop RW/WR/WW conflicts.
+    readonly StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authStateHolder_; // Mutex used to stop RW/WR/WW conflicts.
     readonly PredictManager<TClientInput, TServerInput, TGameState> predictManager_;
     readonly CancellationTokenSource clientCancellation_ = new();
     readonly object stateMutex_ = new(); // Assures atomicity of start and termination operations.
@@ -233,7 +233,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         }
     }
 
-    void AssertChecksum(long frame, ReadOnlySpan<byte> serializedInput, long? checksum)
+    void AssertChecksum(long frame, ReadOnlyMemory<byte> serializedInput, long? checksum)
     {
         if (!UseChecksum || checksum is not { } check)
             return;
@@ -243,10 +243,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         if (actual != check)
         {
             var serialized = authStateHolder_.GetSerialized();
-            Memory<byte> serializedInputCopy = new byte[serializedInput.Length];
-            serializedInput.CopyTo(serializedInputCopy.Span);
 
-            logger_.LogCritical("The client has detected a desync from the server for frame {Frame} ({ActualSum} != {ExpectedSum})! The diverged state: {SerializedState} has resulted from input {SerializedInput}", frame, actual, check, serialized, serializedInputCopy);
+            logger_.LogCritical("The client has detected a desync from the server for frame {Frame} ({ActualSum} != {ExpectedSum})! The diverged state: {SerializedState} has resulted from input {SerializedInput}", frame, actual, check, serialized, serializedInput);
             ArrayPool<byte>.Shared.Return(serialized);
             throw new InvalidOperationException("The auth state has diverged from the server.");
         }
@@ -256,7 +254,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     bool stateInitiated_ = false; // Used to assure invalid auth state updates don't happen before initiation.
 
-    void Update(UpdateInput<TClientInput, TServerInput> input, ReadOnlySpan<byte> serializedInput, long? checksum, long inputFrame)
+    void Update(UpdateInput<TClientInput, TServerInput> input, ReadOnlyMemory<byte> serializedInput, long? checksum, long inputFrame)
     {
         lock (authStateHolder_)
         {
@@ -280,12 +278,12 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             if (TraceState)
             {
                 Memory<byte> trace = authStateHolder_.GetSerialized();
-                logger_.LogInformation("Finished client authoritative state update for {Frame} resulting in state: {SerializedState}", frame, trace);
+                logger_.LogInformation("Finished client authoritative state update with input {SerializedInput} for {Frame} resulting in state: {SerializedState}", serializedInput, frame, trace);
                 ArrayPool<byte>.Shared.Return(trace);
             }
             
             displayer_.AddAuthoritative(frame, authStateHolder_.State);
-            predictManager_.InformAuthInput(serializedInput, frame, input);
+            predictManager_.InformAuthInput(serializedInput.Span, frame, input);
         }
     }
 
@@ -299,10 +297,9 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         }
 
         logger_.LogTrace("The client has begun the next tick for frame.");
-        var inputSpan = serializedInput.Span;
-        var input = MemoryPackSerializer.Deserialize<UpdateInput<TClientInput, TServerInput>>(inputSpan);
+        var input = MemoryPackSerializer.Deserialize<UpdateInput<TClientInput, TServerInput>>(serializedInput.Span);
 
-        Update(input, inputSpan, checksum, frame);
+        Update(input, serializedInput, checksum, frame);
             
         ArrayPool<byte>.Shared.Return(serializedInput);
         logger_.LogTrace("The client has completed the tick for frame {Frame}.", frame);
@@ -310,7 +307,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         if (traceTime)
         {
             TimeSpan tickTime = Stopwatch.GetElapsedTime(tickStartStamp_);
-            logger_.LogTrace("Client tick for frame {Frame} took {Time}.", frame, tickTime);
+            logger_.LogInformation("Client tick for frame {Frame} took {Time}.", frame, tickTime);
         }
     }
 

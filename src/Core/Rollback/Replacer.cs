@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Kcky.GameNewt.Client;
 
 sealed class Replacer<TC, TS, TG>
-    (StateHolder<TC, TS, TG> authStateHolder,
+    (StateHolder<TC, TS, TG, AuthoritativeStateType> authStateHolder,
     ReplacementCoordinator coordinator,
     IndexedQueue<TC> clientInputs,
     UpdateInputPredictor<TC, TS, TG> predictor,
@@ -21,7 +21,7 @@ sealed class Replacer<TC, TS, TG>
     where TC : class, new()
     where TS : class, new()
 {
-    readonly StateHolder<TC, TS, TG> replacementHolder_ = new(loggerFactory);
+    readonly StateHolder<TC, TS, TG, ReplacementStateType> replacementHolder_ = new(loggerFactory);
     readonly PooledBufferWriter<byte> replacementInputWriter_ = new();
     readonly ILogger logger_ = loggerFactory.CreateLogger<Replacer<TC, TS, TG>>();
 

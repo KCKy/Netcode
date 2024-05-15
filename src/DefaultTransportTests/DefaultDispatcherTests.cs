@@ -60,7 +60,7 @@ public sealed class DefaultDispatcherTests
             {
                 Assert.Equal(id, cid);
                 Assert.InRange(frame, startFrame, startFrame + frameCount - 1);
-                var data = MemoryPackSerializer.Deserialize<long>(input);
+                long data = MemoryPackSerializer.Deserialize<long>(input.Span);
                 Assert.Equal(frame, data);
 
                 if (frame < nextFrame)
