@@ -6,7 +6,6 @@ using Kcky.Useful;
 using MemoryPack;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Client;
 

@@ -179,7 +179,7 @@ sealed class SynchronizedClock
     /// </summary>
     /// <param name="frame">The frame the delay belongs to.</param>
     /// <param name="delay">The delay amount. Negative value means the clock should catch up.</param>
-    public void SetDelayHandler(long frame, double delay)
+    public void SetDelay(long frame, double delay)
     {
         lock (mutex_)
         {

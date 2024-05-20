@@ -145,7 +145,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     void SetDelayHandler(long frame, double delay)
     {
         logger_.LogTrace("The client has received delay info for frame {Frame} with value {Delay}.", frame, delay);
-        clock_.SetDelayHandler(frame, delay - TargetDelta);
+        clock_.SetDelay(frame, delay - TargetDelta);
     }
 
     void SetHandlers()
@@ -213,7 +213,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
         logger_.LogDebug("The client has started.");
 
-        await clientCancellation_.Token;
+        await Task.Delay(Timeout.Infinite, clientCancellation_.Token);
     }
 
     /// <inheritdoc/>
@@ -339,11 +339,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         }
     }
 
-    void InitializePredictState(long frame, TGameState predictState)
-    {
-        predictManager_.Init(frame, predictState);
-    }
-
     void Initialize(int id, long frame, Memory<byte> serializedState)
     {
         lock (stateMutex_)
@@ -359,10 +354,10 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             (TGameState authState, TGameState predictState) = DeserializeStates(serializedState);
 
             InitializeAuthState(frame, authState);
-            InitializePredictState(frame, predictState);
 
             Id = id;
             predictManager_.LocalId = id;
+            predictManager_.Init(frame, predictState);
             displayer_.Init(id);
 
             clock_.Initialize(frame);

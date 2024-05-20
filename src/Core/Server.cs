@@ -68,7 +68,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     readonly object tickMutex_ = new(); // Assures tick updates are atomic.
 
     /// <summary>
-    /// Displayer, will shall be notified with the server state.
+    /// Displayer, which shall be notified with the server state.
     /// </summary>
     public IDisplayer<TGameState> Displayer
     {
@@ -113,14 +113,14 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     {
         dispatcher_.OnAddClient += AddClient;
         dispatcher_.OnAddInput += AddInput;
-        dispatcher_.OnRemoveClient += FinishClient;
+        dispatcher_.OnRemoveClient += RemoveClient;
     }
 
     void UnsetHandlers()
     {
         dispatcher_.OnAddClient -= AddClient;
         dispatcher_.OnAddInput -= AddInput;
-        dispatcher_.OnRemoveClient -= FinishClient;
+        dispatcher_.OnRemoveClient -= RemoveClient;
     }
 
     /// <inheritdoc/>
@@ -308,8 +308,8 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
             logger_.LogTrace("The server has received invalid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
         }
     }
-
-    void FinishClient(int id)
+    
+    void RemoveClient(int id)
     {
         inputQueue_.RemoveClient(id);
         logger_.LogDebug("Client with id {Id} has disconnected from the server.", id);

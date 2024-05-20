@@ -79,7 +79,6 @@ sealed class Clock : IClock
         last_ = Stopwatch.GetTimestamp();
         cancelToken_ = cancelToken;
 
-        await cancelToken;
-        throw new OperationCanceledException();
+        await Task.Delay(Timeout.Infinite, cancelToken_);
     }
 }

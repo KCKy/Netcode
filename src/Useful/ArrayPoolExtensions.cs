@@ -29,8 +29,10 @@ public static class ArrayPoolExtensions
     /// <param name="memory">The memory which is backed by a pooled array.</param>
     public static void Return(this ArrayPool<byte> pool, Memory<byte> memory)
     {
-        // SOURCE: https://github.com/Cysharp/MemoryPack#deserialize-array-pooling
-        if (!MemoryMarshal.TryGetArray<byte>(memory, out var segment) || segment.Array is not { Length: > 0 } array)
+        if (!MemoryMarshal.TryGetArray(memory, out ArraySegment<byte> segment))
+            return;
+
+        if (segment.Array is not { Length: > 0 } array)
             return;
 
         pool.Return(array);
