@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Kcky.GameNewt.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.DataStructures;
@@ -24,17 +23,11 @@ delegate void InputAuthoredDelegate(int id, long frame, TimeSpan difference);
 sealed class ClientInputQueue<TClientInput>
 where TClientInput : class, new()
 {
-    sealed class SingleClientQueue
+    sealed class SingleClientQueue(PredictClientInputDelegate<TClientInput> predictClientInput)
     {
         public long LastAuthorizedInput = long.MinValue;
-        readonly IClientInputPredictor<TClientInput> predictor_;
         readonly Dictionary<long, (TClientInput input, long timestamp)> frameToInput_ = new();
         TClientInput previousInput_ = new();
-
-        public SingleClientQueue(IClientInputPredictor<TClientInput> predictor)
-        {
-            predictor_ = predictor;
-        }
 
         public bool TryAdd(long frame, TClientInput input, long timestamp) => frameToInput_.TryAdd(frame, (input, timestamp));
 
@@ -49,7 +42,7 @@ where TClientInput : class, new()
             }
             else
             {
-                predictor_.PredictInput(ref previousInput_);
+                predictClientInput(ref previousInput_);
                 time = null;
             }
 
@@ -62,7 +55,7 @@ where TClientInput : class, new()
     readonly List<int> removedClients_ = new();
 
     readonly double ticksPerSecond_;
-    readonly IClientInputPredictor<TClientInput> predictor_;
+    readonly PredictClientInputDelegate<TClientInput> predictClientInput_;
 
     readonly object mutex_ = new();
 
@@ -70,13 +63,13 @@ where TClientInput : class, new()
     /// Constructor.
     /// </summary>
     /// <param name="tps">The TPS the game should run at. Used for input delay calculations.</param>
-    /// <param name="predictor">Input predictor for client inputs. Used as a substitute when input of a client are not received in time.</param>
+    /// <param name="predictClientInput">Input predictor for client inputs. Used as a substitute when input of a client are not received in time.</param>
     /// <param name="onInputAuthored">Raised when given client input is being authored.</param>
     /// <param name="loggerFactory">Logger factory to use for logging events.</param>
-    public ClientInputQueue(double tps, IClientInputPredictor<TClientInput> predictor, InputAuthoredDelegate onInputAuthored, ILoggerFactory loggerFactory)
+    public ClientInputQueue(double tps, PredictClientInputDelegate<TClientInput> predictClientInput, InputAuthoredDelegate onInputAuthored, ILoggerFactory loggerFactory)
     {
         ticksPerSecond_ = tps;
-        predictor_ = predictor;
+        predictClientInput_ = predictClientInput;
         inputAuthored_ = onInputAuthored;
         logger_ = loggerFactory.CreateLogger<ClientInputQueue<TClientInput>>();
     }
@@ -108,7 +101,7 @@ where TClientInput : class, new()
     {
         lock (mutex_)
         {
-            if (!idToInputs_.TryAdd(id, new(predictor_)))
+            if (!idToInputs_.TryAdd(id, new(predictClientInput_)))
             {
                 logger_.LogCritical("To add duplicate client {Id}", id);
                 throw new ArgumentException("Client with given id is already present.", nameof(id));

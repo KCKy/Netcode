@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Kcky.GameNewt.DataStructures;
-using Kcky.GameNewt.Providers;
 using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
@@ -14,19 +13,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Server;
-
-/// <summary>
-/// Used to initialize the game state before the game begins.
-/// May be undeterministic as it is called only for the server and the resulting state is replicated to clients.
-/// </summary>
-/// <typeparam name="TClientInput">The type of the client input.</typeparam>
-/// <typeparam name="TServerInput">The type of the server input.</typeparam>
-/// <typeparam name="TGameState">The type of the game state.</typeparam>
-/// <param name="state">Borrow of the game state to be modified.</param>
-public delegate void InitStateDelegate<TClientInput, TServerInput, TGameState>(TGameState state)
-    where TGameState : class, IGameState<TClientInput, TServerInput>, new()
-    where TClientInput : class, new()
-    where TServerInput : class, new();
 
 /// <summary>
 /// The main server class. Takes care of collecting inputs of clients,
@@ -55,8 +41,6 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     readonly ThreadClock clock_ = new();
     readonly CancellationTokenSource clockCancellation_ = new();
 
-    readonly IServerInputProvider<TServerInput, TGameState> inputProvider_ = new DefaultServerInputProvider<TServerInput, TGameState>();
-    readonly IDisplayer<TGameState> displayer_ = new DefaultDisplayer<TGameState>();
     bool updatingEnded_ = false;
     long tickStartStamp_;
 
@@ -68,25 +52,14 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     readonly object tickMutex_ = new(); // Assures tick updates are atomic.
 
     /// <summary>
-    /// Displayer, which shall be notified with the server state.
+    /// Server input provider which shall be used to get server inputs.
     /// </summary>
-    public IDisplayer<TGameState> Displayer
-    {
-        init => displayer_ = value;
-    }
+    public ProvideServerInputDelegate<TServerInput, TGameState> ServerInputProvider { private get; init; } = static _ => new();
 
     /// <summary>
-    /// Server input provider which shall be used to get server inputs. If none is provided <see cref="DefaultServerInputProvider{TServerInput,TGameState}"/> is used.
+    /// Client input predictor. Used to predict client input if none is received in time.
     /// </summary>
-    public IServerInputProvider<TServerInput, TGameState> ServerInputProvider
-    {
-        init => inputProvider_ = value;
-    }
-
-    /// <summary>
-    /// Client input predictor. Used to predict client input if none is received in time. If none is provided <see cref="DefaultClientInputPredictor{TClientInput}"/> is used.
-    /// </summary>
-    public IClientInputPredictor<TClientInput> ClientInputPredictor
+    public PredictClientInputDelegate<TClientInput> ClientInputPredictor
     {
         init => inputQueue_ = new(TGameState.DesiredTickRate, value, dispatcher_.SetDelay, loggerFactory_);
     }
@@ -105,7 +78,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
         logger_ = loggerFactory_.CreateLogger<Server<TClientInput, TServerInput, TGameState>>();
         dispatcher_ = dispatcher;
-        inputQueue_ = new(TGameState.DesiredTickRate, new DefaultClientInputPredictor<TClientInput>(), dispatcher_.SetDelay, loggerFactory_);
+        inputQueue_ = new(TGameState.DesiredTickRate, static (ref TClientInput _) => { }, dispatcher_.SetDelay, loggerFactory_);
         SetHandlers();
     }
 
@@ -133,7 +106,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// Invoked once when the server starts.
     /// May be used to modify the initial authoritative game state.
     /// </summary>
-    public event InitStateDelegate<TClientInput, TServerInput, TGameState>? OnStateInit;
+    public event InitializeStateDelegate<TGameState>? OnStateInit;
 
     /// <inheritdoc/>
     public Task RunAsync()
@@ -190,7 +163,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     UpdateInput<TClientInput, TServerInput> GatherInput()
     {
         var clientInput = inputQueue_.ConstructAuthoritativeFrame();
-        TServerInput serverInput = inputProvider_.GetInput(stateHolder_.State);
+        TServerInput serverInput = ServerInputProvider(stateHolder_.State);
         return new(clientInput, serverInput);
     }
 
@@ -211,8 +184,6 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         
         // It is ok to release to lock earlier, as the update is atomic and the state is modified only in the update (concurrent reading is allowed).
 
-        displayer_.AddAuthoritative(stateHolder_.Frame, stateHolder_.State);
-        
         long? checksum = SendChecksum ? stateHolder_.GetChecksum() : null;
 
         if (TraceState && logger_.IsEnabled(LogLevel.Information))

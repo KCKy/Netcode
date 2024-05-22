@@ -4,18 +4,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class ReplacementReceiver<TC, TS, TG>(ILoggerFactory loggerFactory)
-    where TG : class, IGameState<TC, TS>, new()
+sealed class ReplacementReceiver<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
 {
-    readonly StateHolder<TC, TS, TG, MiscStateType> receiverHolder_ = new(loggerFactory);
+    readonly StateHolder<TC, TS, TG, MiscStateType> receiverHolder_;
+
     UpdateInput<TC, TS> newPredictInput_ = UpdateInput<TC, TS>.Empty;
     bool isReplaced_ = false;
 
-    public void Init(long frame)
+    public ReplacementReceiver(ILoggerFactory loggerFactory, long frame)
     {
-        receiverHolder_.Frame = frame;
+        receiverHolder_ = new(loggerFactory)
+        {
+            Frame = frame
+        };
     }
 
     public long TryGive(StateHolder<TC, TS, TG, ReplacementStateType> holder, in UpdateInput<TC, TS> input)

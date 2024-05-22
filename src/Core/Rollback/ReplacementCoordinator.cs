@@ -3,25 +3,24 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Kcky.Useful;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class ReplacementCoordinator(ILoggerFactory loggerFactory)
+sealed class ReplacementCoordinator
 {
     readonly object replacementMutex_ = new();
+    readonly ConcurrentQueue<Memory<byte>> predictQueue_ = new();
+    readonly ILogger logger_;
+
     bool activeReplacement_ = false;
     long currentReplacement_ = long.MinValue;
 
-    readonly ConcurrentQueue<Memory<byte>> predictQueue_ = new();
-    readonly ILogger logger_ = loggerFactory.CreateLogger<ReplacementCoordinator>();
+    public ReplacementCoordinator(ILoggerFactory loggerFactory)
+    {
+        logger_ = loggerFactory.CreateLogger<ReplacementCoordinator>();
+    }
 
     public bool TryDequeuePredictInput(out Memory<byte> input) => predictQueue_.TryDequeue(out input);
-
-    public void Init()
-    {
-        predictQueue_.Clear();
-    }
 
     public long AcquireReplacementIndex()
     {
@@ -33,7 +32,6 @@ sealed class ReplacementCoordinator(ILoggerFactory loggerFactory)
             return index;
         }
     }
-
 
     public void FinishReplacement(long index)
     {

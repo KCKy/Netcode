@@ -1,6 +1,5 @@
 using System;
 using Kcky.GameNewt.DataStructures;
-using Kcky.GameNewt.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Kcky.GameNewt.Tests;
@@ -23,7 +22,7 @@ public sealed class ClientInputQueueTests
     [InlineData(int.MinValue)]
     public void Basic(int id)
     {
-        ClientInputQueue<MockStructure> queue = new(1, new DefaultClientInputPredictor<MockStructure>(), (_, _, _) => {}, NullLoggerFactory.Instance);
+        ClientInputQueue<MockStructure> queue = new(1, (ref MockStructure _) => {}, (_, _, _) => {}, NullLoggerFactory.Instance);
         
         MockStructure thirdStructure = new(1, 1, 1, 1);
 
@@ -104,7 +103,7 @@ public sealed class ClientInputQueueTests
     public void InputAuthorLate(int id, int tps)
     {
         InputAuthCapturer capturer = new();
-        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>(), capturer.Capture, NullLoggerFactory.Instance);
+        ClientInputQueue<MockStructure> queue = new(tps, (ref MockStructure _) => {}, capturer.Capture, NullLoggerFactory.Instance);
         
         queue.AddClient(id);
 
@@ -130,7 +129,7 @@ public sealed class ClientInputQueueTests
     public void InputAuthorInTime(int id, int tps)
     {
         InputAuthCapturer capturer = new();
-        ClientInputQueue<MockStructure> queue = new(tps, new DefaultClientInputPredictor<MockStructure>(), capturer.Capture, NullLoggerFactory.Instance);
+        ClientInputQueue<MockStructure> queue = new(tps, (ref MockStructure _) => {}, capturer.Capture, NullLoggerFactory.Instance);
 
         queue.AddClient(id);
 

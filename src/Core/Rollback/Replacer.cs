@@ -10,29 +10,43 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class Replacer<TC, TS, TG>
-    (StateHolder<TC, TS, TG, AuthoritativeStateType> authStateHolder,
-    ReplacementCoordinator coordinator,
-    IndexedQueue<TC> clientInputs,
-    UpdateInputPredictor<TC, TS, TG> predictor,
-    ReplacementReceiver<TC, TS, TG> receiver,
-    ILoggerFactory loggerFactory)
-    where TG : class, IGameState<TC, TS>, new()
+sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
 {
-    readonly StateHolder<TC, TS, TG, ReplacementStateType> replacementHolder_ = new(loggerFactory);
+    readonly StateHolder<TC, TS, TG, ReplacementStateType> replacementHolder_;
     readonly PooledBufferWriter<byte> replacementInputWriter_ = new();
-    readonly ILogger logger_ = loggerFactory.CreateLogger<Replacer<TC, TS, TG>>();
+    readonly ILogger logger_;
+    readonly StateHolder<TC, TS, TG, AuthoritativeStateType> authStateHolder_;
+    readonly ReplacementCoordinator coordinator_;
+    readonly IndexedQueue<TC> clientInputs_;
+    readonly UpdateInputPredictor<TC, TS, TG> predictor_;
+    readonly ReplacementReceiver<TC, TS, TG> receiver_;
+
+    public Replacer(StateHolder<TC, TS, TG, AuthoritativeStateType> authStateHolder,
+        ReplacementCoordinator coordinator,
+        IndexedQueue<TC> clientInputs,
+        UpdateInputPredictor<TC, TS, TG> predictor,
+        ReplacementReceiver<TC, TS, TG> receiver,
+        ILoggerFactory loggerFactory)
+    {
+        authStateHolder_ = authStateHolder;
+        coordinator_ = coordinator;
+        clientInputs_ = clientInputs;
+        predictor_ = predictor;
+        receiver_ = receiver;
+        replacementHolder_ = new(loggerFactory);
+        logger_ = loggerFactory.CreateLogger<Replacer<TC, TS, TG>>();
+    }
 
     public void BeginReplacement(long frame, UpdateInput<TC, TS> input)
     {
         // Acquire index now, to assure correct ordering of replacements. 
-        long index = coordinator.AcquireReplacementIndex();
+        long index = coordinator_.AcquireReplacementIndex();
 
         // As this is called synchronously from auth state update this does not need to be synchronized.
-        Debug.Assert(authStateHolder.Frame == frame);
-        var authState = authStateHolder.GetSerialized();
+        Debug.Assert(authStateHolder_.Frame == frame);
+        var authState = authStateHolder_.GetSerialized();
 
         ReplaceGameStateAsync(index, frame, authState, input).AssureSuccess();
     }
@@ -46,13 +60,13 @@ sealed class Replacer<TC, TS, TG>
         // Wait for earlier replacements to finish
         lock (replacementHolder_)
         {
-            if (!coordinator.CheckReplacementCurrent(replacementIndex))
+            if (!coordinator_.CheckReplacementCurrent(replacementIndex))
                 return;
 
             replacementInputWriter_.Reset();
             
-            lock (clientInputs)
-                clientInputs.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
+            lock (clientInputs_)
+                clientInputs_.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
 
             TG? state = replacementHolder_.State;
 
@@ -105,15 +119,15 @@ sealed class Replacer<TC, TS, TG>
             difference--;
 
             TC localInput;
-            lock (clientInputs)
-                localInput = clientInputs[frame]; // This is supposed to never fail
+            lock (clientInputs_)
+                localInput = clientInputs_[frame]; // This is supposed to never fail
 
             // Predict
-            predictor.Predict(ref input, localInput, replacementHolder_.State);
+            predictor_.Predict(ref input, localInput, replacementHolder_.State);
 
             MemoryPackSerializer.Serialize(replacementInputWriter_, input);
 
-            if (!coordinator.TryGiveReplacementInput(replacementIndex, replacementInputWriter_))
+            if (!coordinator_.TryGiveReplacementInput(replacementIndex, replacementInputWriter_))
                 return false;
 
             replacementHolder_.Update(input);
@@ -128,11 +142,11 @@ sealed class Replacer<TC, TS, TG>
     {
         Debug.Assert(frame == replacementHolder_.Frame);
 
-        long difference = receiver.TryGive(replacementHolder_, input);
+        long difference = receiver_.TryGive(replacementHolder_, input);
         
         if (difference == 0)
         {
-            coordinator.FinishReplacement(replacementIndex);
+            coordinator_.FinishReplacement(replacementIndex);
             logger_.LogDebug("Successfully replaced predict at frame {Frame}.", frame);
         }
 

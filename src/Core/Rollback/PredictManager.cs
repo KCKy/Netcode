@@ -1,42 +1,52 @@
 ﻿using System;
 using Kcky.GameNewt.DataStructures;
-using Kcky.GameNewt.Providers;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG, AuthoritativeStateType> authState, IClientSender sender, ILoggerFactory loggerFactory)
-    where TG : class, IGameState<TC, TS>, new()
+sealed class PredictManager<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
     where TC : class, new()
     where TS : class, new()
 {
-    readonly ILogger logger_ = loggerFactory.CreateLogger<PredictManager<TC, TS, TG>>();
-
+    readonly StateHolder<TC, TS, TG, AuthoritativeStateType> authState_;
+    readonly IClientSender sender_;
+    readonly ILoggerFactory loggerFactory_;
+    readonly HandleNewPredictiveStateDelegate<TG> newPredictiveStateCallback_;
+    readonly PredictServerInputDelegate<TS, TG> predictServerInput_;
+    readonly PredictClientInputDelegate<TC> predictClientInput_;
+    readonly ProvideClientInputDelegate<TC> provideClientInput_;
+    readonly ILogger logger_;
     readonly IndexedQueue<TC> clientInputs_ = new(); // This queue needs to be locked. Making new client inputs is exclusive to predict update.
-
-    readonly ReplacementCoordinator coordinator_ = new(loggerFactory);
+    readonly ReplacementCoordinator coordinator_;
+    readonly object tickLock_ = new();
 
     PredictRunner<TC, TS, TG>? predictRunner_ = null;
     Replacer<TC, TS, TG>? replacer_= null;
     UpdateInputPredictor<TC, TS, TG>? predictor_ = null;
 
-    readonly object tickLock_ = new();
-
-    public int LocalId
+    public PredictManager(StateHolder<TC, TS, TG, AuthoritativeStateType> authState,
+        IClientSender sender,
+        ILoggerFactory loggerFactory,
+        HandleNewPredictiveStateDelegate<TG> newPredictiveStateCallback,
+        PredictServerInputDelegate<TS, TG> predictServerInput,
+        PredictClientInputDelegate<TC> predictClientInput,
+        ProvideClientInputDelegate<TC> provideClientInput)
     {
-        set
-        {
-            var predictor = predictor_ ?? throw new InvalidOperationException();
-            predictor.LocalId = value;
-        }
+        authState_ = authState;
+        sender_ = sender;
+        loggerFactory_ = loggerFactory;
+        newPredictiveStateCallback_ = newPredictiveStateCallback;
+        predictServerInput_ = predictServerInput;
+        predictClientInput_ = predictClientInput;
+        provideClientInput_ = provideClientInput;
+        logger_ = loggerFactory.CreateLogger<PredictManager<TC, TS, TG>>();
+        coordinator_ = new(loggerFactory);
     }
 
-    public IServerInputPredictor<TS, TG> ServerInputPredictor { private get; set; } = new DefaultServerInputPredictor<TS, TG>();
-    public IClientInputPredictor<TC> ClientInputPredictor { private get; set; } = new DefaultClientInputPredictor<TC>();
-    public IClientInputProvider<TC> ClientInputProvider { private get; set; } = new DefaultClientInputProvider<TC>();
-    public IDisplayer<TG> Displayer { private get; set; } = new DefaultDisplayer<TG>();
+    public long Frame => predictRunner_?.Frame ?? long.MinValue;
+    public TG? State => predictRunner_?.State;
 
     /// <summary>
     /// Initialize the predict manager to be able to receive inputs.
@@ -46,16 +56,13 @@ sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG, AuthoritativeSta
     /// </remarks>
     /// <param name="frame">The index of the state.</param>
     /// <param name="state">The state to initialize with.</param>
-    public void Init(long frame, TG state)
+    /// <param name="localId">The local id of the client.</param>
+    public void Init(long frame, TG state, int localId)
     {
-        ReplacementReceiver<TC, TS, TG> receiver = new(loggerFactory);
-        predictor_ = new(ClientInputPredictor, ServerInputPredictor);
-        predictRunner_ = new(ClientInputProvider, Displayer, sender, predictor_, clientInputs_, receiver, coordinator_, loggerFactory);
-        replacer_ = new(authState, coordinator_, clientInputs_, predictor_, receiver, loggerFactory);
-
-        receiver.Init(frame);
-        coordinator_.Init();
-        predictRunner_.Init(frame, state);
+        ReplacementReceiver<TC, TS, TG> receiver = new(loggerFactory_, frame);
+        predictor_ = new(predictClientInput_, predictServerInput_, localId);
+        predictRunner_ = new(provideClientInput_, newPredictiveStateCallback_, sender_, predictor_, clientInputs_, receiver, coordinator_, loggerFactory_, frame, state);
+        replacer_ = new(authState_, coordinator_, clientInputs_, predictor_, receiver, loggerFactory_);
         
         lock (clientInputs_)
             clientInputs_.Set(frame + 1);
@@ -82,8 +89,7 @@ sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG, AuthoritativeSta
             predictedInput = Memory<byte>.Empty;
             logger_.LogDebug("The queue is empty.");
         }
-            
-
+        
         if (predictedInput.Span.SequenceEqual(serializedInput))
             return;
 
@@ -101,10 +107,7 @@ sealed class PredictManager<TC, TS, TG>(StateHolder<TC, TS, TG, AuthoritativeSta
             if (predictRunner_ is {} runner)
                 runner.Update();
     }
-
-    public long Frame => predictRunner_?.Frame ?? -1;
-    public TG? State => predictRunner_?.State;
-
+    
     /// <summary>
     /// Stops the predict manager from further management.
     /// </summary>
