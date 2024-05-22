@@ -31,12 +31,12 @@ sealed class ThreadClock : IClock
     /// </remarks>
     public TimeSpan ClockQuantum
     {
-        get => TimeSpan.FromSeconds(clockQuantumTicks_ / (double)Stopwatch.Frequency);
+        get => TimeSpan.FromSeconds(clockQuantumTicks_ / (float)Stopwatch.Frequency);
         set => clockQuantumTicks_ = (long)(value.TotalSeconds * Stopwatch.Frequency);
     }
 
     /// <inheritdoc/>
-    public double TargetTps
+    public float TargetTps
     {
         get => clock_.TargetTps;
         set => clock_.TargetTps = value;

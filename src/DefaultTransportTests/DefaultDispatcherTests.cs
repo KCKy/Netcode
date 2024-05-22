@@ -176,7 +176,7 @@ public sealed class DefaultDispatcherTests
         {
             long cur = startFrame + i;
             server.SendAuthoritativeInput(cur, cur, cur);
-            server.SetDelay(id, cur, TimeSpan.Zero);
+            server.SetDelay(id, cur, 0);
         }
 
         Assert.False(clientTask.IsCompleted);

@@ -63,9 +63,9 @@ public interface IServerSender
     /// See <see cref="SetDelayDelegate"/> for more.
     /// </remarks>
     /// <param name="id">The id of the client to rec</param>
-    /// <param name="frame"></param>
-    /// <param name="difference"></param>
-    void SetDelay(int id, long frame, TimeSpan difference);
+    /// <param name="frame">The frame the input corresponds to.</param>
+    /// <param name="difference">The delay in seconds between receiving the input and the state update.</param>
+    void SetDelay(int id, long frame, float difference);
 
     /// <summary>
     /// Send authoritative input for given state update.

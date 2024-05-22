@@ -136,7 +136,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     void NewPredictiveStateHandler(long frame, TGameState state) => OnNewPredictiveState?.Invoke(frame, state);
 
-    void SetDelayHandler(long frame, double delay)
+    void SetDelayHandler(long frame, float delay)
     {
         logger_.LogTrace("The client has received delay info for frame {Frame} with value {Delay}.", frame, delay);
         clock_.SetDelay(frame, delay - TargetDelta);
@@ -179,13 +179,13 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     public long PredictFrame => predictManager_?.Frame ?? long.MinValue;
 
     /// <inheritdoc/>
-    public double TargetDelta { get; init; } = 0.05;
+    public float TargetDelta { get; init; } = 0.05f;
 
     /// <inheritdoc/>
-    public double CurrentTps => clock_.CurrentTps;
+    public float CurrentTps => clock_.CurrentTps;
 
     /// <inheritdoc/>
-    public double TargetTps => clock_.TargetTps;
+    public float TargetTps => clock_.TargetTps;
 
     /// <inheritdoc/>
     public Task RunAsync()

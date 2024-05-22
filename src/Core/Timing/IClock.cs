@@ -17,7 +17,7 @@ interface IClock
     /// <summary>
     /// The target TPS of the clock, the clock should as closely match this TPS while spacing the ticks evenly.
     /// </summary>
-    double TargetTps { get; set; }
+    float TargetTps { get; set; }
 
     /// <summary>
     /// Starts the clock.

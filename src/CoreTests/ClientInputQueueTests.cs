@@ -70,16 +70,16 @@ public sealed class ClientInputQueueTests
     {
         public int? IdCapture = null;
         public long? FrameCapture = null;
-        public TimeSpan? DifferenceCapture = null;
+        public float? DifferenceCapture = null;
 
-        public void Capture(int id, long frame, TimeSpan difference)
+        public void Capture(int id, long frame, float difference)
         {
             IdCapture = id;
             FrameCapture = frame;
             DifferenceCapture = difference;
         }
 
-        public void AssertValid(int id, long frame, TimeSpan min, TimeSpan max)
+        public void AssertValid(int id, long frame, float min, float max)
         {
             Assert.Equal(id, IdCapture);
             Assert.Equal(frame, FrameCapture);
@@ -111,7 +111,7 @@ public sealed class ClientInputQueueTests
 
         queue.AddInput(id, 0, new()); // Send late input
 
-        capturer.AssertValid(id, 0, TimeSpan.MinValue, TimeSpan.Zero);
+        capturer.AssertValid(id, 0, float.NegativeInfinity, 0);
     }
 
     /// <summary>
@@ -137,6 +137,6 @@ public sealed class ClientInputQueueTests
 
         queue.ConstructAuthoritativeFrame();
 
-        capturer.AssertValid(id, 0, TimeSpan.Zero, TimeSpan.MaxValue);
+        capturer.AssertValid(id, 0, 0, float.PositiveInfinity);
     }
 }

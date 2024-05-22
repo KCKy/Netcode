@@ -23,5 +23,5 @@ public interface IGameState<TC, TS>
     /// <summary>
     /// Number of ticks per second the game is designed to run it. Shall be a constant value across all platforms.
     /// </summary>
-    static abstract double DesiredTickRate { get; }
+    static abstract float DesiredTickRate { get; }
 }

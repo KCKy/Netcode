@@ -156,8 +156,8 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
 
     // Authorize
     readonly PooledBufferWriter<byte> authorizeInputBuffer_ = new();
-    internal const int InputAuthoredHeader = sizeof(long) * 2;
-    Memory<byte> ConstructInputAuthored(long frame, long difference)
+    internal const int InputAuthoredHeader = sizeof(long) + sizeof(int);
+    Memory<byte> ConstructInputAuthored(long frame, int difference)
     {
         WriteMessageHeader(authorizeInputBuffer_, unreliableHeader_, MessageType.ServerAuthorize);
         authorizeInputBuffer_.Write(frame);
@@ -166,15 +166,15 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
     }
 
     /// <inheritdoc/>
-    public void SetDelay(int id, long frame, TimeSpan difference)
+    public void SetDelay(int id, long frame, float difference)
     {
         /*
          * Packet format:
-         * [ Unreliable Message Header ] [ Message Type: byte ] [ Frame: long ] [ Difference: long ]
+         * [ Unreliable Message Header ] [ Message Type: byte ] [ Frame: long ] [ Difference: int ]
          */
 
-        long rawDifference = BitConverter.DoubleToInt64Bits(difference.TotalSeconds);
-        var message = ConstructInputAuthored(frame, rawDifference);
+        int rawDifference = BitConverter.SingleToInt32Bits(difference);
+        Memory<byte> message = ConstructInputAuthored(frame, rawDifference);
         transport_.SendUnreliable(message, id);
     }
 

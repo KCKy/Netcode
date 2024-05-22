@@ -61,9 +61,9 @@ public sealed class IntegrateWindowed<T>
 /// </summary>
 public struct TimeWeightedAverage
 {
-    double last_ = double.NaN;
-    double sum_ = 0;
-    double weight_ = 0;
+    float last_ = float.NaN;
+    float sum_ = 0;
+    float weight_ = 0;
 
     /// <summary>
     /// Constructor.
@@ -73,7 +73,7 @@ public struct TimeWeightedAverage
     /// <summary>
     /// The length of the averaged period.
     /// </summary>
-    public double ResetTime { get; init; } = 1;
+    public float ResetTime { get; init; } = 1;
 
     /// <summary>
     /// Update the average calculation.
@@ -81,7 +81,7 @@ public struct TimeWeightedAverage
     /// <param name="delta">Time passed since the last update.</param>
     /// <param name="amount">The amount to be recorded for this update.</param>
     /// <returns>Time weighted average of the last completed period.</returns>
-    public double Update(double delta, double amount)
+    public float Update(float delta, float amount)
     {
         sum_ += amount * delta;
         weight_ += delta;
@@ -103,9 +103,9 @@ public struct TimeWeightedAverage
 /// </summary>
 public struct Average
 {
-    double last_ = double.NaN;
-    double sum_ = 0;
-    double weight_ = 0;
+    float last_ = float.NaN;
+    float sum_ = 0;
+    float weight_ = 0;
     long count_ = 0;
 
     /// <summary>
@@ -116,7 +116,7 @@ public struct Average
     /// <summary>
     /// The length of the averaged period.
     /// </summary>
-    public double ResetTime { get; init; } = 1;
+    public float ResetTime { get; init; } = 1;
 
     /// <summary>
     /// Update the average calculation.
@@ -124,7 +124,7 @@ public struct Average
     /// <param name="delta">Time passed since the last update.</param>
     /// <param name="amount">The amount to be recorded for this update.</param>
     /// <returns>Average of the last completed period.</returns>
-    public double Update(double delta, double amount)
+    public float Update(float delta, float amount)
     {
         sum_ += amount;
         count_++;

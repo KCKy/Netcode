@@ -86,7 +86,7 @@ public sealed class ClockTests
     [InlineData(5d, 20, 0.001, 0.0005)]
     [InlineData(5d, 40, 0.001, 0.0005)]
     [InlineData(10d, 2, 0.001, 0.0005)]
-    public async Task Basic(double time, double tps, double meanError, double deviationError)
+    public async Task Basic(float time, float tps, double meanError, double deviationError)
     {
         ThreadClock clock = new()
         {

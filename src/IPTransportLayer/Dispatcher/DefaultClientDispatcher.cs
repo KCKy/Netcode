@@ -122,11 +122,11 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         var header = message.Span[..headerLength];
 
         long frame = header.ReadLong();
-        long differenceRaw = header.ReadLong();
+        int differenceRaw = header.ReadInt();
 
-        double difference = BitConverter.Int64BitsToDouble(differenceRaw);
+        float difference = BitConverter.Int32BitsToSingle(differenceRaw);
 
-        if (double.IsRealNumber(difference))
+        if (float.IsRealNumber(difference))
         {
             OnSetDelay?.Invoke(frame, difference);
 

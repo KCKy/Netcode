@@ -46,9 +46,9 @@ public sealed class DebugInfo
         long authFrame = Client?.AuthFrame ?? 0;
         long predictFrame = Client?.PredictFrame ?? 0;
 
-        double frameDiff = frameDiff_.Update(delta, predictFrame - authFrame);
-        double lerperFrames = lerperFrames_.Update(delta, Lerper?.FramesBehind ?? 0);
-        double fps = 1 / drawDelta_.Update(delta, delta);
+        float frameDiff = frameDiff_.Update(delta, predictFrame - authFrame);
+        float lerperFrames = lerperFrames_.Update(delta, Lerper?.FramesBehind ?? 0);
+        float fps = 1 / drawDelta_.Update(delta, delta);
 
         return $"Draw FPS: {fps:0.00}\n" +
                $"Auth Frame: {authFrame}\n" +

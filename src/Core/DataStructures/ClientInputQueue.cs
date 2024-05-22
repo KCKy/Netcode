@@ -12,8 +12,8 @@ namespace Kcky.GameNewt.DataStructures;
 /// </summary>
 /// <param name="id">The ID of the client the input belongs to.</param>
 /// <param name="frame">The frame index of the frame the input is for.</param>
-/// <param name="difference">The difference of the corresponding frame update time and the input receive time.</param>
-delegate void InputAuthoredDelegate(int id, long frame, TimeSpan difference);
+/// <param name="difference">The difference of the corresponding frame update time and the input receive time in seconds.</param>
+delegate void InputAuthoredDelegate(int id, long frame, float difference);
 
 /// <summary>
 /// Receives all client input to the server. Constructs authoritative client update inputs <see cref="UpdateClientInfo{TClientInput}"/>.
@@ -54,7 +54,7 @@ where TClientInput : class, new()
     readonly Dictionary<int, SingleClientQueue> idToInputs_ = new();
     readonly List<int> removedClients_ = new();
 
-    readonly double ticksPerSecond_;
+    readonly float ticksPerSecond_;
     readonly PredictClientInputDelegate<TClientInput> predictClientInput_;
 
     readonly object mutex_ = new();
@@ -66,7 +66,7 @@ where TClientInput : class, new()
     /// <param name="predictClientInput">Input predictor for client inputs. Used as a substitute when input of a client are not received in time.</param>
     /// <param name="onInputAuthored">Raised when given client input is being authored.</param>
     /// <param name="loggerFactory">Logger factory to use for logging events.</param>
-    public ClientInputQueue(double tps, PredictClientInputDelegate<TClientInput> predictClientInput, InputAuthoredDelegate onInputAuthored, ILoggerFactory loggerFactory)
+    public ClientInputQueue(float tps, PredictClientInputDelegate<TClientInput> predictClientInput, InputAuthoredDelegate onInputAuthored, ILoggerFactory loggerFactory)
     {
         ticksPerSecond_ = tps;
         predictClientInput_ = predictClientInput;
@@ -158,12 +158,11 @@ where TClientInput : class, new()
 
                 clientInfo.LastAuthorizedInput = frame;
 
-                var framePart = Stopwatch.GetElapsedTime(lastFrameUpdate_, now);
-
-                TimeSpan difference = TimeSpan.FromSeconds((frame - frame_) / ticksPerSecond_) - framePart;
+                float framePart = (float)Stopwatch.GetElapsedTime(lastFrameUpdate_, now).TotalSeconds;
+                float difference = (frame - frame_) / ticksPerSecond_ - framePart;
                 inputAuthored_?.Invoke(id, frame, difference);
 
-                logger_.LogDebug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} ms).", id, frame, frame_, difference.TotalMilliseconds);
+                logger_.LogDebug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} s).", id, frame, frame_, difference);
                 return;
             }
             
@@ -203,10 +202,10 @@ where TClientInput : class, new()
                 if (timestamp is { } value)
                 {
                     queue.LastAuthorizedInput = nextFrame;
-                    TimeSpan difference = Stopwatch.GetElapsedTime(value, lastFrameUpdate_);
+                    float difference = (float)Stopwatch.GetElapsedTime(value, lastFrameUpdate_).TotalSeconds;
                     inputAuthored_?.Invoke(id, nextFrame, difference);
 
-                    logger_.LogTrace("Input from {Id} received {Time:F2} ms in advance.", id, difference.TotalMilliseconds);
+                    logger_.LogTrace("Input from {Id} received {Time:F2} s in advance.", id, difference);
                 }
                 
                 i++;

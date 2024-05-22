@@ -16,18 +16,18 @@ sealed class Clock : IClock
     public event Action? OnTick;
     
     long targetPeriod_;
-    double targetTps_;
+    float targetTps_;
     long last_;
 
     CancellationToken cancelToken_ = new(true);
 
     /// <inheritdoc/>
-    public double TargetTps
+    public float TargetTps
     {
         get => targetTps_;
         set
         {
-            double period = 1 / value * Stopwatch.Frequency;
+            float period = 1 / value * Stopwatch.Frequency;
             targetPeriod_ = (long)Math.Clamp(period, 1, long.MaxValue);
             targetTps_ = value;
         }

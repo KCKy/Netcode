@@ -19,7 +19,7 @@ sealed class SynchronizedClock
     readonly object mutex_ = new();
     readonly IClock internalClock_;
     readonly ILogger logger_;
-    readonly double targetTps_;
+    readonly float targetTps_;
 
     /// <summary>
     /// The desired number of clock ticks per second.
@@ -27,7 +27,7 @@ sealed class SynchronizedClock
     /// <remarks>
     /// May be momentarily modified to resynchronize the clock.
     /// </remarks>
-    public double TargetTps
+    public float TargetTps
     {
         get => targetTps_;
         init
@@ -70,7 +70,7 @@ sealed class SynchronizedClock
     /// <summary>
     /// The current TPS of the clock.
     /// </summary>
-    public double CurrentTps { get; private set; } = 0;
+    public float CurrentTps { get; private set; } = 0;
     
     /// <summary>
     /// Initialize the clock.
@@ -114,49 +114,49 @@ sealed class SynchronizedClock
 
     readonly IndexedQueue<long> timingQueue_ = new();
 
-    readonly IntegrateWindowed<double> normalizedDelays_ = new(20)
+    readonly IntegrateWindowed<float> normalizedDelays_ = new(20)
     {
         Statistic = static values => values.Min()
     };
 
 
-    double GetOffset(long targetFrame, long targetTime, long sourceFrame, long sourceTime)
+    float GetOffset(long targetFrame, long targetTime, long sourceFrame, long sourceTime)
     {
-        double supposedTime = (targetFrame - sourceFrame) / TargetTps;
-        double actualTime = (targetTime - sourceTime) /  (double) Stopwatch.Frequency;
+        float supposedTime = (targetFrame - sourceFrame) / TargetTps;
+        float actualTime = (targetTime - sourceTime) /  (float) Stopwatch.Frequency;
         return supposedTime - actualTime;
     }
 
-    double GetOffset(double targetFrame, long targetTime, double sourceFrame, long sourceTime)
+    float GetOffset(float targetFrame, long targetTime, float sourceFrame, long sourceTime)
     {
-        double supposedTime = (targetFrame - sourceFrame) / TargetTps;
-        double actualTime = (targetTime - sourceTime) / (double) Stopwatch.Frequency;
+        float supposedTime = (targetFrame - sourceFrame) / TargetTps;
+        float actualTime = (targetTime - sourceTime) / (float) Stopwatch.Frequency;
         return supposedTime - actualTime;
     }
 
-    double GetNormalizationOffset(long frame, long time) => GetOffset(beginFrame_, beginTime_, frame, time);
+    float GetNormalizationOffset(long frame, long time) => GetOffset(beginFrame_, beginTime_, frame, time);
     
-    double CalculateCurrentFrameProgression(long frameStartTime, long currentTime)
+    float CalculateCurrentFrameProgression(long frameStartTime, long currentTime)
     {
         return (currentTime - frameStartTime) * internalClock_.TargetTps / Stopwatch.Frequency;
     }
 
-    double GetDenormalizationOffset(long currentTime)
+    float GetDenormalizationOffset(long currentTime)
     {
         long latestFrame = timingQueue_.LastIndex;
         long latestFrameTime = timingQueue_.Last;
-        double currentFrame = latestFrame + CalculateCurrentFrameProgression(latestFrameTime, currentTime);
+        float currentFrame = latestFrame + CalculateCurrentFrameProgression(latestFrameTime, currentTime);
 
         return GetOffset(currentFrame, currentTime, beginFrame_, beginTime_);
     }
 
-    double currentWorstCase_ = 0;
+    float currentWorstCase_ = 0;
 
     void UpdateClockSpeed(long currentTime)
     {
-        double offset = GetDenormalizationOffset(currentTime);
-        double denormalizedWorstCase = currentWorstCase_ + offset;
-        double newPeriod = Math.Max(1 / TargetTps + denormalizedWorstCase, 0);
+        float offset = GetDenormalizationOffset(currentTime);
+        float denormalizedWorstCase = currentWorstCase_ + offset;
+        float newPeriod = Math.Max(1 / TargetTps + denormalizedWorstCase, 0);
 
         logger_.LogTrace("Updating clock speed with denormalization offset {Offset} yields period {Period}.", offset, newPeriod);
 
@@ -166,7 +166,7 @@ sealed class SynchronizedClock
         }
         else
         {
-            double newTps = 1 / newPeriod;
+            float newTps = 1 / newPeriod;
             CurrentTps = newTps;
             internalClock_.TargetTps = newTps;
         }
@@ -179,7 +179,7 @@ sealed class SynchronizedClock
     /// </summary>
     /// <param name="frame">The frame the delay belongs to.</param>
     /// <param name="delay">The delay amount. Negative value means the clock should catch up.</param>
-    public void SetDelay(long frame, double delay)
+    public void SetDelay(long frame, float delay)
     {
         lock (mutex_)
         {
@@ -190,8 +190,8 @@ sealed class SynchronizedClock
 
             timingQueue_.Pop(frame - 1);
 
-            double offset = GetNormalizationOffset(frame, time);
-            double normalizedDelay = delay + offset;
+            float offset = GetNormalizationOffset(frame, time);
+            float normalizedDelay = delay + offset;
             currentWorstCase_ = normalizedDelays_.Add(normalizedDelay);
 
             logger_.LogTrace("Normalization offset {Offset} yields normalized delay {Delay} and current worst case {Case}.", offset, normalizedDelay, currentWorstCase_);

@@ -91,7 +91,7 @@ sealed class UdpServerTransceiver : IProtocol<(Memory<byte> payload, int id), (M
             IPAddress address = current.Address;
             if (!address.Equals(sender.Address))
             {
-                logger_.LogTrace("It comes from different address {Used} != {Valid}.", id, address, sender.Address);
+                logger_.LogTrace("It comes from different address {Used} != {Valid}.", address, sender.Address);
                 continue; // Address does not match
             }
 

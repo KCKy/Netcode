@@ -36,17 +36,17 @@ public interface IClient
     /// <summary>
     /// Number of seconds, how much the client should be ahead from the server (ignoring latency).
     /// </summary>
-    double TargetDelta { get; }
+    float TargetDelta { get; }
     
     /// <summary>
     /// Returns the predict loop TPS, could be slightly off from the server loop to catch up/slow down.
     /// </summary>
-    double CurrentTps { get; }
+    float CurrentTps { get; }
 
     /// <summary>
     /// The target TPS of the client clock, the clock should as closely match this TPS while spacing the ticks evenly.
     /// </summary>
-    public double TargetTps { get; }
+    float TargetTps { get; }
 
     /// <summary>
     /// Begin the client. Starts the update controller for predict, input collection, and server communication.
