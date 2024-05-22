@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Threading.Tasks;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
@@ -20,8 +21,8 @@ namespace Kcky.GameNewt.Dispatcher.Default;
 /// </remarks>
 public sealed class DefaultClientDispatcher : IClientDispatcher
 {
-    readonly IClientTransport outTransport_;
-    
+    readonly IClientTransport transport_;
+
     readonly int unreliableHeader_;
     readonly int unreliableMaxMessage_;
 
@@ -36,7 +37,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
     public DefaultClientDispatcher(IClientTransport transport, ILoggerFactory? loggerFactory = null)
     {
         loggerFactory ??= NullLoggerFactory.Instance;
-        outTransport_ = transport;
+        transport_ = transport;
         logger_ = loggerFactory.CreateLogger<DefaultClientDispatcher>();
 
         unreliableHeader_ = transport.UnreliableMessageHeader;
@@ -48,10 +49,10 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
     /// <inheritdoc/>
     public event InitializeDelegate? OnInitialize;
-    
+
     /// <inheritdoc/>
     public event AuthoritativeInputDelegate? OnAuthoritativeInput;
-    
+
     /// <inheritdoc/>
     public event SetDelayDelegate? OnSetDelay;
 
@@ -98,12 +99,12 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         }
 
         var header = message.Span[..headerLength];
-        
+
         int id = header.ReadInt();
         long frame = header.ReadLong();
 
         var state = message[headerLength..];
-        
+
         OnInitialize?.Invoke(id, frame, state); // Transfer memory ownership to the client
     }
 
@@ -119,10 +120,10 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         }
 
         var header = message.Span[..headerLength];
-        
+
         long frame = header.ReadLong();
         long differenceRaw = header.ReadLong();
-        
+
         double difference = BitConverter.Int64BitsToDouble(differenceRaw);
 
         if (double.IsRealNumber(difference))
@@ -157,11 +158,11 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         var input = message[headerLength..];
 
         OnAuthoritativeInput?.Invoke(frame, input, checksum); // Transfer memory ownership to the client
-        
+
         lock (aggregator_)
             aggregator_.Pop(frame);
     }
-    
+
     readonly PooledBufferWriter<byte> inputBuffer_ = new();
     internal const int InputStructHeader = sizeof(long) + sizeof(int);
 
@@ -176,7 +177,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         inputBuffer_.Skip(sizeof(int));
         MemoryPackSerializer.Serialize(inputBuffer_, payload);
         var message = inputBuffer_.ExtractAndReplace();
-        
+
         int fullLength = message.Length;
         int payloadLength = fullLength - InputStructHeader;
 
@@ -202,9 +203,15 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         lock (aggregator_)
             packet = aggregator_.AddAndConstruct(input, frame, unreliableHeader_ + sizeof(byte), unreliableMaxMessage_);
-        
+
         packet.Span[unreliableHeader_] = (byte)MessageType.ClientInput;
 
-        outTransport_.SendUnreliable(packet);
+        transport_.SendUnreliable(packet);
     }
+
+    /// <inheritdoc/>
+    public void Terminate() => transport_.Terminate();
+
+    /// <inheritdoc/>
+    public Task RunAsync() => transport_.RunAsync();
 }

@@ -28,7 +28,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     where TServerInput : class, new()
 {
     readonly StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authStateHolder_; // Mutex used to stop RW/WR/WW conflicts.
-    readonly CancellationTokenSource clientCancellation_ = new();
+    readonly CancellationTokenSource clockCancellation_ = new();
     readonly object stateMutex_ = new(); // Assures atomicity of start and termination operations.
     readonly SynchronizedClock clock_;
     readonly ILogger logger_;
@@ -188,7 +188,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     public double TargetTps => clock_.TargetTps;
 
     /// <inheritdoc/>
-    public async Task RunAsync()
+    public Task RunAsync()
     {
         lock (stateMutex_)
         {
@@ -206,8 +206,9 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         predictManager_ = new(authStateHolder_, dispatcher_, loggerFactory_, NewPredictiveStateHandler, ServerInputPredictor, ClientInputPredictor, ClientInputProvider);
         clock_.OnTick += predictManager_.Tick;
 
+        Task task = dispatcher_.RunAsync();
         logger_.LogDebug("The client has started.");
-        await Task.Delay(Timeout.Infinite, clientCancellation_.Token);
+        return task;
     }
 
     /// <inheritdoc/>
@@ -223,7 +224,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             UnsetHandlers();
             PredictManager.Stop();
-            clientCancellation_.Cancel();
+            clockCancellation_.Cancel();
+            dispatcher_.Terminate();
         }
     }
 
@@ -355,7 +357,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             OnInitialize?.Invoke(id);
 
             clock_.Initialize(frame);
-            clock_.RunAsync(clientCancellation_.Token).AssureNoFault();
+            clock_.RunAsync(clockCancellation_.Token).AssureNoFault();
         }
     }
 

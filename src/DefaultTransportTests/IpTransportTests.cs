@@ -111,7 +111,7 @@ public class IpTransportTests
 
         output_.WriteLine("[Test] Terminating server.");
 
-        server.Kick();
+        server.Terminate();
 
         try
         {
@@ -181,7 +181,7 @@ public class IpTransportTests
 
         output_.WriteLine("[Test] Terminating server.");
 
-        server.Kick();
+        server.Terminate();
 
         try
         {
@@ -276,7 +276,7 @@ public class IpTransportTests
         output_.WriteLine("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
-        server.Kick();
+        server.Terminate();
 
         await Task.Delay(20);
     }
@@ -359,7 +359,7 @@ public class IpTransportTests
         output_.WriteLine("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
-        server.Kick();
+        server.Terminate();
 
         await Task.Delay(20);
     }
@@ -455,7 +455,7 @@ public class IpTransportTests
         output_.WriteLine("[Test] TERMINATING ALL.");
         
         TerminateClients(clients);
-        server.Kick();
+        server.Terminate();
 
         await Task.Delay(20);
     }
@@ -548,7 +548,7 @@ public class IpTransportTests
         output_.WriteLine("[Test] TERMINATING ALL.");
 
         TerminateClients(clients);
-        server.Kick();
+        server.Terminate();
 
         await Task.Delay(20);
     }
@@ -637,7 +637,7 @@ public class IpTransportTests
         output_.WriteLine("[Test] TERMINATING ALL.");
 
         TerminateClients(clients);
-        server.Kick();
+        server.Terminate();
 
         await Task.Delay(20);
     }

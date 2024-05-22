@@ -214,7 +214,7 @@ public class IpServerTransport : IServerTransport
     }
 
     /// <inheritdoc/>
-    public void Kick() => cancellationSource_.Cancel();
+    public void Terminate() => cancellationSource_.Cancel();
 
     /// <inheritdoc/>
     public int ReliableMessageHeader => TcpServerTransceiver.HeaderSize;
@@ -243,10 +243,4 @@ public class IpServerTransport : IServerTransport
         if (idToConnection_.TryGetValue(id, out ConnectedClient? client))
             client.Cancellation.Cancel();
     }
-
-    /// <summary>
-    /// Terminate the server transport.
-    /// All current clients will be disconnected and the transport shall stop sending/receiving messages.
-    /// </summary>
-    public void Terminate() => cancellationSource_.Cancel();
 }

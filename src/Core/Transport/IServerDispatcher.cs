@@ -1,11 +1,26 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Kcky.GameNewt.Transport;
 
 /// <summary>
 /// Implements the server-side sending and receiving binary messages.
 /// </summary>
-public interface IServerDispatcher : IServerSender, IServerReceiver  { }
+public interface IServerDispatcher : IServerSender, IServerReceiver
+{
+    /// <summary>
+    /// Terminate the dispatcher instance.
+    /// All dispatcher operation shall stop soon.
+    /// </summary>
+    void Terminate();
+
+    /// <summary>
+    /// Start the dispatcher instance.
+    /// The dispatcher will listen for new clients and start sending/receiving messages.
+    /// </summary>
+    /// <returns>Task representing the dispatcher lifetime.</returns>
+    Task RunAsync();
+}
 
 /// <summary>
 /// Allows sending messages of the application protocol from the server to clients.

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Threading.Tasks;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
@@ -200,4 +201,10 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
         var message = ConstructAuthoritativeInput(frame, checksum, payload);
         transport_.SendReliable(message);
     }
+
+    /// <inheritdoc/>
+    public void Terminate() => transport_.Terminate();
+
+    /// <inheritdoc/>
+    public Task RunAsync() => transport_.RunAsync();
 }

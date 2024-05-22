@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Threading.Tasks;
 using Kcky.GameNewt.Dispatcher.Default;
 using MemoryPack;
 using Kcky.Useful;
@@ -20,28 +21,26 @@ public sealed class DefaultDispatcherTests
     /// <param name="id">The id of the client.</param>
     /// <param name="startFrame">The first frame to send.</param>
     /// <param name="frameCount">The last frame to send.</param>
+    /// <param name="headersLength">The length of all transport message headers.</param>
     /// <param name="respond">Whether the server should ping back.</param>
     [Theory]
-    [InlineData(1, 1, 10, false)]
-    [InlineData(1, 1, 10, true)]
-    public void ClientSendTest(int id, long startFrame, long frameCount, bool respond)
+    [InlineData(1, 1, 10, 0, false)]
+    [InlineData(1, 1, 10, 0, true)]
+    [InlineData(1, 1, 10, 42, false)]
+    [InlineData(1, 1, 10, 42, true)]
+    public void ClientSendTest(int id, long startFrame, long frameCount, int headersLength, bool respond)
     {
-        MockClientTransport clientTransport = new(id);
-
-        MockServerTransport serverTransport = new()
-        {
-            clientTransport
-        };
+        MockServerTransport serverTransport = new(headersLength, 0);
+        IClientTransport clientTransport = serverTransport.CreateMockClient(id);
 
         DefaultServerDispatcher server = new(serverTransport);
         DefaultClientDispatcher client = new(clientTransport);
 
         long nextFrame = startFrame;
-
         object mutex = new();
         int add = 0;
         int remove = 0;
-        
+
         server.OnAddClient += cid =>
         {
             Assert.Equal(id, cid);
@@ -65,7 +64,7 @@ public sealed class DefaultDispatcherTests
 
                 if (frame < nextFrame)
                     return;
-                
+
                 if (frame > nextFrame)
                     Assert.Fail("Missed input.");
 
@@ -76,7 +75,8 @@ public sealed class DefaultDispatcherTests
             }
         };
 
-        clientTransport.Start();
+        server.RunAsync();
+        Task clientTask = client.RunAsync();
 
         for (long i = 0; i < frameCount; i++)
         {
@@ -84,7 +84,9 @@ public sealed class DefaultDispatcherTests
             client.SendInput(cur, cur);
         }
 
-        clientTransport.Terminate();
+        Assert.False(clientTask.IsCompleted);
+        client.Terminate();
+        Assert.True(clientTask.IsCompleted);
 
         Assert.Equal(1, remove);
         Assert.Equal(1, add);
@@ -96,17 +98,15 @@ public sealed class DefaultDispatcherTests
     /// </summary>
     /// <param name="id">The id of the client.</param>
     /// <param name="startFrame">The first frame to send.</param>
+    /// <param name="headersLength">The length of all transport message headers.</param>
     /// <param name="frameCount">The last frame to send.</param>
     [Theory]
-    [InlineData(1, 1, 10)]
-    public void ClientReceiveTest(int id, long startFrame, int frameCount)
+    [InlineData(1, 1, 0, 10)]
+    [InlineData(1, 1, 42, 10)]
+    public void ClientReceiveTest(int id, long startFrame, int headersLength, int frameCount)
     {
-        MockClientTransport clientTransport = new(id);
-
-        MockServerTransport serverTransport = new()
-        {
-            clientTransport
-        };
+        MockServerTransport serverTransport = new(headersLength, 0);
+        IClientTransport clientTransport = serverTransport.CreateMockClient(id);
 
         DefaultServerDispatcher server = new(serverTransport);
         DefaultClientDispatcher client = new(clientTransport);
@@ -114,6 +114,9 @@ public sealed class DefaultDispatcherTests
         object mutex = new();
         int add = 0;
         int remove = 0;
+        int initialized = 0;
+        int delay = 0;
+        long currentFrame = startFrame + 1;
 
         server.OnAddClient += cid =>
         {
@@ -127,9 +130,6 @@ public sealed class DefaultDispatcherTests
             lock (mutex) remove++;
         };
 
-        int initialized = 0;
-        int delay = 0;
-
         client.OnInitialize += (_, frame, raw) =>
         {
             var data = MemoryPackSerializer.Deserialize<int>(raw.Span);
@@ -137,11 +137,9 @@ public sealed class DefaultDispatcherTests
 
             Assert.Equal(frame, data);
             Assert.Equal(frame, startFrame);
-            
+
             lock (mutex) initialized++;
         };
-
-        long currentFrame = startFrame + 1;
 
         client.OnAuthoritativeInput += (frame, input, checksum) =>
         {
@@ -169,7 +167,8 @@ public sealed class DefaultDispatcherTests
                 delay++;
         };
 
-        clientTransport.Start();
+        Task clientTask = client.RunAsync();
+        server.RunAsync();
 
         server.Initialize(id, startFrame, startFrame);
 
@@ -180,8 +179,11 @@ public sealed class DefaultDispatcherTests
             server.SetDelay(id, cur, TimeSpan.Zero);
         }
 
+        Assert.False(clientTask.IsCompleted);
+
         server.Kick(id);
 
+        Assert.True(clientTask.IsCompleted);
         Assert.Equal(1, remove);
         Assert.Equal(1, add);
         Assert.Equal(delay, frameCount - 1);
@@ -196,13 +198,19 @@ public sealed class DefaultDispatcherTests
     public void TestClientEmptyMessages()
     {
         SingleClientMockTransport transport = new();
-        DefaultClientDispatcher _ = new(transport);
+        DefaultClientDispatcher dispatcher = new(transport);
+        Task task = dispatcher.RunAsync();
+        Assert.False(task.IsCompleted);
 
         var a = ArrayPool<byte>.Shared.RentMemory(0);
         transport.InvokeReliable(a);
 
         var b = ArrayPool<byte>.Shared.RentMemory(0);
         transport.InvokeUnreliable(b);
+
+        Assert.False(task.IsCompleted);
+        dispatcher.Terminate();
+        Assert.True(task.IsCompleted);
     }
 
     /// <summary>
@@ -212,13 +220,19 @@ public sealed class DefaultDispatcherTests
     public void TestServerEmptyMessages()
     {
         SingleServerMockTransport transport = new();
-        DefaultServerDispatcher _ = new(transport);
-        
+        DefaultServerDispatcher dispatcher = new(transport);
+        Task task = dispatcher.RunAsync();
+        Assert.False(task.IsCompleted);
+
         var a = ArrayPool<byte>.Shared.RentMemory(0);
         transport.InvokeReliable(42, a);
 
         var b = ArrayPool<byte>.Shared.RentMemory(0);
         transport.InvokeUnreliable(42, b);
+
+        Assert.False(task.IsCompleted);
+        dispatcher.Terminate();
+        Assert.True(task.IsCompleted);
     }
 
     /// <summary>
@@ -235,7 +249,9 @@ public sealed class DefaultDispatcherTests
     public void TestInvalidClientInput(int givenLength, int actual)
     {
         SingleServerMockTransport transport = new();
-        DefaultServerDispatcher _ = new(transport);
+        DefaultServerDispatcher dispatcher = new(transport);
+        Task task = dispatcher.RunAsync();
+        Assert.False(task.IsCompleted);
 
         var message = ArrayPool<byte>.Shared.RentMemory(actual + sizeof(int) + sizeof(long) + 1);
         var span = message.Span;
@@ -246,6 +262,9 @@ public sealed class DefaultDispatcherTests
         Bits.Write(givenLength, span);
 
         transport.InvokeUnreliable(42, message);
-    }
 
+        Assert.False(task.IsCompleted);
+        dispatcher.Terminate();
+        Assert.True(task.IsCompleted);
+    }
 }

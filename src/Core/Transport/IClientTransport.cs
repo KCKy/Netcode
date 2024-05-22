@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Kcky.GameNewt.Transport;
 
@@ -7,10 +8,25 @@ namespace Kcky.GameNewt.Transport;
 /// Reliable messages shall always be delivered in the order they were sent. Unreliable messages may not be received or received out of the sending order.
 /// </summary>
 /// <remarks>
-/// This structure is thread safe. It is safe to call methods of this interface concurrently (although sending of reliable messages could be a race condition for the sending order).
+/// This structure is thread safe (except for <see cref="RunAsync"/>). It is safe to call methods of this interface concurrently (although sending of reliable messages could be a race condition for the sending order).
 /// Calling methods on a terminated client is safe and will do nothing.
 /// </remarks>
-public interface IClientTransport : IClientInTransport, IClientOutTransport { }
+public interface IClientTransport : IClientInTransport, IClientOutTransport
+{
+    /// <summary>
+    /// Terminate the transport instance.
+    /// All transport operation shall stop soon.
+    /// </summary>
+    void Terminate();
+
+    /// <summary>
+    /// Start the transport instance.
+    /// The transport will connect to a server and start sending/receiving binary messages.
+    /// </summary>
+    /// <returns>Task representing the transport lifetime.</returns>
+    /// <remarks>This method is not thread safe.</remarks>
+    Task RunAsync();
+}
 
 /// <summary>
 /// A message from the server to the client.

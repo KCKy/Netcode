@@ -1,127 +1,180 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Kcky.Useful;
 
 namespace Kcky.GameNewt.Transport.Default.Tests;
 
-sealed class MockClientTransport : IClientTransport
-{
-    public event ClientMessageEvent? OnReliableMessage;
-    public event ClientMessageEvent? OnUnreliableMessage;
-
-    internal void InvokeReliable(Memory<byte> message) => OnReliableMessage?.Invoke(message[ReliableMessageHeader..]);
-    internal void InvokeUnreliable(Memory<byte> message) => OnUnreliableMessage?.Invoke(message[UnreliableMessageHeader..]);
-    
-    MockServerTransport? transport_;
-    internal readonly int Id;
-
-    public MockClientTransport(int id)
-    {
-        Id = id;
-    }
-
-    internal void Register(MockServerTransport transport) => transport_ = transport;
-
-    public void Start() => transport_?.InvokeJoin(this);
-    public void Terminate() => transport_?.InvokeFinish(Id);
-
-    public int ReliableMessageHeader { get; init; } = 0;
-    public int UnreliableMessageHeader { get; init; } = 0;
-    public int UnreliableMessageMaxLength { get; init; } = int.MaxValue;
-
-    public void SendReliable(Memory<byte> message) => transport_?.InvokeReliable(Id, message);
-    public void SendUnreliable(Memory<byte> message) => transport_?.InvokeUnreliable(Id, message);
-}
-
-sealed class MockServerTransport : IServerTransport, IEnumerable<MockClientTransport>
+sealed class MockServerTransport(int messageHeadersLength, int unreliableMaxLength) : IServerTransport
 {
     public event ServerMessageEvent? OnReliableMessage;
     public event ServerMessageEvent? OnUnreliableMessage;
     public event Action<int>? OnClientJoin;
     public event Action<int>? OnClientFinish;
+    public int ReliableMessageHeader => messageHeadersLength;
+    public int UnreliableMessageHeader => messageHeadersLength;
+    public int UnreliableMessageMaxLength => unreliableMaxLength;
 
-    internal void InvokeReliable(int id, Memory<byte> message)
+    enum State
     {
-        if (idToClient_.TryGetValue(id, out _))
-            OnReliableMessage?.Invoke(id, message);
+        Unstarted,
+        Running,
+        Terminated
     }
 
-    internal void InvokeUnreliable(int id, Memory<byte> message)
+    sealed class MockClientTransport(int messageHeadersLength, int unreliableMaxLength, Action connectedCallback, Action terminatedCallback, Action<Memory<byte>> reliableCallback, Action<Memory<byte>> unreliableCallback) : IClientTransport
     {
-        if (idToClient_.TryGetValue(id, out _))
-            OnUnreliableMessage?.Invoke(id, message);
-    }
+        public event ClientMessageEvent? OnReliableMessage;
+        public event ClientMessageEvent? OnUnreliableMessage;
+        public int ReliableMessageHeader => messageHeadersLength;
+        public int UnreliableMessageHeader => messageHeadersLength;
+        public int UnreliableMessageMaxLength => unreliableMaxLength;
+        
+        public void SendReliable(Memory<byte> message)
+        {
+            lock (mutex_)
+                if (state_ != State.Running)
+                    return;
 
-    internal void InvokeJoin(MockClientTransport client)
-    {
-        if (idToClient_.TryAdd(client.Id, client))
-            OnClientJoin?.Invoke(client.Id);
-    }
+            reliableCallback.Invoke(message[ReliableMessageHeader..]);
+        }
 
-    internal void InvokeFinish(int id)
-    {
-        if (idToClient_.TryRemove(id, out _))
-            OnClientFinish?.Invoke(id);
+        public void SendUnreliable(Memory<byte> message)
+        {
+            lock (mutex_)
+                if (state_ != State.Running)
+                    return;
+
+            reliableCallback.Invoke(message[UnreliableMessageHeader..]);
+        }
+
+        public void ReceiveReliable(Memory<byte> message)
+        {
+            lock (mutex_)
+                if (state_ != State.Running)
+                    return;
+
+            OnReliableMessage?.Invoke(message);
+        }
+
+        public void ReceiveUnreliable(Memory<byte> message)
+        {
+            lock (mutex_)
+                if (state_ != State.Running)
+                    return;
+
+            OnUnreliableMessage?.Invoke(message);
+        }
+
+        readonly object mutex_ = new();
+        State state_ = State.Unstarted;
+
+        public void Terminate()
+        {
+            lock (mutex_)
+            {
+                switch (state_)
+                {
+                    case State.Unstarted:
+                        state_ = State.Terminated;
+                        return;
+                    case State.Running:
+                        state_ = State.Terminated;
+                        runtime_.SetCanceled();
+                        terminatedCallback();
+                        return;
+                    case State.Terminated:
+                        return;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
+
+        readonly TaskCompletionSource runtime_ = new();
+
+        public Task RunAsync()
+        {
+            lock (mutex_)
+            {
+                switch (state_)
+                {
+                    case State.Unstarted:
+                        state_ = State.Running;
+                        connectedCallback();
+                        return runtime_.Task;
+                    case State.Running:
+                        throw new InvalidOperationException();
+                    case State.Terminated:
+                        return Task.CompletedTask;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
     }
 
     readonly ConcurrentDictionary<int, MockClientTransport> idToClient_ = new();
 
-    public void Add(MockClientTransport client)
+    public IClientTransport CreateMockClient(int id)
     {
-        client.Register(this);
+        int idCapture = id;
+        MockClientTransport client = new(ReliableMessageHeader, UnreliableMessageMaxLength,
+            () => OnClientJoin?.Invoke(idCapture),
+            () => OnClientFinish?.Invoke(idCapture),
+            m => OnReliableMessage?.Invoke(idCapture, m),
+            m => OnUnreliableMessage?.Invoke(idCapture, m));
+
+        if (!idToClient_.TryAdd(id, client))
+            throw new InvalidOperationException();
+
+        return client;
     }
 
-    public int ReliableMessageHeader { get; init; } = 0;
-    public int UnreliableMessageHeader { get; init; } = 0;
-    public int UnreliableMessageMaxLength { get; init; } = int.MaxValue;
-
+    public Task RunAsync() => Task.Delay(Timeout.InfiniteTimeSpan);
+    public void Terminate() => throw new InvalidOperationException();
+    
     public void SendReliable(Memory<byte> message)
     {
-        foreach (var pair in idToClient_)
+        foreach (MockClientTransport client in idToClient_.Values)
         {
-            var copy = ArrayPool<byte>.Shared.RentMemory(message.Length);
+            Memory<byte> copy = ArrayPool<byte>.Shared.RentMemory(message.Length);
             message.CopyTo(copy);
-            pair.Value.InvokeReliable(copy[ReliableMessageHeader..]);
+            client.ReceiveReliable(copy[ReliableMessageHeader..]);
         }
-
-        ArrayPool<byte>.Shared.Return(message);
     }
 
     public void SendReliable(Memory<byte> message, int id)
     {
         if (idToClient_.TryGetValue(id, out var client))
-            client.InvokeReliable(message[ReliableMessageHeader..]);
+            client.ReceiveReliable(message[ReliableMessageHeader..]);
     }
-    
+
     public void SendUnreliable(Memory<byte> message)
     {
-        foreach (var pair in idToClient_)
+        foreach (MockClientTransport client in idToClient_.Values)
         {
-            var copy = ArrayPool<byte>.Shared.RentMemory(message.Length);
+            Memory<byte> copy = ArrayPool<byte>.Shared.RentMemory(message.Length);
             message.CopyTo(copy);
-            pair.Value.InvokeUnreliable(copy[UnreliableMessageHeader..]);
+            client.ReceiveUnreliable(copy[UnreliableMessageHeader..]);
         }
-
-        ArrayPool<byte>.Shared.Return(message);
     }
 
     public void SendUnreliable(Memory<byte> message, int id)
     {
-        if (idToClient_.TryGetValue(id, out var client))
-            client.InvokeUnreliable(message[UnreliableMessageHeader..]);
+        if (idToClient_.TryGetValue(id, out MockClientTransport? client))
+            client.ReceiveUnreliable(message[UnreliableMessageHeader..]);
     }
 
-    public void Kick(int id) => InvokeFinish(id);
-    public void Kick() => throw new InvalidOperationException();
-
-    public IEnumerator<MockClientTransport> GetEnumerator() => (from p in idToClient_ select p.Value).GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    public void Kick(int id)
+    {
+        if (idToClient_.TryGetValue(id, out MockClientTransport? client))
+            client.Terminate();
+    }
 }
+
 
 sealed class SingleClientMockTransport : IClientTransport
 {
@@ -129,12 +182,15 @@ sealed class SingleClientMockTransport : IClientTransport
     public event ClientMessageEvent? OnUnreliableMessage;
     public void InvokeReliable(Memory<byte> message) => OnReliableMessage?.Invoke(message);
     public void InvokeUnreliable(Memory<byte> message) => OnUnreliableMessage?.Invoke(message);
-    public void Terminate()  => throw new InvalidOperationException();
     public int ReliableMessageHeader { get; init; } = 0;
     public void SendReliable(Memory<byte> message) => throw new InvalidOperationException();
     public int UnreliableMessageHeader { get; init; } = 0;
     public int UnreliableMessageMaxLength { get; init; } = int.MaxValue;
     public void SendUnreliable(Memory<byte> message)  => throw new InvalidOperationException();
+
+    readonly TaskCompletionSource runtime_ = new();
+    public void Terminate() => runtime_.SetCanceled();
+    public Task RunAsync() => runtime_.Task;
 }
 
 sealed class SingleServerMockTransport : IServerTransport
@@ -146,8 +202,6 @@ sealed class SingleServerMockTransport : IServerTransport
 
     public event Action<int>? OnClientJoin;
     public event Action<int>? OnClientFinish;
-    public void InvokeJoin(int id) => OnClientJoin?.Invoke(id);
-    public void InvokeFinish(int id) => OnClientFinish?.Invoke(id);
     public int ReliableMessageHeader { get; init; } = 0;
     public void SendReliable(Memory<byte> message) => throw new InvalidOperationException();
     public void SendReliable(Memory<byte> message, int id) => throw new InvalidOperationException();
@@ -157,4 +211,9 @@ sealed class SingleServerMockTransport : IServerTransport
     public void SendUnreliable(Memory<byte> message, int id) => throw new InvalidOperationException();
     public void Kick(int id) => throw new InvalidOperationException();
     public void Kick() => throw new InvalidOperationException();
+
+    readonly TaskCompletionSource runtime_ = new();
+    public void Terminate() => runtime_.SetCanceled();
+    public Task RunAsync() => runtime_.Task;
 }
+

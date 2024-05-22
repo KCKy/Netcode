@@ -132,11 +132,13 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         lock (stateHolder_)
             OnStateInit?.Invoke(stateHolder_.State);
 
-        Task clockTask = clock_.RunAsync(clockCancellation_.Token);
+        clock_.RunAsync(clockCancellation_.Token).AssureNoFault();
+
+        Task task = dispatcher_.RunAsync();
 
         logger_.LogDebug("The server has started.");
 
-        return clockTask;
+        return task;
     }
 
     void TerminateInternal()
@@ -148,8 +150,9 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
             clock_.OnTick -= Tick;
             clockCancellation_.Cancel();
-            authInputWriter_.Dispose();
             UnsetHandlers();
+            dispatcher_.Terminate();
+            authInputWriter_.Dispose();
         }
     }
 

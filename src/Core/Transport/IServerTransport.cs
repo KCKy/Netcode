@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Kcky.GameNewt.Transport;
 
@@ -11,7 +12,21 @@ namespace Kcky.GameNewt.Transport;
 /// This structure is thread safe. It is safe to call methods of this interface concurrently (although sending of reliable messages could be a race condition for the sending order).
 /// Calling methods on a terminated server is safe and will do nothing.
 /// </remarks>
-public interface IServerTransport : IServerInTransport, IServerOutTransport { }
+public interface IServerTransport : IServerInTransport, IServerOutTransport
+{
+    /// <summary>
+    /// Terminate the transport instance.
+    /// All transport operation shall stop soon.
+    /// </summary>
+    void Terminate();
+
+    /// <summary>
+    /// Start the transport instance.
+    /// The transport will listen for new clients and start sending/receiving binary messages.
+    /// </summary>
+    /// <returns>Task representing the transport lifetime.</returns>
+    Task RunAsync();
+}
 
 /// <summary>
 /// A message from a client to the server.
@@ -108,9 +123,4 @@ public interface IServerOutTransport
     /// </summary>
     /// <param name="id">The id of the client to disconnect.</param>
     void Kick(int id);
-    
-    /// <summary>
-    /// Kick the server. All client will be disconnected and the whole server transport will close.
-    /// </summary>
-    void Kick();
 }
