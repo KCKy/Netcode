@@ -52,13 +52,16 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     readonly object tickMutex_ = new(); // Assures tick updates are atomic.
 
     /// <summary>
-    /// Server input provider which shall be used to get server inputs.
+    /// Method which provides server input based on current state.
     /// </summary>
     public ProvideServerInputDelegate<TServerInput, TGameState> ServerInputProvider { private get; init; } = static _ => new();
 
     /// <summary>
-    /// Client input predictor. Used to predict client input if none is received in time.
+    /// Optional method to predict client input from the previous client input.
     /// </summary>
+    /// <remarks>
+    /// By default, we predict the input to not change.
+    /// </remarks>
     public PredictClientInputDelegate<TClientInput> ClientInputPredictor
     {
         init => inputQueue_ = new(TGameState.DesiredTickRate, value, dispatcher_.SetDelay, loggerFactory_);

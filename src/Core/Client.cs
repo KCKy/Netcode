@@ -49,14 +49,41 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         Terminated
     }
 
+    /// <summary>
+    /// Invoked when a new authoritative state is computed.
+    /// </summary>
     public event HandleNewAuthoritativeStateDelegate<TGameState>? OnNewAuthoritativeState;
+
+    /// <summary>
+    /// Invoked when a new predictive state is computed.
+    /// </summary>
     public event HandleNewPredictiveStateDelegate<TGameState>? OnNewPredictiveState;
+
+    /// <summary>
+    /// Invoked when the client is initialized, provides the acquired local id.
+    /// </summary>
     public event HandleClientInitializeDelegate? OnInitialize;
+
+    /// <summary>
+    /// Method which provides input for the local player.
+    /// </summary>
     public ProvideClientInputDelegate<TClientInput> ClientInputProvider { private get; init; } = static () => new();
+    
+    /// <summary>
+    /// Optional method to predict client input from the previous client input.
+    /// </summary>
+    /// <remarks>
+    /// By default, we predict the input to not change.
+    /// </remarks>
     public PredictClientInputDelegate<TClientInput> ClientInputPredictor { private get; init; } = static (ref TClientInput i) => {};
+
+    /// <summary>
+    /// Optional method to predict server input from the previous server input and game state.
+    /// </summary>
+    /// <remarks>
+    /// By default, we predict the input to not change.
+    /// </remarks>
     public PredictServerInputDelegate<TServerInput, TGameState> ServerInputPredictor { private get; init; } = static (ref TServerInput i, TGameState state) => {};
-
-
 
     Action updateAction_ = () => throw new InvalidOperationException("The client uses its own thread. Update is not supported. To use update disable useOwnThread in the constructor.");
     IClock GetTimingClock(bool useOwnThread = false)
