@@ -13,7 +13,7 @@ partial struct Level : IEnumerable<ILevelObject?>
     [MemoryPackConstructor]
     public Level()
     {
-        objects_ = Array.Empty<ILevelObject>();
+        objects_ = [];
         Width = 0;
         Height = 0;
     }
@@ -73,16 +73,6 @@ partial struct Level : IEnumerable<ILevelObject?>
         {
             Vector2f position = origin + new Vector2f(x, y) * unit;
             this[x, y]?.Draw(target, position, unit);
-        }
-    }
-
-    public void DrawAuth(RenderTarget target, float unit, Vector2f origin)
-    {
-        for (int x = 0; x < Width; x++)
-        for (int y = 0; y < Height; y++)
-        {
-            Vector2f position = origin + new Vector2f(x, y) * unit;
-            this[x, y]?.DrawAuth(target, position, unit);
         }
     }
 

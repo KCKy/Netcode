@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using MemoryPack;
-using Serilog;
 using SFML.Graphics;
 using SFML.System;
-using TopDownShooter.Display;
-using TopDownShooter.Input;
 using Kcky.Useful;
 using SfmlExtensions;
 
-namespace TopDownShooter.Game;
+namespace TopDownShooter;
 
 [MemoryPackable]
 partial struct Position
@@ -103,8 +100,6 @@ sealed partial class PlayerAvatar : IEntity
 
     public void Shoot(Vec2<Fixed> direction, List<PlayerAvatar> avatars, int histIndex)
     {
-        Log.Information("Shooting with hist index: {HistIndex}.", histIndex);
-
         if (position_.GetHistory(histIndex) is not { } position)
             return;
 
@@ -153,7 +148,7 @@ sealed partial class PlayerAvatar : IEntity
         renderTarget.Draw(PlayerShape);
     }
 
-    public void DrawLerped(Displayer displayer, Vector2f origin, IEntity to, float t)
+    public void DrawLerped(RenderTarget renderTarget, Vector2f origin, IEntity to, float t, GameClient gameClient)
     {
         if (to as PlayerAvatar is not { EntityId: var otherId } target || otherId != entityId_)
             throw new ArgumentException("Invalid target entity.", nameof(to));
@@ -165,10 +160,9 @@ sealed partial class PlayerAvatar : IEntity
         Vector2f targetPosition = new(rawTargetPosition.X, rawTargetPosition.Y);
         Vector2f position = sourcePosition.Lerp(targetPosition, t);
 
-        if (displayer.Id == playerId_)
-            displayer.Center = position;
+        gameClient.InformPlayer(playerId_, position);
 
-        Draw(displayer.Window, position - origin);
+        Draw(renderTarget, position - origin);
     }
 
     public bool IsPredicted(int localId) => playerId_ == localId;

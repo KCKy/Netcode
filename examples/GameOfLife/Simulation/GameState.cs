@@ -4,6 +4,7 @@ using Kcky.GameNewt;
 using MemoryPack;
 using SFML.System;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace GameOfLife;
 
@@ -21,7 +22,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     public const int LevelWidth = 30;
     public const int LevelHeight = 30;
-    public static double DesiredTickRate => 3;
+    public static float DesiredTickRate => 5;
 
     public static Vector2i SpawnPoint = new(0, 0);
 
@@ -152,7 +153,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         }
     }
 
-    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs)
+    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
     {
         UpdateGame();
 

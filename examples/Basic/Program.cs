@@ -1,62 +1,21 @@
-﻿using System.Net;
-using Kcky.GameNewt.Client;
-using Kcky.GameNewt.Dispatcher.Default;
-using Kcky.GameNewt.Server;
-using Kcky.GameNewt.Transport.Default;
+﻿namespace Basic;
 
-namespace Basic;
-
-class Program
+static class Program
 {
-    static async Task RunClientAsync()
-    {
-        IPEndPoint serverAddress = new(IPAddress.Loopback, 42000);
-
-        IpClientTransport transport = new(serverAddress);
-        DefaultClientDispatcher dispatcher = new(transport);
-
-        Client<ClientInput, ServerInput, GameState> client = new(dispatcher)
-        {
-            Displayer = new Displayer(),
-            ClientInputProvider = new InputProvider()
-        };
-
-        Task result = await Task.WhenAny(client.RunAsync(), transport.RunAsync());
-
-        transport.Terminate();
-        client.Terminate();
-
-        await result;
-    }
-
-    static async Task RunServerAsync()
-    {
-        IPEndPoint serverAddress = new(IPAddress.Any, 42000);
-        IpServerTransport transport = new(serverAddress);
-        DefaultServerDispatcher dispatcher = new(transport);
-
-        Server<ClientInput, ServerInput, GameState> server = new(dispatcher);
-
-        Task result = await Task.WhenAny(server.RunAsync(), transport.RunAsync());
-
-        transport.Terminate();
-        server.Terminate();
-
-        await result;
-    }
-
-    static async Task Main()
+    static void Main()
     {
         Console.WriteLine("Run client or server [c/s]? ");
-        char? command = Console.ReadLine()?.ToLower()[0];
-        
+        char? command = Console.ReadLine()?.ToLower().FirstOrDefault();
+
         switch (command)
         {
             case 's':
-                await RunServerAsync();
+                GameServer server = new();
+                server.RunAsync().Wait();
                 return;
             default:
-                await RunClientAsync();
+                GameClient client = new();
+                client.Run();
                 return;
         }
     }

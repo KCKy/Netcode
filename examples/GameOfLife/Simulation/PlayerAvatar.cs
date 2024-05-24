@@ -21,7 +21,6 @@ sealed partial class PlayerAvatar : ILevelObject
     static readonly CircleShape Shape = new();
 
     const float PlayerPaletteSpacing = 0.1f;
-    const int AuthAlpha = 100;
 
     static void Draw(RenderTarget target, Vector2f position, float unit, Color innerColor, Color outerColor)
     {
@@ -44,15 +43,6 @@ sealed partial class PlayerAvatar : ILevelObject
     public void Draw(RenderTarget target, Vector2f position, float unit)
     {
         (Color innerColor, Color outerColor) = GetColors();
-        Draw(target, position, unit, innerColor, outerColor);
-    }
-
-    public void DrawAuth(RenderTarget target, Vector2f position, float unit)
-    {
-        (Color innerColor, Color outerColor) = GetColors();
-        innerColor.A = AuthAlpha;
-        outerColor.A = AuthAlpha;
-
         Draw(target, position, unit, innerColor, outerColor);
     }
 }

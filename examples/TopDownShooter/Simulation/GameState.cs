@@ -1,18 +1,15 @@
 ﻿using System.Collections.Generic;
 using Kcky.GameNewt;
 using MemoryPack;
-using Serilog;
-using TopDownShooter.Display;
-using TopDownShooter.Input;
 using Kcky.Useful;
+using Microsoft.Extensions.Logging;
 
-namespace TopDownShooter.Game;
+namespace TopDownShooter;
 
 [MemoryPackable]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
     [MemoryPackInclude] SortedDictionary<int, ClientInfo> idToClientInfo_ = new();
-    [MemoryPackInclude] int lastConnected_ = int.MinValue;
     [MemoryPackInclude] int entityCounter_ = 0;
 
     public IEnumerable<(int Id, IEntity Entity)> GetEntities(PooledBufferWriter<byte> copyWriter)
@@ -30,16 +27,12 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         }
     }
 
-    PlayerAvatar? UpdatePlayerAvatar(UpdateClientInfo<ClientInput> info)
+    PlayerAvatar? UpdatePlayerAvatar(UpdateClientInfo<ClientInput> info, ILogger logger)
     {
         (int id, ClientInput input, bool disconnected) = info;
         
         if (!idToClientInfo_.TryGetValue(id, out ClientInfo? client))
         {
-            if (id <= lastConnected_)
-                return null;
-
-            lastConnected_ = id;
             client = new();
             idToClientInfo_.Add(id, client);
         }
@@ -49,7 +42,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
         if (client.Avatar is not { } avatar)
         {
-            Log.Information("Created player avatar for: {Id}", id);
+            logger.LogInformation("Created player avatar for: {Id}", id);
             avatar = new(entityCounter_++, id);
             client.Avatar = avatar;
         }
@@ -88,14 +81,14 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         avatar?.Respawn();
     }
 
-    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs)
+    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
     {
         List<PlayerAvatar> avatars = new();
         var clientInputs = updateInputs.ClientInputInfos.Span;
 
         foreach (var info in clientInputs)
         {
-            PlayerAvatar? avatar = UpdatePlayerAvatar(info);
+            PlayerAvatar? avatar = UpdatePlayerAvatar(info, logger);
             if (avatar is not null)
                 avatars.Add(avatar);
         }
@@ -109,7 +102,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         return UpdateOutput.Empty;
     }
 
-    public static double DesiredTickRate => 20;
+    public static float DesiredTickRate => 20;
 }
 
 [MemoryPackable]

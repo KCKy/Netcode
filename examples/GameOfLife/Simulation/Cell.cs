@@ -7,11 +7,6 @@ namespace GameOfLife;
 [MemoryPackable]
 sealed partial class Cell : ILevelObject
 {
-    static readonly RectangleShape AuthShape = new()
-    {
-        FillColor = new(100, 100, 200, 150)
-    };
-
     static readonly RectangleShape PredictShape = new()
     {
         FillColor = new(200, 200, 200, 180)
@@ -31,12 +26,5 @@ sealed partial class Cell : ILevelObject
         PredictShape.Size = new(unit, unit);
         PredictShape.Position = position;
         target.Draw(PredictShape);
-    }
-
-    public void DrawAuth(RenderTarget target, Vector2f position, float unit)
-    {
-        AuthShape.Size = new(unit, unit);
-        AuthShape.Position = position;
-        target.Draw(AuthShape);
     }
 }

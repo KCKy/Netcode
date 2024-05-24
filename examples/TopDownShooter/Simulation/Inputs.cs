@@ -1,7 +1,6 @@
-﻿using Kcky.GameNewt.Providers;
-using MemoryPack;
+﻿using MemoryPack;
 
-namespace TopDownShooter.Input;
+namespace TopDownShooter;
 
 [MemoryPackable]
 partial class ClientInput
@@ -16,9 +15,12 @@ partial class ClientInput
     public bool Respawn;
 }
 
-class ClientInputPredictor : IClientInputPredictor<ClientInput>
+[MemoryPackable]
+partial class ServerInput { }
+
+static class ClientInputPrediction
 {
-    public void PredictInput(ref ClientInput previous)
+    public static void PredictClientInput(ref ClientInput previous)
     {
         previous.Shoot = false;
         previous.ShootX = 0;

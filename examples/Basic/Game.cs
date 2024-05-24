@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Kcky.GameNewt;
+using Microsoft.Extensions.Logging;
 
 namespace Basic;
 
@@ -54,7 +55,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         return true;
     }
 
-    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs)
+    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
     {
         foreach (var clientInputInfo in updateInputs.ClientInputInfos.Span)
         {
@@ -99,7 +100,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         return UpdateOutput.Empty;
     }
 
-    public static double DesiredTickRate => 5;
+    public static float DesiredTickRate => 5;
 }
 
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
