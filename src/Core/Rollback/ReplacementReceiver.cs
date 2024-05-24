@@ -40,11 +40,12 @@ sealed class ReplacementReceiver<TC, TS, TG> where TG : class, IGameState<TC, TS
         return 0;
     }
 
-    public void TryReceive(long frame, StateHolder<TC, TS, TG, PredictiveStateType> holder, ref UpdateInput<TC, TS> input)
+    public bool TryReceive(long frame, StateHolder<TC, TS, TG, PredictiveStateType> holder, ref UpdateInput<TC, TS> input)
     {
         lock (receiverHolder_)
         {
-            if (isReplaced_)
+            bool success = isReplaced_;
+            if (success)
             {
                 Debug.Assert(receiverHolder_.Frame == holder.Frame);
                 (receiverHolder_.State, holder.State) = (holder.State, receiverHolder_.State);
@@ -53,6 +54,8 @@ sealed class ReplacementReceiver<TC, TS, TG> where TG : class, IGameState<TC, TS
             }
 
             receiverHolder_.Frame = frame;
+
+            return success;
         }
     }
 }

@@ -65,7 +65,7 @@ public delegate void HandleNewAuthoritativeStateDelegate<in TGameState>(long fra
 /// Receives new predictive state.
 /// </summary>
 /// <typeparam name="TGameState">The type of the game state.</typeparam>
-/// <param name="frame">The frame index (called in ascending continuous order).</param>
+/// <param name="frame">The frame index (called in non-descending continuous order).</param>
 /// <param name="gameState">Read only borrow of the game state (May not be modified by the displayer).</param>
 /// <remarks>
 /// Mostly useful to display the game to the players. It is up to the game programmer to pick the best
