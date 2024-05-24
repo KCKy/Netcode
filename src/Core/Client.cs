@@ -189,7 +189,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     public float TargetTps => clock_.TargetTps;
 
     /// <inheritdoc/>
-    public Task RunAsync()
+    public async Task RunAsync()
     {
         lock (stateMutex_)
         {
@@ -209,11 +209,18 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
         Task task = dispatcher_.RunAsync();
         logger_.LogDebug("The client has started.");
-        return task;
+
+        try
+        {
+            await task;
+        }
+        finally
+        {
+            TerminateInternal();
+        }
     }
 
-    /// <inheritdoc/>
-    public void Terminate()
+    void TerminateInternal()
     {
         lock (stateMutex_)
         {
@@ -221,13 +228,20 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
                 return;
 
             clientState_ = ClientState.Terminated;
-            logger_.LogDebug("The client has been signalled to terminate.");
+            
 
             UnsetHandlers();
             PredictManager.Stop();
             clockCancellation_.Cancel();
             dispatcher_.Terminate();
         }
+    }
+
+    /// <inheritdoc/>
+    public void Terminate()
+    {
+        logger_.LogDebug("The client has been signalled to terminate.");
+        TerminateInternal();
     }
 
     void AssertChecksum(long frame, ReadOnlyMemory<byte> serializedInput, long? checksum)

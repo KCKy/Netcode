@@ -113,7 +113,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     public event InitializeStateDelegate<TGameState>? OnStateInit;
 
     /// <inheritdoc/>
-    public Task RunAsync()
+    public async Task RunAsync()
     {
         lock (stateMutex_)
         {
@@ -139,7 +139,14 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
         logger_.LogDebug("The server has started.");
 
-        return task;
+        try
+        {
+            await task;
+        }
+        finally
+        {
+            TerminateInternal();
+        }
     }
 
     void TerminateInternal()
