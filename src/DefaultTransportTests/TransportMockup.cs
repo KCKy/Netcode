@@ -47,7 +47,7 @@ sealed class MockServerTransport(int messageHeadersLength, int unreliableMaxLeng
                 if (state_ != State.Running)
                     return;
 
-            reliableCallback.Invoke(message[UnreliableMessageHeader..]);
+            unreliableCallback.Invoke(message[UnreliableMessageHeader..]);
         }
 
         public void ReceiveReliable(Memory<byte> message)
@@ -175,7 +175,6 @@ sealed class MockServerTransport(int messageHeadersLength, int unreliableMaxLeng
     }
 }
 
-
 sealed class SingleClientMockTransport : IClientTransport
 {
     public event ClientMessageEvent? OnReliableMessage;
@@ -210,10 +209,8 @@ sealed class SingleServerMockTransport : IServerTransport
     public void SendUnreliable(Memory<byte> message) => throw new InvalidOperationException();
     public void SendUnreliable(Memory<byte> message, int id) => throw new InvalidOperationException();
     public void Kick(int id) => throw new InvalidOperationException();
-    public void Kick() => throw new InvalidOperationException();
 
     readonly TaskCompletionSource runtime_ = new();
     public void Terminate() => runtime_.SetCanceled();
     public Task RunAsync() => runtime_.Task;
 }
-

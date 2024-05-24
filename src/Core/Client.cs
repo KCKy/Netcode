@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using GameNewt.Timing;
+using Kcky.GameNewt.Dispatcher;
 using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;

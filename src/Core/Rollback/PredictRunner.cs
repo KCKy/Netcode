@@ -1,9 +1,9 @@
 ﻿using Kcky.GameNewt.DataStructures;
-using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using Kcky.Useful;
 using MemoryPack;
 using System.Diagnostics;
+using Kcky.GameNewt.Dispatcher;
 using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Kcky.GameNewt.Transport;
+namespace Kcky.GameNewt.Dispatcher;
 
 /// <summary>
 /// Implements the server-side sending and receiving binary messages.

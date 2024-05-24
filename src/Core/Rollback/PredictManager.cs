@@ -1,6 +1,6 @@
 ﻿using System;
 using Kcky.GameNewt.DataStructures;
-using Kcky.GameNewt.Transport;
+using Kcky.GameNewt.Dispatcher;
 using Kcky.GameNewt.Utility;
 using Microsoft.Extensions.Logging;
 

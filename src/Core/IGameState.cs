@@ -17,6 +17,7 @@ public interface IGameState<TC, TS>
     /// The deterministic update method of the game state.
     /// </summary>
     /// <param name="updateInputs">The inputs for the update. The result of this update on the state and the return value shall be purely determined by this value.</param>
+    /// <param name="logger">A logger instance for logging internal update events. Useful for debugging.</param>
     /// <returns>The result of the state update. Used for kicking clients and determining the end of the game simulation.</returns>
     UpdateOutput Update(UpdateInput<TC, TS> updateInputs, ILogger logger);
 

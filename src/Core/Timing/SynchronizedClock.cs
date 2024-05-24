@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Kcky.GameNewt.DataStructures;
+using Kcky.GameNewt.Dispatcher;
 using Kcky.GameNewt.Timing;
 using Kcky.GameNewt.Transport;
 using Kcky.Useful;
@@ -50,6 +51,7 @@ sealed class SynchronizedClock
     /// <summary>
     /// Constructor.
     /// <param name="clock">IClock instance to use for tick measuring.</param>
+    /// <param name="loggerFactory">Logger factory to construct loggers for this instance and internal types.</param>
     /// </summary>
     public SynchronizedClock(IClock clock, ILoggerFactory loggerFactory)
     {
