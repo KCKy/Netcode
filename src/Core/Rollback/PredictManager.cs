@@ -20,7 +20,6 @@ sealed class PredictManager<TC, TS, TG> where TG : class, IGameState<TC, TS>, ne
     readonly ILogger logger_;
     readonly IndexedQueue<TC> clientInputs_ = new(); // This queue needs to be locked. Making new client inputs is exclusive to predict update.
     readonly ReplacementCoordinator coordinator_;
-    readonly object tickLock_ = new();
 
     PredictRunner<TC, TS, TG>? predictRunner_ = null;
     Replacer<TC, TS, TG>? replacer_= null;
@@ -103,11 +102,19 @@ sealed class PredictManager<TC, TS, TG> where TG : class, IGameState<TC, TS>, ne
     /// </summary>
     public void Tick()
     {
-        lock (tickLock_)
-            if (predictRunner_ is {} runner)
-                runner.Update();
+        if (predictRunner_ is {} runner)
+            runner.Update();
     }
-    
+
+    /// <summary>
+    /// Check and swap predict state if a replacement occured.
+    /// </summary>
+    public void CheckPredict()
+    {
+        if (predictRunner_ is {} runner)
+            runner.CheckPredict();
+    }
+
     /// <summary>
     /// Stops the predict manager from further management.
     /// </summary>

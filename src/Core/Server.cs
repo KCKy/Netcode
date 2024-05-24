@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Kcky.GameNewt.DataStructures;
 using Kcky.GameNewt.Dispatcher;
 using Kcky.GameNewt.Timing;
-using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
 using Kcky.Useful;
@@ -285,12 +284,12 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
         if (input is null)
         {
-            logger_.LogWarning("The server has received valid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
+            logger_.LogWarning("The server has received invalid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
         }
         else
         {
             inputQueue_.AddInput(id, frame, input);
-            logger_.LogTrace("The server has received invalid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
+            logger_.LogTrace("The server has received valid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
         }
     }
     

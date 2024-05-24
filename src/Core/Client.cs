@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using GameNewt.Timing;
 using Kcky.GameNewt.Dispatcher;
 using Kcky.GameNewt.Timing;
-using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Utility;
 using MemoryPack;
 using Kcky.Useful;
@@ -31,10 +30,11 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     readonly StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authStateHolder_; // Mutex used to stop RW/WR/WW conflicts.
     readonly CancellationTokenSource clockCancellation_ = new();
     readonly object stateMutex_ = new(); // Assures atomicity of start and termination operations.
-    readonly SynchronizedClock clock_;
+    readonly SynchronizedClock syncClock_;
     readonly ILogger logger_;
     readonly IClientDispatcher dispatcher_;
     readonly ILoggerFactory loggerFactory_;
+    readonly Clock clock_ = new();
 
     PredictManager<TClientInput, TServerInput, TGameState>? predictManager_;
     PredictManager<TClientInput, TServerInput, TGameState> PredictManager => predictManager_ ?? throw new InvalidOperationException("The client has not been started.");
@@ -86,17 +86,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// </remarks>
     public PredictServerInputDelegate<TServerInput, TGameState> ServerInputPredictor { private get; init; } = static (ref TServerInput i, TGameState state) => {};
 
-    Action updateAction_ = () => throw new InvalidOperationException("The client uses its own thread. Update is not supported. To use update disable useOwnThread in the constructor.");
-    IClock GetTimingClock(bool useOwnThread = false)
-    {
-        if (useOwnThread)
-            return new ThreadClock();
-        
-        Clock clock = new();
-        updateAction_ = () => clock.Update();
-        return clock;
-    }
-
     /// <summary>
     /// Update the client.
     /// Shall be called frequently to update the simulation.
@@ -109,7 +98,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// </remarks>
     public TGameState? Update()
     {
-        updateAction_.Invoke();
+        predictManager_?.CheckPredict();
+        clock_.Update();
         return predictManager_?.State;
     }
 
@@ -117,20 +107,20 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// Constructor.
     /// </summary>
     /// <param name="dispatcher">Sender to use for sending messages the server.</param>
-    /// <param name="useOwnThread">Whether the client should use its own thread for updating.</param>
     /// <param name="loggerFactory">Optional logger factory to use for logging client events.</param>
-    public Client(IClientDispatcher dispatcher, bool useOwnThread = true, ILoggerFactory? loggerFactory = null)
+    public Client(IClientDispatcher dispatcher, ILoggerFactory? loggerFactory = null)
     {
         loggerFactory_ = loggerFactory ?? NullLoggerFactory.Instance;
         logger_ = loggerFactory_.CreateLogger<Client<TClientInput, TServerInput, TGameState>>();
         dispatcher_ = dispatcher;
         authStateHolder_ = new(loggerFactory_);
 
-        IClock internalClock = GetTimingClock(useOwnThread);
-        clock_ = new(internalClock, loggerFactory_)
+        syncClock_ = new(clock_, loggerFactory_)
         {
             TargetTps = TGameState.DesiredTickRate
         };
+
+        TargetDelta = 0.05f;
 
         SetHandlers();
     }
@@ -140,7 +130,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     void SetDelayHandler(long frame, float delay)
     {
         logger_.LogTrace("The client has received delay info for frame {Frame} with value {Delay}.", frame, delay);
-        clock_.SetDelay(frame, delay - TargetDelta);
+        syncClock_.SetDelay(frame, delay);
     }
 
     void SetHandlers()
@@ -180,13 +170,17 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     public long PredictFrame => predictManager_?.Frame ?? long.MinValue;
 
     /// <inheritdoc/>
-    public float TargetDelta { get; init; } = 0.05f;
+    public float TargetDelta
+    {
+        get => syncClock_.TargetDelta;
+        init => syncClock_.TargetDelta = value;
+    }
 
     /// <inheritdoc/>
-    public float CurrentTps => clock_.CurrentTps;
+    public float CurrentTps => syncClock_.CurrentTps;
 
     /// <inheritdoc/>
-    public float TargetTps => clock_.TargetTps;
+    public float TargetTps => syncClock_.TargetTps;
 
     /// <inheritdoc/>
     public async Task RunAsync()
@@ -205,7 +199,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         }
 
         predictManager_ = new(authStateHolder_, dispatcher_, loggerFactory_, NewPredictiveStateHandler, ServerInputPredictor, ClientInputPredictor, ClientInputProvider);
-        clock_.OnTick += predictManager_.Tick;
+        syncClock_.OnTick += predictManager_.Tick;
 
         Task task = dispatcher_.RunAsync();
         logger_.LogDebug("The client has started.");
@@ -298,7 +292,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         }
     }
 
-    
     void Authorize(Memory<byte> serializedInput, long? checksum, long frame)
     {
         bool traceTime = logger_.IsEnabled(LogLevel.Information);
@@ -339,7 +332,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
         return (authState, predictState);
     }
-
+    
     void InitializeAuthState(long frame, TGameState authState)
     {
         lock (authStateHolder_)
@@ -371,8 +364,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             PredictManager.Init(frame, predictState, id);
             OnInitialize?.Invoke(id);
 
-            clock_.Initialize(frame);
-            clock_.RunAsync(clockCancellation_.Token).AssureNoFault();
+            syncClock_.Initialize(frame);
+            syncClock_.RunAsync(clockCancellation_.Token).AssureNoFault();
         }
     }
 

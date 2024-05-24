@@ -66,6 +66,11 @@ sealed class PredictRunner<TC, TS, TG> where TG : class, IGameState<TC, TS>, new
 
     public TG State => predictHolder_.State;
 
+    public void CheckPredict()
+    {
+        replacementReceiver_.TryReceive(predictHolder_.Frame, predictHolder_, ref predictInput_);
+    }
+
     public void Update()
     {
         // Input

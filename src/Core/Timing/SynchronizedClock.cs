@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Kcky.GameNewt.DataStructures;
 using Kcky.GameNewt.Dispatcher;
 using Kcky.GameNewt.Timing;
-using Kcky.GameNewt.Transport;
 using Kcky.Useful;
 using Microsoft.Extensions.Logging;
 
@@ -73,7 +72,12 @@ sealed class SynchronizedClock
     /// The current TPS of the clock.
     /// </summary>
     public float CurrentTps { get; private set; } = 0;
-    
+
+    /// <summary>
+    /// The desired delay between the server receiving input and the corresponding input collection.
+    /// </summary>
+    public float TargetDelta { get; set; } = 0;
+
     /// <summary>
     /// Initialize the clock.
     /// </summary>
@@ -121,7 +125,6 @@ sealed class SynchronizedClock
         Statistic = static values => values.Min()
     };
 
-
     float GetOffset(long targetFrame, long targetTime, long sourceFrame, long sourceTime)
     {
         float supposedTime = (targetFrame - sourceFrame) / TargetTps;
@@ -157,7 +160,7 @@ sealed class SynchronizedClock
     void UpdateClockSpeed(long currentTime)
     {
         float offset = GetDenormalizationOffset(currentTime);
-        float denormalizedWorstCase = currentWorstCase_ + offset;
+        float denormalizedWorstCase = currentWorstCase_ + offset - TargetDelta;
         float newPeriod = Math.Max(1 / TargetTps + denormalizedWorstCase, 0);
 
         logger_.LogTrace("Updating clock speed with denormalization offset {Offset} yields period {Period}.", offset, newPeriod);
