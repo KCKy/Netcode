@@ -48,7 +48,6 @@ class GameClient : GameBase
         {
             ClientInputProvider = ProvideClientInput,
             ServerInputPredictor = PredictServerInput,
-            TargetDelta = 0.01f
         };
     }
 

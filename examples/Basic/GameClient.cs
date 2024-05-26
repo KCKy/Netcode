@@ -19,18 +19,14 @@ class GameClient
 
         client_ = new(dispatcher)
         {
-            ClientInputProvider = GetInput,
-            TargetDelta = 0
+            ClientInputProvider = GetInput
         };
 
         client_.OnInitialize += Init;
         client_.OnNewPredictiveState += Draw;
     }
 
-    void Init(int id)
-    {
-        localId_ = id;
-    }
+    void Init(int id) => localId_ = id;
 
     public void Run()
     {
@@ -44,6 +40,7 @@ class GameClient
 
         task.Wait();
     }
+
     static ClientInput GetInput()
     {
         ClientInput input = new();

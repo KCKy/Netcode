@@ -7,14 +7,15 @@ namespace Basic;
 
 class GameServer
 {
-    public Task RunAsync()
+    readonly Server<ClientInput, ServerInput, GameState> server_;
+
+    public GameServer()
     {
         IPEndPoint serverAddress = new(IPAddress.Any, 42000);
         IpServerTransport transport = new(serverAddress);
         DefaultServerDispatcher dispatcher = new(transport);
-        
-        Server<ClientInput, ServerInput, GameState> server = new(dispatcher);
-
-        return server.RunAsync();
+        server_ = new(dispatcher);
     }
+
+    public Task RunAsync() => server_.RunAsync();
 }
