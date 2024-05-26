@@ -1,8 +1,7 @@
 ﻿using Kcky.GameNewt.Client;
-using Kcky.GameNewt.Timing;
 using Kcky.Useful;
 
-namespace Kcky.GameNewt.Utility;
+namespace SfmlExtensions;
 
 /// <summary>
 /// General debug info collector for clients.
