@@ -81,7 +81,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
                 return;
             case MessageType.ClientInput:
             default:
-                logger_.LogError("Received invalid message from server: {Message} of type {Type}.", message, type);
+                logger_.LogError("Received invalid message from server of type {Type}.", type);
                 ArrayPool<byte>.Shared.Return(message);
                 return;
         }
@@ -93,7 +93,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         if (message.Length < headerLength)
         {
-            logger_.LogError("Received invalid initialization message: {Message}.", message);
+            logger_.LogError("Received invalid initialization message.");
             ArrayPool<byte>.Shared.Return(message);
             return;
         }
@@ -114,7 +114,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         if (message.Length < headerLength)
         {
-            logger_.LogError("Received invalid authorize message: {Message}.", message);
+            logger_.LogError("Received invalid authorize message.");
             ArrayPool<byte>.Shared.Return(message);
             return; // Return owned memory to the pool
         }
@@ -135,7 +135,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
         }
         else
         {
-            logger_.LogError("Authorize message has invalid time difference: {Message} -> {Difference}.", message, difference);
+            logger_.LogError("Authorize message has invalid time difference: {Difference}.", difference);
         }
 
         ArrayPool<byte>.Shared.Return(message); // Return owned memory to the pool
@@ -147,7 +147,7 @@ public sealed class DefaultClientDispatcher : IClientDispatcher
 
         if (message.Length < headerLength)
         {
-            logger_.LogError("Received invalid auth input message: {Message}.", message);
+            logger_.LogError("Received invalid auth input message.");
             ArrayPool<byte>.Shared.Return(message);
             return; // Return owned memory to the pool
         }

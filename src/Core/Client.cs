@@ -182,6 +182,16 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// <inheritdoc/>
     public float TargetTps => syncClock_.TargetTps;
 
+    /// <summary>
+    /// To account for jitter the clock works over a window of latencies.
+    /// This value determines the number of frames for this window.
+    /// </summary>
+    public int SamplingWindow
+    {
+        get => syncClock_.SamplingWindow;
+        init => syncClock_.SamplingWindow = value;
+    }
+
     /// <inheritdoc/>
     public async Task RunAsync()
     {
@@ -247,9 +257,11 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
         if (actual != check)
         {
-            var serialized = authStateHolder_.GetSerialized();
+            Memory<byte> serialized = authStateHolder_.GetSerialized();
+            string base64State = Convert.ToBase64String(authStateHolder_.GetSerialized().Span);
+            string base64Input = Convert.ToBase64String(serializedInput.Span);
 
-            logger_.LogCritical("The client has detected a desync from the server for frame {Frame} ({ActualSum} != {ExpectedSum})! The diverged state: {SerializedState} has resulted from input {SerializedInput}", frame, actual, check, serialized, serializedInput);
+            logger_.LogCritical("The client has detected a desync from the server for frame {Frame} ({ActualSum} != {ExpectedSum})! The diverged state: {SerializedState} has resulted from input {SerializedInput}", frame, actual, check, base64State, base64Input);
             ArrayPool<byte>.Shared.Return(serialized);
             throw new InvalidOperationException("The auth state has diverged from the server.");
         }
@@ -282,9 +294,11 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             if (TraceState)
             {
-                Memory<byte> trace = authStateHolder_.GetSerialized();
-                logger_.LogInformation("Finished client authoritative state update with input {SerializedInput} for {Frame} resulting in state: {SerializedState}", serializedInput, frame, trace);
-                ArrayPool<byte>.Shared.Return(trace);
+                Memory<byte> serializedState = authStateHolder_.GetSerialized();
+                string base64Input = Convert.ToBase64String(serializedInput.Span);
+                string base64State = Convert.ToBase64String(serializedState.Span);
+                logger_.LogInformation("Finished client authoritative state update with input {SerializedInput} for {Frame} resulting in state: {SerializedState}", base64Input, frame, base64State);
+                ArrayPool<byte>.Shared.Return(serializedState);
             }
             
             OnNewAuthoritativeState?.Invoke(frame, authStateHolder_.State);
@@ -353,8 +367,13 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
             clientState_ = ClientState.Initiated;
 
-            logger_.LogDebug("Client received id {Id}", id);
-            logger_.LogDebug("Received init state for {Frame} with {Serialized}.", frame, serializedState);
+            logger_.LogDebug("Client received id {Id} and init state for {Frame}", id, frame);
+
+            if (TraceState)
+            {
+                string base64State = Convert.ToBase64String(serializedState.Span);
+                logger_.LogDebug("The init state is {Serialized}.", base64State);
+            }
 
             (TGameState authState, TGameState predictState) = DeserializeStates(serializedState);
 

@@ -23,7 +23,7 @@ struct Sender<TMessages, TMessage>(ISendProtocol<TMessage> protocol, TMessages m
             while (true)
             {
                 TMessage message = await messages_.GetAsync(cancellation);
-                logger_.LogTrace("Got message {Payload} to send to a remote.", message);
+                logger_.LogTrace("Got message to send to a remote.");
                 await protocol.SendAsync(message, cancellation);
             }
         }

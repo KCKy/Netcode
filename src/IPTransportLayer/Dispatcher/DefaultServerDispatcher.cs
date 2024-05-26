@@ -81,7 +81,7 @@ public sealed class DefaultServerDispatcher : IServerDispatcher
                 HandleClientInput(id, message);
                 return;
             default:
-                logger_.LogError("Received invalid message from client {Id}: {Message} of type {Type}.", id, message, type);
+                logger_.LogError("Received invalid from client {Id} of type {Type}.", id, type);
                 ArrayPool<byte>.Shared.Return(message);
                 return;
         }

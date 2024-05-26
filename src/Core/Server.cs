@@ -201,9 +201,10 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
         if (TraceState && logger_.IsEnabled(LogLevel.Information))
         {
-            var trace = traceStateWriter_.MemoryPackSerialize(stateHolder_.State);
-            logger_.LogInformation("Finished server state update for {Frame} resulting in state: {SerializedState}", stateHolder_.Frame, trace);
-            ArrayPool<byte>.Shared.Return(trace);
+            var serializedState = traceStateWriter_.MemoryPackSerialize(stateHolder_.State);
+            string base64State = Convert.ToBase64String(serializedState.Span);
+            logger_.LogInformation("Finished server state update for {Frame} resulting in state: {SerializedState}", stateHolder_.Frame, base64State);
+            ArrayPool<byte>.Shared.Return(serializedState);
         }
         
         return (output, checksum);
@@ -284,12 +285,12 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
 
         if (input is null)
         {
-            logger_.LogWarning("The server has received invalid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
+            logger_.LogWarning("The server has received invalid input from client with id {Id} for frame {Frame}.", id, frame);
         }
         else
         {
             inputQueue_.AddInput(id, frame, input);
-            logger_.LogTrace("The server has received valid input from client with id {Id} for frame {Frame}: {SerializedInput}", id, frame, serializedInput);
+            logger_.LogTrace("The server has received valid input from client with id {Id} for frame {Frame}.", id, frame);
         }
     }
     

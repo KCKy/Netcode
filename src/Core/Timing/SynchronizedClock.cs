@@ -44,7 +44,7 @@ sealed class SynchronizedClock
     public int SamplingWindow
     {
         get => normalizedDelays_.Length;
-        init => normalizedDelays_ = new(value);
+        set => normalizedDelays_ = new(value);
     }
 
     /// <summary>
@@ -103,8 +103,12 @@ sealed class SynchronizedClock
         lock (mutex_)
         {
             logger_.LogDebug("ServerStarted sync-clock.");
-            beginTime_ = Stopwatch.GetTimestamp();
-            TickHandlerUnsafe();
+            logger_.LogTrace("Processing first clock tick.");
+            long currentTime = Stopwatch.GetTimestamp();
+            OnTick?.Invoke();
+            beginTime_ = currentTime;
+            timingQueue_.Add(currentTime);
+            Debug.Assert(beginFrame_ == timingQueue_.FirstIndex);
         }
 
         try
@@ -120,7 +124,7 @@ sealed class SynchronizedClock
 
     readonly IndexedQueue<long> timingQueue_ = new();
 
-    readonly IntegrateWindowed<float> normalizedDelays_ = new(20)
+    IntegrateWindowed<float> normalizedDelays_ = new(20)
     {
         Statistic = static values => values.Min()
     };
@@ -132,38 +136,25 @@ sealed class SynchronizedClock
         return supposedTime - actualTime;
     }
 
-    float GetOffset(float targetFrame, long targetTime, float sourceFrame, long sourceTime)
-    {
-        float supposedTime = (targetFrame - sourceFrame) / TargetTps;
-        float actualTime = (targetTime - sourceTime) / (float) Stopwatch.Frequency;
-        return supposedTime - actualTime;
-    }
-
     float GetNormalizationOffset(long frame, long time) => GetOffset(beginFrame_, beginTime_, frame, time);
     
-    float CalculateCurrentFrameProgression(long frameStartTime, long currentTime)
-    {
-        return (currentTime - frameStartTime) * internalClock_.TargetTps / Stopwatch.Frequency;
-    }
-
-    float GetDenormalizationOffset(long currentTime)
+    float GetDenormalizationOffset()
     {
         long latestFrame = timingQueue_.LastIndex;
         long latestFrameTime = timingQueue_.Last;
-        float currentFrame = latestFrame + CalculateCurrentFrameProgression(latestFrameTime, currentTime);
 
-        return GetOffset(currentFrame, currentTime, beginFrame_, beginTime_);
+        return GetOffset(latestFrame, latestFrameTime, beginFrame_, beginTime_);
     }
 
     float currentWorstCase_ = 0;
 
-    void UpdateClockSpeed(long currentTime)
+    void UpdateClockSpeed()
     {
-        float offset = GetDenormalizationOffset(currentTime);
+        float offset = GetDenormalizationOffset();
         float denormalizedWorstCase = currentWorstCase_ + offset - TargetDelta;
         float newPeriod = Math.Max(1 / TargetTps + denormalizedWorstCase, 0);
 
-        logger_.LogTrace("Updating clock speed with denormalization offset {Offset} yields period {Period}.", offset, newPeriod);
+        logger_.LogTrace("Updating clock speed from current worst case {WorstCase} with denormalization offset {Offset} yields period {Period}.", currentWorstCase_, offset, newPeriod);
 
         if (newPeriod <= 0)
         {
@@ -201,30 +192,29 @@ sealed class SynchronizedClock
 
             logger_.LogTrace("Normalization offset {Offset} yields normalized delay {Delay} and current worst case {Case}.", offset, normalizedDelay, currentWorstCase_);
             
-            long currentTime = Stopwatch.GetTimestamp();
-            UpdateClockSpeed(currentTime);
+            UpdateClockSpeed();
         }
     }
 
     void TickHandler()
     {
-        long currentTime = Stopwatch.GetTimestamp();
         logger_.LogTrace("Processing regular clock tick.");
+        long currentTime = Stopwatch.GetTimestamp();
         OnTick?.Invoke();
         
         lock (mutex_)
         {
             timingQueue_.Add(currentTime);
-            UpdateClockSpeed(currentTime);
+            UpdateClockSpeed();
         }
     }
 
     void TickHandlerUnsafe()
     {
-        long currentTime = Stopwatch.GetTimestamp();
         logger_.LogTrace("Processing fake clock tick.");
+        long currentTime = Stopwatch.GetTimestamp();
         OnTick?.Invoke();
         timingQueue_.Add(currentTime);
-        UpdateClockSpeed(currentTime);
+        UpdateClockSpeed();
     }
 }

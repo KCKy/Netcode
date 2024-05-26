@@ -162,7 +162,7 @@ where TClientInput : class, new()
                 float difference = (frame - frame_) / ticksPerSecond_ - framePart;
                 inputAuthored_?.Invoke(id, frame, difference);
 
-                logger_.LogDebug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F2} s).", id, frame, frame_, difference);
+                logger_.LogDebug( "Got late input from client {Id} for {Frame} at {Current} ({Time:F4} s).", id, frame, frame_, difference);
                 return;
             }
             
@@ -205,7 +205,7 @@ where TClientInput : class, new()
                     float difference = (float)Stopwatch.GetElapsedTime(value, lastFrameUpdate_).TotalSeconds;
                     inputAuthored_?.Invoke(id, nextFrame, difference);
 
-                    logger_.LogTrace("Input from {Id} received {Time:F2} s in advance.", id, difference);
+                    logger_.LogTrace("Input from {Id} received {Time:F5} s in advance.", id, difference);
                 }
                 
                 i++;
