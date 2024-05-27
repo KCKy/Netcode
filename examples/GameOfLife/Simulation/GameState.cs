@@ -22,7 +22,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     public const int LevelWidth = 30;
     public const int LevelHeight = 30;
-    public static float DesiredTickRate => 5;
+    public static float DesiredTickRate => 1;
 
     public static Vector2i SpawnPoint = new(0, 0);
 

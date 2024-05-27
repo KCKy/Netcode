@@ -17,5 +17,12 @@ class GameServer
         server_ = new(dispatcher);
     }
 
-    public Task RunAsync() => server_.RunAsync();
+    public async Task RunAsync()
+    {
+        try
+        {
+            await server_.RunAsync();
+        }
+        catch (OperationCanceledException) { }
+    }
 }

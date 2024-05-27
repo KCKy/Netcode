@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopDownShooter", "TopDownSh
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameOfLife", "GameOfLife\GameOfLife.csproj", "{2347AEA9-288B-49A1-8ED5-0157E2D293C4}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Advanced", "Advanced\Advanced.csproj", "{D421D463-5181-477F-8AB4-FFA9E418B950}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{2347AEA9-288B-49A1-8ED5-0157E2D293C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2347AEA9-288B-49A1-8ED5-0157E2D293C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2347AEA9-288B-49A1-8ED5-0157E2D293C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D421D463-5181-477F-8AB4-FFA9E418B950}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D421D463-5181-477F-8AB4-FFA9E418B950}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D421D463-5181-477F-8AB4-FFA9E418B950}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D421D463-5181-477F-8AB4-FFA9E418B950}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

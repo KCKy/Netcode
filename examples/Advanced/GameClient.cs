@@ -3,7 +3,7 @@ using Kcky.GameNewt.Dispatcher.Default;
 using Kcky.GameNewt.Transport.Default;
 using System.Net;
 
-namespace Basic;
+namespace Advanced;
 
 class GameClient
 {
@@ -19,11 +19,17 @@ class GameClient
 
         client_ = new(dispatcher)
         {
-            ClientInputProvider = GetInput
+            ClientInputProvider = GetInput,
+            ClientInputPredictor = PredictInput,
         };
 
         client_.OnInitialize += Init;
         client_.OnNewPredictiveState += Draw;
+    }
+
+    static void PredictInput(ref ClientInput input)
+    {
+        input.PlaceFlag = false;
     }
 
     void Init(int id) => localId_ = id;
@@ -71,9 +77,29 @@ class GameClient
         return input;
     }
 
+    static void DrawEndScreen(EndScreen screen)
+    {
+        Console.WriteLine("Game over.");
+        Console.WriteLine($"Number of traps: {screen.TrapCount}");
+        foreach ((int id, int count) in screen.PlayerToFlags)
+            Console.WriteLine($"Player {id} placed {count} flags.");
+
+        Console.WriteLine();
+        Console.WriteLine($"The game will end in {screen.RemainingTicks / GameState.TickRateWhole} seconds.");
+    }
+
     void Draw(long frame, GameState state)
     {
-        Console.WriteLine($"My ID: {localId_} Frame: {frame} Players: {state.IdToPlayer.Count}");
+        if (state.EndScreen is { } screen)
+        {
+            Console.Clear();
+            DrawEndScreen(screen);
+            return;
+        }
+
+        DateTime datetime = DateTimeOffset.FromUnixTimeSeconds(state.LatestPlayerConnectionTime).LocalDateTime;
+
+        Console.WriteLine($"My ID: {localId_} Frame: {frame} Players: {state.IdToPlayer.Count} Latest connected: {datetime}");
 
         var idToPlayer = state.IdToPlayer;
         int[,] flags = state.PlacedFlags;
@@ -86,7 +112,7 @@ class GameClient
                 switch (value)
                 {
                     case 0:
-                        Console.Write('.');
+                        Console.Write(state.IsTrapped[x, y] ? '!' : '.');
                         break;
                     case > 0:
                         Console.Write(value % 10);
