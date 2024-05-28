@@ -8,32 +8,32 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class PredictRunner<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
-    where TC : class, new()
-    where TS : class, new()
+sealed class PredictRunner<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
+    where TClientInput : class, new()
+    where TServerInput : class, new()
 {
     readonly PooledBufferWriter<byte> predictInputWriter_ = new();
-    readonly StateHolder<TC, TS, TG, PredictiveStateType> predictHolder_;
+    readonly StateHolder<TClientInput, TServerInput, TGameState, PredictiveStateType> predictHolder_;
     readonly ILogger logger_;
     readonly object frameLock_ = new();
-    readonly ProvideClientInputDelegate<TC> provideClientInput_;
-    readonly HandleNewPredictiveStateDelegate<TG> predictiveStateCallback_;
+    readonly ProvideClientInputDelegate<TClientInput> provideClientInput_;
+    readonly HandleNewPredictiveStateDelegate<TGameState> predictiveStateCallback_;
     readonly IClientSender sender_;
-    readonly UpdateInputPredictor<TC, TS, TG> predictor_;
-    readonly IndexedQueue<TC> clientInputs_;
-    readonly ReplacementReceiver<TC, TS, TG> replacementReceiver_;
+    readonly UpdateInputPredictor<TClientInput, TServerInput, TGameState> predictor_;
+    readonly IndexedQueue<TClientInput> clientInputs_;
+    readonly ReplacementReceiver<TClientInput, TServerInput, TGameState> replacementReceiver_;
     readonly ReplacementCoordinator coordinator_;
-    UpdateInput<TC, TS> predictInput_ = UpdateInput<TC, TS>.Empty;
+    UpdateInput<TClientInput, TServerInput> predictInput_ = UpdateInput<TClientInput, TServerInput>.Empty;
     long frame_;
 
-    public PredictRunner(ProvideClientInputDelegate<TC> provideClientInput,
-        HandleNewPredictiveStateDelegate<TG> predictiveStateCallback,
+    public PredictRunner(ProvideClientInputDelegate<TClientInput> provideClientInput,
+        HandleNewPredictiveStateDelegate<TGameState> predictiveStateCallback,
         IClientSender sender,
-        UpdateInputPredictor<TC, TS, TG> predictor,
-        IndexedQueue<TC> clientInputs,
-        ReplacementReceiver<TC, TS, TG> replacementReceiver,
+        UpdateInputPredictor<TClientInput, TServerInput, TGameState> predictor,
+        IndexedQueue<TClientInput> clientInputs,
+        ReplacementReceiver<TClientInput, TServerInput, TGameState> replacementReceiver,
         ReplacementCoordinator coordinator,
-        ILoggerFactory loggerFactory, long frame, TG state)
+        ILoggerFactory loggerFactory, long frame, TGameState state)
     {
         provideClientInput_ = provideClientInput;
         predictiveStateCallback_ = predictiveStateCallback;
@@ -47,7 +47,7 @@ sealed class PredictRunner<TC, TS, TG> where TG : class, IGameState<TC, TS>, new
             Frame = frame,
             State = state
         };
-        logger_ = loggerFactory.CreateLogger<PredictRunner<TC, TS, TG>>();
+        logger_ = loggerFactory.CreateLogger<PredictRunner<TClientInput, TServerInput, TGameState>>();
     }
 
     public long Frame
@@ -64,7 +64,7 @@ sealed class PredictRunner<TC, TS, TG> where TG : class, IGameState<TC, TS>, new
         }
     }
 
-    public TG State => predictHolder_.State;
+    public TGameState State => predictHolder_.State;
 
     public void CheckPredict()
     {
@@ -75,7 +75,7 @@ sealed class PredictRunner<TC, TS, TG> where TG : class, IGameState<TC, TS>, new
     public void Update()
     {
         // Input
-        TC localInput = provideClientInput_();
+        TClientInput localInput = provideClientInput_();
         long frame = predictHolder_.Frame + 1;
         Frame = frame;
 

@@ -4,13 +4,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class ReplacementReceiver<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
-    where TC : class, new()
-    where TS : class, new()
+sealed class ReplacementReceiver<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
+    where TClientInput : class, new()
+    where TServerInput : class, new()
 {
-    readonly StateHolder<TC, TS, TG, MiscStateType> receiverHolder_;
+    readonly StateHolder<TClientInput, TServerInput, TGameState, MiscStateType> receiverHolder_;
 
-    UpdateInput<TC, TS> newPredictInput_ = UpdateInput<TC, TS>.Empty;
+    UpdateInput<TClientInput, TServerInput> newPredictInput_ = UpdateInput<TClientInput, TServerInput>.Empty;
     bool isReplaced_ = false;
 
     public ReplacementReceiver(ILoggerFactory loggerFactory, long frame)
@@ -21,7 +21,7 @@ sealed class ReplacementReceiver<TC, TS, TG> where TG : class, IGameState<TC, TS
         };
     }
 
-    public long TryGive(StateHolder<TC, TS, TG, ReplacementStateType> holder, in UpdateInput<TC, TS> input)
+    public long TryGive(StateHolder<TClientInput, TServerInput, TGameState, ReplacementStateType> holder, in UpdateInput<TClientInput, TServerInput> input)
     {
         lock (receiverHolder_)
         {
@@ -40,7 +40,7 @@ sealed class ReplacementReceiver<TC, TS, TG> where TG : class, IGameState<TC, TS
         return 0;
     }
 
-    public bool TryReceive(long frame, StateHolder<TC, TS, TG, PredictiveStateType> holder, ref UpdateInput<TC, TS> input)
+    public bool TryReceive(long frame, StateHolder<TClientInput, TServerInput, TGameState, PredictiveStateType> holder, ref UpdateInput<TClientInput, TServerInput> input)
     {
         lock (receiverHolder_)
         {

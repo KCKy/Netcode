@@ -6,32 +6,32 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class PredictManager<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
-    where TC : class, new()
-    where TS : class, new()
+sealed class PredictManager<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
+    where TClientInput : class, new()
+    where TServerInput : class, new()
 {
-    readonly StateHolder<TC, TS, TG, AuthoritativeStateType> authState_;
+    readonly StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authState_;
     readonly IClientSender sender_;
     readonly ILoggerFactory loggerFactory_;
-    readonly HandleNewPredictiveStateDelegate<TG> newPredictiveStateCallback_;
-    readonly PredictServerInputDelegate<TS, TG> predictServerInput_;
-    readonly PredictClientInputDelegate<TC> predictClientInput_;
-    readonly ProvideClientInputDelegate<TC> provideClientInput_;
+    readonly HandleNewPredictiveStateDelegate<TGameState> newPredictiveStateCallback_;
+    readonly PredictServerInputDelegate<TServerInput, TGameState> predictServerInput_;
+    readonly PredictClientInputDelegate<TClientInput> predictClientInput_;
+    readonly ProvideClientInputDelegate<TClientInput> provideClientInput_;
     readonly ILogger logger_;
-    readonly IndexedQueue<TC> clientInputs_ = new(); // This queue needs to be locked. Making new client inputs is exclusive to predict update.
+    readonly IndexedQueue<TClientInput> clientInputs_ = new(); // This queue needs to be locked. Making new client inputs is exclusive to predict update.
     readonly ReplacementCoordinator coordinator_;
 
-    PredictRunner<TC, TS, TG>? predictRunner_ = null;
-    Replacer<TC, TS, TG>? replacer_= null;
-    UpdateInputPredictor<TC, TS, TG>? predictor_ = null;
+    PredictRunner<TClientInput, TServerInput, TGameState>? predictRunner_ = null;
+    Replacer<TClientInput, TServerInput, TGameState>? replacer_= null;
+    UpdateInputPredictor<TClientInput, TServerInput, TGameState>? predictor_ = null;
 
-    public PredictManager(StateHolder<TC, TS, TG, AuthoritativeStateType> authState,
+    public PredictManager(StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authState,
         IClientSender sender,
         ILoggerFactory loggerFactory,
-        HandleNewPredictiveStateDelegate<TG> newPredictiveStateCallback,
-        PredictServerInputDelegate<TS, TG> predictServerInput,
-        PredictClientInputDelegate<TC> predictClientInput,
-        ProvideClientInputDelegate<TC> provideClientInput)
+        HandleNewPredictiveStateDelegate<TGameState> newPredictiveStateCallback,
+        PredictServerInputDelegate<TServerInput, TGameState> predictServerInput,
+        PredictClientInputDelegate<TClientInput> predictClientInput,
+        ProvideClientInputDelegate<TClientInput> provideClientInput)
     {
         authState_ = authState;
         sender_ = sender;
@@ -40,12 +40,12 @@ sealed class PredictManager<TC, TS, TG> where TG : class, IGameState<TC, TS>, ne
         predictServerInput_ = predictServerInput;
         predictClientInput_ = predictClientInput;
         provideClientInput_ = provideClientInput;
-        logger_ = loggerFactory.CreateLogger<PredictManager<TC, TS, TG>>();
+        logger_ = loggerFactory.CreateLogger<PredictManager<TClientInput, TServerInput, TGameState>>();
         coordinator_ = new(loggerFactory);
     }
 
     public long Frame => predictRunner_?.Frame ?? long.MinValue;
-    public TG? State => predictRunner_?.State;
+    public TGameState? State => predictRunner_?.State;
 
     /// <summary>
     /// Initialize the predict manager to be able to receive inputs.
@@ -56,9 +56,9 @@ sealed class PredictManager<TC, TS, TG> where TG : class, IGameState<TC, TS>, ne
     /// <param name="frame">The index of the state.</param>
     /// <param name="state">The state to initialize with.</param>
     /// <param name="localId">The local id of the client.</param>
-    public void Init(long frame, TG state, int localId)
+    public void Init(long frame, TGameState state, int localId)
     {
-        ReplacementReceiver<TC, TS, TG> receiver = new(loggerFactory_, frame);
+        ReplacementReceiver<TClientInput, TServerInput, TGameState> receiver = new(loggerFactory_, frame);
         predictor_ = new(predictClientInput_, predictServerInput_, localId);
         predictRunner_ = new(provideClientInput_, newPredictiveStateCallback_, sender_, predictor_, clientInputs_, receiver, coordinator_, loggerFactory_, frame, state);
         replacer_ = new(authState_, coordinator_, clientInputs_, predictor_, receiver, loggerFactory_);
@@ -78,7 +78,7 @@ sealed class PredictManager<TC, TS, TG> where TG : class, IGameState<TC, TS>, ne
     /// <param name="serializedInput">Borrow of serialized authoritative input.</param>
     /// <param name="frame">Index of the frame the input belongs to.</param>
     /// <param name="input">Move of input corresponding to <paramref name="serializedInput"/>.</param>
-    public void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TC, TS> input)
+    public void InformAuthInput(ReadOnlySpan<byte> serializedInput, long frame, UpdateInput<TClientInput, TServerInput> input)
     {
         if (replacer_ is not { } replacer)
             return;

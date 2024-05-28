@@ -10,24 +10,24 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
-sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
-    where TC : class, new()
-    where TS : class, new()
+sealed class Replacer<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
+    where TClientInput : class, new()
+    where TServerInput : class, new()
 {
-    readonly StateHolder<TC, TS, TG, ReplacementStateType> replacementHolder_;
+    readonly StateHolder<TClientInput, TServerInput, TGameState, ReplacementStateType> replacementHolder_;
     readonly PooledBufferWriter<byte> replacementInputWriter_ = new();
     readonly ILogger logger_;
-    readonly StateHolder<TC, TS, TG, AuthoritativeStateType> authStateHolder_;
+    readonly StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authStateHolder_;
     readonly ReplacementCoordinator coordinator_;
-    readonly IndexedQueue<TC> clientInputs_;
-    readonly UpdateInputPredictor<TC, TS, TG> predictor_;
-    readonly ReplacementReceiver<TC, TS, TG> receiver_;
+    readonly IndexedQueue<TClientInput> clientInputs_;
+    readonly UpdateInputPredictor<TClientInput, TServerInput, TGameState> predictor_;
+    readonly ReplacementReceiver<TClientInput, TServerInput, TGameState> receiver_;
 
-    public Replacer(StateHolder<TC, TS, TG, AuthoritativeStateType> authStateHolder,
+    public Replacer(StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authStateHolder,
         ReplacementCoordinator coordinator,
-        IndexedQueue<TC> clientInputs,
-        UpdateInputPredictor<TC, TS, TG> predictor,
-        ReplacementReceiver<TC, TS, TG> receiver,
+        IndexedQueue<TClientInput> clientInputs,
+        UpdateInputPredictor<TClientInput, TServerInput, TGameState> predictor,
+        ReplacementReceiver<TClientInput, TServerInput, TGameState> receiver,
         ILoggerFactory loggerFactory)
     {
         authStateHolder_ = authStateHolder;
@@ -36,10 +36,10 @@ sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
         predictor_ = predictor;
         receiver_ = receiver;
         replacementHolder_ = new(loggerFactory);
-        logger_ = loggerFactory.CreateLogger<Replacer<TC, TS, TG>>();
+        logger_ = loggerFactory.CreateLogger<Replacer<TClientInput, TServerInput, TGameState>>();
     }
 
-    public void BeginReplacement(long frame, UpdateInput<TC, TS> input)
+    public void BeginReplacement(long frame, UpdateInput<TClientInput, TServerInput> input)
     {
         // Acquire index now, to assure correct ordering of replacements. 
         long index = coordinator_.AcquireReplacementIndex();
@@ -51,7 +51,7 @@ sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
         ReplaceGameStateAsync(index, frame, authState, input).AssureSuccess(logger_);
     }
 
-    async Task ReplaceGameStateAsync(long replacementIndex, long frame, Memory<byte> serializedState, UpdateInput<TC, TS> input)
+    async Task ReplaceGameStateAsync(long replacementIndex, long frame, Memory<byte> serializedState, UpdateInput<TClientInput, TServerInput> input)
     {
         await Task.Yield(); // Run async. in a different thread
 
@@ -68,7 +68,7 @@ sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
             lock (clientInputs_)
                 clientInputs_.Pop(frame); // Only inputs greater than frame will be needed from now (replacements which could need it are finished).
 
-            TG? state = replacementHolder_.State;
+            TGameState? state = replacementHolder_.State;
 
             MemoryPackSerializer.Deserialize(serializedState.Span, ref state);
             ArrayPool<byte>.Shared.Return(serializedState);
@@ -84,7 +84,7 @@ sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
         }
     }
 
-    void ReplacementLoop(long replacementIndex, long frame, UpdateInput<TC, TS> input)
+    void ReplacementLoop(long replacementIndex, long frame, UpdateInput<TClientInput, TServerInput> input)
     {
         while (true)
         {
@@ -111,14 +111,14 @@ sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
         }
     }
 
-    bool UpdateReplacementState(long replacementIndex, long difference, ref long frame, UpdateInput<TC, TS> input)
+    bool UpdateReplacementState(long replacementIndex, long difference, ref long frame, UpdateInput<TClientInput, TServerInput> input)
     {
         while (difference > 0)
         {
             frame++;
             difference--;
 
-            TC localInput;
+            TClientInput localInput;
             lock (clientInputs_)
                 localInput = clientInputs_[frame]; // This is supposed to never fail
 
@@ -138,7 +138,7 @@ sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
         return true;
     }
 
-    long TryReplace(long replacementIndex, long frame, UpdateInput<TC, TS> input)
+    long TryReplace(long replacementIndex, long frame, UpdateInput<TClientInput, TServerInput> input)
     {
         Debug.Assert(frame == replacementHolder_.Frame);
 

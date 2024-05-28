@@ -2,16 +2,16 @@
 
 namespace Kcky.GameNewt.Client;
 
-sealed class UpdateInputPredictor<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
-    where TC : class, new()
-    where TS : class, new()
+sealed class UpdateInputPredictor<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
+    where TClientInput : class, new()
+    where TServerInput : class, new()
 {
-    readonly PredictClientInputDelegate<TC> predictClientInput_;
-    readonly PredictServerInputDelegate<TS, TG> predictServerInput_;
+    readonly PredictClientInputDelegate<TClientInput> predictClientInput_;
+    readonly PredictServerInputDelegate<TServerInput, TGameState> predictServerInput_;
     readonly int localId_;
 
-    public UpdateInputPredictor(PredictClientInputDelegate<TC> predictClientInput,
-        PredictServerInputDelegate<TS, TG> predictServerInput,
+    public UpdateInputPredictor(PredictClientInputDelegate<TClientInput> predictClientInput,
+        PredictServerInputDelegate<TServerInput, TGameState> predictServerInput,
         int localId)
     {
         predictClientInput_ = predictClientInput;
@@ -19,13 +19,13 @@ sealed class UpdateInputPredictor<TC, TS, TG> where TG : class, IGameState<TC, T
         localId_ = localId;
     }
 
-    public void Predict(ref UpdateInput<TC, TS> input, TC localInput, TG state)
+    public void Predict(ref UpdateInput<TClientInput, TServerInput> input, TClientInput localInput, TGameState state)
     {
         PredictClientInputs(input.ClientInputInfos.Span, localInput);
         predictServerInput_(ref input.ServerInput, state);
     }
 
-    void PredictClientInputs(Span<UpdateClientInfo<TC>> inputs, TC localInput)
+    void PredictClientInputs(Span<UpdateClientInfo<TClientInput>> inputs, TClientInput localInput)
     {
         // Terminated players are going to be predicted as well, but the game state update should ignore the removed player.
 
