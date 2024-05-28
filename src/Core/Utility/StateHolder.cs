@@ -51,6 +51,7 @@ sealed class StateHolder<TC, TS, TG, TType>(ILoggerFactory loggerFactory)
         if (checksum_ is null)
             CalculateChecksum();
 
+        serialized_ = false;
         return writer_.ExtractAndReplace();
     }
 

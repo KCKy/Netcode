@@ -277,13 +277,13 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         {
             long frame = authStateHolder_.Frame + 1; 
 
-            if (!stateInitiated_ || frame < inputFrame)
+            if (!stateInitiated_ || frame > inputFrame)
             {
                 logger_.LogWarning("Given old undesired input of frame {Frame} for auth update {Index}. Skipping.", inputFrame, frame);
                 return;
             }
             
-            if (frame > inputFrame)
+            if (inputFrame > frame)
             {
                 logger_.LogCritical("Given newer input of frame {Frame} before receiving for auth update {Index}.", inputFrame, frame);
                 throw new ArgumentException("Given invalid frame for auth update.", nameof(inputFrame));
