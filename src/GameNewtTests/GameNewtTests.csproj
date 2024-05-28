@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\GameNewt.csproj" />
+    <ProjectReference Include="..\GameNewt\GameNewt.csproj" />
   </ItemGroup>
 
 </Project>

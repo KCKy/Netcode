@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
+    <ProjectReference Include="..\DefaultTransport\DefaultTransport.csproj" />
   </ItemGroup>
 
 </Project>

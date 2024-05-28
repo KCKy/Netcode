@@ -15,8 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\GameNewt.csproj" />
-    <ProjectReference Include="..\IPTransportLayer\DefaultTransport.csproj" />
+    <ProjectReference Include="..\DefaultTransport\DefaultTransport.csproj" />
   </ItemGroup>
 
 </Project>
