@@ -48,7 +48,7 @@ sealed class Replacer<TC, TS, TG> where TG : class, IGameState<TC, TS>, new()
         Debug.Assert(authStateHolder_.Frame == frame);
         var authState = authStateHolder_.GetSerialized();
 
-        ReplaceGameStateAsync(index, frame, authState, input).AssureSuccess();
+        ReplaceGameStateAsync(index, frame, authState, input).AssureSuccess(logger_);
     }
 
     async Task ReplaceGameStateAsync(long replacementIndex, long frame, Memory<byte> serializedState, UpdateInput<TC, TS> input)

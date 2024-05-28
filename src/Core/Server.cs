@@ -132,7 +132,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         lock (stateHolder_)
             OnStateInit?.Invoke(stateHolder_.State);
 
-        clock_.RunAsync(clockCancellation_.Token).AssureNoFault();
+        clock_.RunAsync(clockCancellation_.Token).AssureNoFault(logger_);
 
         Task task = dispatcher_.RunAsync();
 

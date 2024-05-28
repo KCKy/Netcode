@@ -147,7 +147,7 @@ public class IpServerTransport : IServerTransport
         for (int id = 1; ; id++)
         {
             TcpClient client = await listener.AcceptTcpClientAsync(cancellation);
-            RunClientAsync(client, id).AssureNoFault();
+            RunClientAsync(client, id).AssureNoFault(logger_);
             logger_.LogTrace("Client connected to server with id {Id}.", id);
         }
     }

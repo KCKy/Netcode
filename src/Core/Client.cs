@@ -384,7 +384,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             OnInitialize?.Invoke(id);
 
             syncClock_.Initialize(frame);
-            syncClock_.RunAsync(clockCancellation_.Token).AssureNoFault();
+            syncClock_.RunAsync(clockCancellation_.Token).AssureNoFault(logger_);
         }
     }
 

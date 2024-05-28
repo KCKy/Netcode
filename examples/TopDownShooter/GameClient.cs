@@ -94,7 +94,7 @@ class GameClient : GameBase
 
     protected override void Start()
     {
-        gamenewtClient_.RunAsync().AssureNoFault();
+        gamenewtClient_.RunAsync().AssureNoFault(logger_);
         DebugInfo.Client = gamenewtClient_;
     }
     

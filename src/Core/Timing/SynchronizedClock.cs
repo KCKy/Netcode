@@ -102,7 +102,7 @@ sealed class SynchronizedClock
     {
         lock (mutex_)
         {
-            logger_.LogDebug("ServerStarted sync-clock.");
+            logger_.LogDebug("Started sync-clock.");
             logger_.LogTrace("Processing first clock tick.");
             long currentTime = Stopwatch.GetTimestamp();
             OnTick?.Invoke();

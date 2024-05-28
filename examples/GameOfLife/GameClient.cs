@@ -14,6 +14,7 @@ namespace GameOfLife;
 
 class GameClient : GameBase
 {
+    readonly ILogger logger_;
     readonly float unit_;
     readonly Vector2f origin_;
     readonly Grid grid_ = new()
@@ -34,6 +35,7 @@ class GameClient : GameBase
 
     public GameClient(IPEndPoint target, ILoggerFactory loggerFactory) : base("Game of Life Demo")
     {
+        logger_ = loggerFactory.CreateLogger<GameClient>();
         var size = (Vector2f)Window.Size;
         unit_ = MathF.Min(size.X / grid_.Width, size.Y / grid_.Height);
         Vector2f offset = new Vector2f(grid_.Width, grid_.Height) / 2 * unit_;
@@ -91,7 +93,7 @@ class GameClient : GameBase
 
     protected override void Start()
     {
-        gamenewtClient_.RunAsync().AssureNoFault();
+        gamenewtClient_.RunAsync().AssureNoFault(logger_);
         DebugInfo.Client = gamenewtClient_;
     }
 

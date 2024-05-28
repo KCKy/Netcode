@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Kcky.Useful;
 
@@ -10,22 +10,10 @@ namespace Kcky.Useful;
 public static class TaskExtensions
 {
     /// <summary>
-    /// Method called when a task given to <see cref="AssureSuccess"/> or <see cref="AssureNoFault"/> has been cancelled.
-    /// </summary>
-    /// <param name="task">The task which faulted.</param>
-    /// <param name="exception">The exception causing the fault.</param>
-    public delegate void FaultDelegate(Task task, Exception exception);
-
-    /// <summary>
-    /// Method called when a task given to <see cref="AssureSuccess"/> has been cancelled.
-    /// </summary>
-    /// <param name="task">The task which was cancelled.</param>
-    public delegate void CanceledDelegate(Task task);
-    
-    /// <summary>
-    /// Non-blocking method, which assures the given task completes successfully, otherwise an error is signaled via <see cref="OnCanceled"/> or <see cref="OnFault"/>.
+    /// Non-blocking method, which assures the given task completes successfully, otherwise an error is signaled via the provided logger. 
     /// </summary>
     /// <param name="task">Task to assure.</param>
+    /// <param name="logger">A logger to use for signalling the potential error.</param>
     /// <example>
     /// <code>
     /// var task = FooAsync(bar);
@@ -34,12 +22,13 @@ public static class TaskExtensions
     /// In cases where it is not desirable to await a Task, calling <see cref="AssureSuccess"/> makes sure potential errors or cancellations are logged.
     /// FooAsync therefore does some side effect but returns no direct result.
     /// </example>
-    public static void AssureSuccess(this Task task) => task.ContinueWith(TestTaskSuccess);
+    public static void AssureSuccess(this Task task, ILogger logger) => AssureSuccessInternal(task, logger);
 
     /// <summary>
-    /// Non-blocking method, which assures the given task completes successfully or is canceled, otherwise an error is signaled via <see cref="OnCanceled"/>. 
+    /// Non-blocking method, which assures the given task completes successfully or is canceled, otherwise an error is signaled via the provided logger. 
     /// </summary>
     /// <param name="task">Task to assure.</param>
+    /// <param name="logger">A logger to use for signalling the potential error.</param>
     /// <example>
     /// <code>
     /// var task = FooAsync(bar);
@@ -48,59 +37,37 @@ public static class TaskExtensions
     /// In cases where it is not desirable to await a Task, calling <see cref="AssureNoFault"/> makes sure potential exceptions are logged.
     /// FooAsync therefore does some side effect but returns no direct result.
     /// </example>
-    public static void AssureNoFault(this Task task) => task.ContinueWith(TestTaskNoFault);
+    public static void AssureNoFault(this Task task, ILogger logger) => AssureNoFaultInternal(task, logger);
 
-    /// <summary>
-    /// Called when an assured task fails, although it should not.
-    /// </summary>
-    public static event FaultDelegate? OnFault;
-
-    /// <summary>
-    /// Called when an assured task is canceled, although it should not.
-    /// </summary>
-    public static event CanceledDelegate? OnCanceled;
-
-    static void TestTaskSuccess(Task task)
+    static async void AssureSuccessInternal(this Task task, ILogger logger)
     {
-        switch (task.Status)
+        try
         {
-            case TaskStatus.RanToCompletion:
-                return;
-            case TaskStatus.Faulted:
-                OnFault?.Invoke(task, task.Exception!);
-                return;
-            case TaskStatus.Canceled:
-                OnCanceled?.Invoke(task);
-                return;
-            case TaskStatus.Created:
-            case TaskStatus.WaitingForActivation:
-            case TaskStatus.WaitingToRun:
-            case TaskStatus.Running:
-            case TaskStatus.WaitingForChildrenToComplete:
-            default:
-                Debug.Assert(false); // This should not happen as this is a continuation of the task
-                return;
+            await task;
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogError(Cancelled);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, Exception);
         }
     }
 
-    static void TestTaskNoFault(Task task)
+    static async void AssureNoFaultInternal(Task task, ILogger logger)
     {
-        switch (task.Status)
+        try
         {
-            case TaskStatus.RanToCompletion:
-            case TaskStatus.Canceled:
-                return;
-            case TaskStatus.Faulted:
-                OnFault?.Invoke(task, task.Exception!);
-                return;
-            case TaskStatus.Created:
-            case TaskStatus.WaitingForActivation:
-            case TaskStatus.WaitingToRun:
-            case TaskStatus.Running:
-            case TaskStatus.WaitingForChildrenToComplete:
-            default:
-                Debug.Assert(false); // This should not happen as this is a continuation of the task
-                return;
+            await task;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+           logger.LogError(ex, Exception);
         }
     }
+
+    const string Exception = "Assured task faulted with exception.";
+    const string Cancelled = "Assured task was cancelled.";
 }
