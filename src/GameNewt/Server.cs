@@ -59,7 +59,6 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// </summary>
     public ProvideServerInputDelegate<TServerInput, TGameState>? ServerInputProvider
     {
-        private get => serverInputProvider_;
         init
         {
             if (value is not null)
@@ -188,7 +187,7 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     UpdateInput<TClientInput, TServerInput> GatherInput()
     {
         var clientInput = inputQueue_.ConstructAuthoritativeFrame();
-        TServerInput serverInput = ServerInputProvider(stateHolder_.State);
+        TServerInput serverInput = serverInputProvider_(stateHolder_.State);
         return new(clientInput, serverInput);
     }
 

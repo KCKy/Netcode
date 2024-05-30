@@ -73,7 +73,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// </summary>
     public ProvideClientInputDelegate<TClientInput>? ClientInputProvider
     {
-        private get => clientInputProvider_;
         init
         {
             if (value is not null)
@@ -89,7 +88,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// </remarks>
     public PredictClientInputDelegate<TClientInput>? ClientInputPredictor
     {
-        private get => clientInputPredictor_;
         init
         {
             if (value is not null)
@@ -105,7 +103,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// </remarks>
     public PredictServerInputDelegate<TServerInput, TGameState>? ServerInputPredictor
     {
-        private get => serverInputPredictor_;
         init
         {
             if (value is not null)
@@ -235,7 +232,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             clientState_ = ClientState.Started;
         }
 
-        predictManager_ = new(authStateHolder_, dispatcher_, loggerFactory_, NewPredictiveStateHandler, ServerInputPredictor, ClientInputPredictor, ClientInputProvider);
+        predictManager_ = new(authStateHolder_, dispatcher_, loggerFactory_, NewPredictiveStateHandler, serverInputPredictor_, clientInputPredictor_, clientInputProvider_);
         syncClock_.OnTick += predictManager_.Tick;
 
         Task task = dispatcher_.RunAsync();
@@ -266,7 +263,6 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             UnsetHandlers();
             PredictManager.Stop();
             clockCancellation_.Cancel();
-            dispatcher_.Terminate();
         }
     }
 
@@ -274,6 +270,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     public void Terminate()
     {
         logger_.LogDebug("The client has been signalled to terminate.");
+        dispatcher_.Terminate();
         TerminateInternal();
     }
 
