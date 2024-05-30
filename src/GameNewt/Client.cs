@@ -35,6 +35,9 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     readonly IClientDispatcher dispatcher_;
     readonly ILoggerFactory loggerFactory_;
     readonly Clock clock_ = new();
+    readonly ProvideClientInputDelegate<TClientInput> clientInputProvider_ = static () => new();
+    readonly PredictClientInputDelegate<TClientInput> clientInputPredictor_ = static (ref TClientInput i) => {};
+    readonly PredictServerInputDelegate<TServerInput, TGameState> serverInputPredictor_ = static (ref TServerInput i, TGameState state) => {};
 
     PredictManager<TClientInput, TServerInput, TGameState>? predictManager_;
     PredictManager<TClientInput, TServerInput, TGameState> PredictManager => predictManager_ ?? throw new InvalidOperationException("The client has not been started.");
@@ -68,15 +71,31 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// <summary>
     /// Method which provides input for the local player.
     /// </summary>
-    public ProvideClientInputDelegate<TClientInput> ClientInputProvider { private get; init; } = static () => new();
-    
+    public ProvideClientInputDelegate<TClientInput>? ClientInputProvider
+    {
+        private get => clientInputProvider_;
+        init
+        {
+            if (value is not null)
+                clientInputProvider_ = value;
+        }
+    }
+
     /// <summary>
     /// Optional method to predict client input from the previous client input.
     /// </summary>
     /// <remarks>
     /// By default, we predict the input to not change.
     /// </remarks>
-    public PredictClientInputDelegate<TClientInput> ClientInputPredictor { private get; init; } = static (ref TClientInput i) => {};
+    public PredictClientInputDelegate<TClientInput>? ClientInputPredictor
+    {
+        private get => clientInputPredictor_;
+        init
+        {
+            if (value is not null)
+                clientInputPredictor_ = value;
+        }
+    }
 
     /// <summary>
     /// Optional method to predict server input from the previous server input and game state.
@@ -84,7 +103,15 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
     /// <remarks>
     /// By default, we predict the input to not change.
     /// </remarks>
-    public PredictServerInputDelegate<TServerInput, TGameState> ServerInputPredictor { private get; init; } = static (ref TServerInput i, TGameState state) => {};
+    public PredictServerInputDelegate<TServerInput, TGameState>? ServerInputPredictor
+    {
+        private get => serverInputPredictor_;
+        init
+        {
+            if (value is not null)
+                serverInputPredictor_ = value;
+        }
+    }
 
     /// <summary>
     /// Update the client.
@@ -222,6 +249,8 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
         {
             TerminateInternal();
         }
+
+        throw new OperationCanceledException();
     }
 
     void TerminateInternal()

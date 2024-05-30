@@ -29,4 +29,9 @@ public struct UpdateOutput
     /// Empty output, signals no special behaviour.
     /// </summary>
     public static readonly UpdateOutput Empty = new();
+
+    /// <sumarry>
+    /// Output, which signals termination.
+    /// </sumarry>
+    public static readonly UpdateOutput Terminate = new() { ShallStop = true };
 }

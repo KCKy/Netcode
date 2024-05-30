@@ -47,6 +47,9 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     readonly ILogger logger_;
     readonly ClientInputQueue<TClientInput> inputQueue_;
     readonly IServerDispatcher dispatcher_;
+    readonly PooledBufferWriter<byte> authInputWriter_ = new();
+    readonly PooledBufferWriter<byte> traceStateWriter_ = new();
+    readonly ProvideServerInputDelegate<TServerInput, TGameState> serverInputProvider_ = static _ => new();
 
     readonly object stateMutex_ = new(); // Assures atomicity of start and termination operations.
     readonly object tickMutex_ = new(); // Assures tick updates are atomic.
@@ -54,7 +57,15 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// <summary>
     /// Method which provides server input based on current state.
     /// </summary>
-    public ProvideServerInputDelegate<TServerInput, TGameState> ServerInputProvider { private get; init; } = static _ => new();
+    public ProvideServerInputDelegate<TServerInput, TGameState>? ServerInputProvider
+    {
+        private get => serverInputProvider_;
+        init
+        {
+            if (value is not null)
+                serverInputProvider_ = value;
+        }
+    }
 
     /// <summary>
     /// Optional method to predict client input from the previous client input.
@@ -62,9 +73,13 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
     /// <remarks>
     /// By default, we predict the input to not change.
     /// </remarks>
-    public PredictClientInputDelegate<TClientInput> ClientInputPredictor
+    public PredictClientInputDelegate<TClientInput>? ClientInputPredictor
     {
-        init => inputQueue_ = new(TGameState.DesiredTickRate, value, dispatcher_.SetDelay, loggerFactory_);
+        init
+        {
+            if (value is not null)
+                inputQueue_ = new(TGameState.DesiredTickRate, value, dispatcher_.SetDelay, loggerFactory_);
+        }
     }
 
     readonly ILoggerFactory loggerFactory_;
@@ -169,9 +184,6 @@ public sealed class Server<TClientInput, TServerInput, TGameState> : IServer
         logger_.LogDebug("The server has been signalled to terminate from outside.");
         TerminateInternal();
     }
-
-    readonly PooledBufferWriter<byte> authInputWriter_ = new();
-    readonly PooledBufferWriter<byte> traceStateWriter_ = new();
 
     UpdateInput<TClientInput, TServerInput> GatherInput()
     {
