@@ -55,7 +55,7 @@ class InputPredictionTest : ITestGame
         {
             return new()
             {
-                Value = (int)(client ?? throw new()).PredictFrame + 1
+                Value = (int)client.PredictFrame + 1
             };
         }
 

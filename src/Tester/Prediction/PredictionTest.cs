@@ -49,7 +49,8 @@ class PredictionTest : ITestGame
             if (state.Frame != frame)
             {
                 logger.LogError("Logical frame number and actual mismatch {A} != {B}", state.Frame, frame);
-                throw new InvalidOperationException();
+                ctx.FlagTestFail();
+                return;
             }
 
             if (magicToInputTime.Remove(state.MyNumber, out long value))
@@ -58,7 +59,8 @@ class PredictionTest : ITestGame
                 if (seconds > maxLag)
                 {
                     logger.LogError("Bigger lag detected {A} > {B}", seconds, maxLag);
-                    throw new InvalidOperationException();
+                    ctx.FlagTestFail();
+                    return;
                 }
             }
 

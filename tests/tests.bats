@@ -9,9 +9,8 @@ setup()
 
 prepare_log()
 {
-    logdir="$BATS_TEST_DIRNAME/$BATS_TEST_NUMBER"
-    echo "$(pwd)"
-    echo "Logging to folder: $logdir"
+    logdir="$BATS_TEST_DIRNAME/${BATS_TEST_NUMBER}_${BATS_TEST_NAME}"
+    if [ -d "$logdir" ]; then rm -rf "$logdir"; fi
 }
 
 run()
