@@ -156,16 +156,9 @@ sealed class SynchronizedClock
 
         logger_.LogTrace("Updating clock speed from current worst case {WorstCase} with denormalization offset {Offset} yields period {Period}.", currentWorstCase_, offset, newPeriod);
 
-        if (newPeriod <= 0)
-        {
-            TickHandlerUnsafe();
-        }
-        else
-        {
-            float newTps = 1 / newPeriod;
-            CurrentTps = newTps;
-            internalClock_.TargetTps = newTps;
-        }
+        float newTps = 1 / newPeriod;
+        CurrentTps = newTps;
+        internalClock_.TargetTps = newTps;
     }
 
     /// <summary>
@@ -207,14 +200,5 @@ sealed class SynchronizedClock
             timingQueue_.Add(currentTime);
             UpdateClockSpeed();
         }
-    }
-
-    void TickHandlerUnsafe()
-    {
-        logger_.LogTrace("Processing fake clock tick.");
-        long currentTime = Stopwatch.GetTimestamp();
-        OnTick?.Invoke();
-        timingQueue_.Add(currentTime);
-        UpdateClockSpeed();
     }
 }
