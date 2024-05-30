@@ -25,7 +25,7 @@ class GameServer
     }
 
     readonly object newConnectionTimeLock_ = new();
-    long? newConnectionTime_ = null;
+    long newConnectionTime_ = long.MinValue;
 
     void HandleClientJoin(int _)
     {
@@ -41,7 +41,7 @@ class GameServer
         lock (newConnectionTimeLock_)
         {
             input.SetLatestConnectionTime = newConnectionTime_;
-            newConnectionTime_ = null;
+            newConnectionTime_ = long.MinValue;
         }
 
         return input;

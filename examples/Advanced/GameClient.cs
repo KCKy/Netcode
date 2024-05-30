@@ -2,13 +2,19 @@
 using Kcky.GameNewt.Dispatcher.Default;
 using Kcky.GameNewt.Transport.Default;
 using System.Net;
+using Kcky.GameNewt.Utility;
+using Kcky.Useful;
+using System.Threading;
 
 namespace Advanced;
 
 class GameClient
 {
     readonly Client<ClientInput, ServerInput, GameState> client_;
+    GameState authoritativeState_ = new();
+    GameState predictiveState_ = new();
     int localId_;
+    volatile bool updateDraw_ = false;
 
     public GameClient()
     {
@@ -24,8 +30,28 @@ class GameClient
         };
 
         client_.OnInitialize += Init;
-        client_.OnNewPredictiveState += Draw;
+        client_.OnNewPredictiveState += HandleNewPredictiveState;
+        client_.OnNewAuthoritativeState += HandleNewAuthoritativeState;
     }
+
+    readonly PooledBufferWriter<byte> authoritativeStateBufferWriter_ = new();
+
+    readonly object newAuthoritativeStateLock_ = new();
+    bool receivedNewAuthoritativeState_= false;
+    GameState newAuthoritativeState_ = new();
+
+    void HandleNewAuthoritativeState(long frame, GameState state)
+    {
+        lock (newAuthoritativeStateLock_)
+        {
+            authoritativeStateBufferWriter_.Copy(state, ref newAuthoritativeState_!);
+            receivedNewAuthoritativeState_ = true;
+        }
+
+        updateDraw_ = true;
+    }
+
+    void HandleNewPredictiveState(long frame, GameState state) => updateDraw_ = true;
 
     static void PredictInput(ref ClientInput input)
     {
@@ -42,7 +68,11 @@ class GameClient
         Task task = client_.RunAsync();
 
         while (!task.IsCompleted)
-            client_.Update();
+        {
+            if (client_.Update() is { } validState)
+                predictiveState_ = validState;
+            Draw();
+        }
 
         task.Wait();
     }
@@ -88,21 +118,37 @@ class GameClient
         Console.WriteLine($"The game will end in {screen.RemainingTicks / GameState.TickRateWhole} seconds.");
     }
 
-    void Draw(long frame, GameState state)
+    void Draw()
     {
-        if (state.EndScreen is { } screen)
+        if (Monitor.TryEnter(newAuthoritativeStateLock_))
+        {
+            if (receivedNewAuthoritativeState_)
+            {
+                receivedNewAuthoritativeState_ = false;
+                (authoritativeState_, newAuthoritativeState_) = (newAuthoritativeState_, authoritativeState_);
+            }
+
+            Monitor.Exit(newAuthoritativeStateLock_);
+        }
+
+        if (!updateDraw_)
+            return;
+        
+        updateDraw_ = false;
+
+        if (predictiveState_.EndScreen is { } screen)
         {
             Console.Clear();
             DrawEndScreen(screen);
             return;
         }
 
-        DateTime datetime = DateTimeOffset.FromUnixTimeSeconds(state.LatestPlayerConnectionTime).LocalDateTime;
+        DateTime datetime = DateTimeOffset.FromUnixTimeSeconds(predictiveState_.LatestPlayerConnectionTime).LocalDateTime;
 
-        Console.WriteLine($"My ID: {localId_} Frame: {frame} Players: {state.IdToPlayer.Count} Latest connected: {datetime}");
+        Console.WriteLine($"My ID: {localId_} Frame: {client_.PredictFrame} Players: {predictiveState_.IdToPlayer.Count} Latest connected: {datetime}");
 
-        var idToPlayer = state.IdToPlayer;
-        int[,] flags = state.PlacedFlags;
+        int[,] flags = predictiveState_.PlacedFlags;
+        bool[,] isTrapped = predictiveState_.IsTrapped;
 
         for (int y = 0; y < GameState.MapSize; y++)
         {
@@ -112,7 +158,7 @@ class GameClient
                 switch (value)
                 {
                     case 0:
-                        Console.Write(state.IsTrapped[x, y] ? '!' : '.');
+                        Console.Write(isTrapped[x, y] ? '!' : '.');
                         break;
                     case > 0:
                         Console.Write(value % 10);
@@ -122,18 +168,20 @@ class GameClient
             Console.WriteLine();
         }
 
-        foreach ((int playerId, PlayerInfo info) in idToPlayer)
+        foreach ((int playerId, PlayerInfo info) in authoritativeState_.IdToPlayer)
         {
-            Console.SetCursorPosition(info.X, info.Y + 1);
             if (playerId == localId_)
-            {
-                Console.Write('#');
-            }
-            else
-            {
-                char icon = (char)('A' + (char)((playerId - 1) % 26));
-                Console.Write(icon);
-            }
+                continue;
+
+            Console.SetCursorPosition(info.X, info.Y + 1);
+            char icon = (char)('A' + (char)((playerId - 1) % 26));
+            Console.Write(icon);
+        }
+
+        if (predictiveState_.IdToPlayer.TryGetValue(localId_, out PlayerInfo? localInfo))
+        {
+            Console.SetCursorPosition(localInfo.X, localInfo.Y + 1);
+            Console.Write('#');
         }
 
         Console.SetCursorPosition(0, 0);

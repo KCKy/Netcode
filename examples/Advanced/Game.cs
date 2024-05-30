@@ -23,7 +23,7 @@ partial class ClientInput
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
 partial class ServerInput
 {
-    public long? SetLatestConnectionTime;
+    public long SetLatestConnectionTime;
 }
 
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
@@ -138,8 +138,8 @@ partial class GameState : IGameState<ClientInput, ServerInput>
             return endScreen_.Update();
 
         ServerInput serverInput = updateInputs.ServerInput;
-        if (serverInput.SetLatestConnectionTime is { } connectionTime)
-            latestPlayerConnectionTime_ = connectionTime;
+        if (serverInput.SetLatestConnectionTime >= 0)
+            latestPlayerConnectionTime_ = serverInput.SetLatestConnectionTime;
 
         List<int> toBeKickedClients = new();
 
@@ -185,7 +185,8 @@ partial class GameState : IGameState<ClientInput, ServerInput>
                 }
                 else
                 {
-                    placedFlags_[info.X, info.Y] = id;
+                    if (placedFlags_[info.X, info.Y] == 0)
+                        placedFlags_[info.X, info.Y] = id;
                 }
             }
         }
