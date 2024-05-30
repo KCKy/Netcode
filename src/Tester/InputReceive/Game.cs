@@ -2,7 +2,7 @@
 using MemoryPack;
 using Microsoft.Extensions.Logging;
 
-namespace Tester.InputReceiveTest;
+namespace Tester.InputReceive;
 
 [MemoryPackable]
 partial class ClientInput
@@ -18,7 +18,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 {
     public SortedDictionary<int, List<int>> ClientIdToReceivedInputs = new();
 
-    public long Frame = 0;
+    public long Frame = -1;
     public long TotalFrames = long.MaxValue;
 
     public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
@@ -39,15 +39,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
         Frame++;
 
-        if (Frame == TotalFrames)
-        {
-            return new UpdateOutput()
-            {
-                ShallStop = true
-            };
-        }
-
-        return UpdateOutput.Empty;
+        return Frame == TotalFrames ? UpdateOutput.Terminate : UpdateOutput.Empty;
     }
 
     public static float DesiredTickRate => Program.TickRate;

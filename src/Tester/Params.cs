@@ -1,21 +1,16 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Serilog.Core;
 using Serilog;
 using System.CommandLine.Invocation;
 using System.CommandLine;
 using System.Net;
-using Serilog.Core;
 
 namespace Tester;
 
-static class RootCommandExtensions
-{
-    public static void AddGlobalOptions(this RootCommand command, params Option[] options)
-    {
-        foreach (Option option in options)
-            command.AddGlobalOption(option);
-    }
-}
+public readonly record struct CommonParams(IPEndPoint Target, ILoggerFactory ComLogger, ILoggerFactory GameLogger, ILoggerFactory TestLogger, bool Trace, bool Checksum);
+public readonly record struct ServerParams(CommonParams Common);
+public readonly record struct ClientParams(CommonParams Common, float TargetDelta, int SampleWindow) {}
 
 static class ParamsException
 {
@@ -31,20 +26,22 @@ static class InvocationContextExtensions
 {
     public static void FlagTestFail(this InvocationContext context) => context.ExitCode = -1;
 
+    public static T? GetOption<T>(this InvocationContext context, Option<T> option) => context.ParseResult.GetValueForOption(option);
+
     static void HandleTickrate(InvocationContext ctx)
     {
-        Program.TickRate = ctx.ParseResult.GetValueForOption(Program.Tickrate);
+        Program.TickRate = ctx.GetOption(Program.Tickrate);
     }
 
     static ILoggerFactory GetLoggerFactory(InvocationContext ctx, Option<FileInfo> option)
     {
-        if (ctx.ParseResult.GetValueForOption(option) is not { } path)
+        if (ctx.GetOption(option) is not { } path)
             return NullLoggerFactory.Instance;
 
         Logger logger;
 
         try
-        {
+        { 
             logger = new LoggerConfiguration().WriteTo.File(path.FullName).MinimumLevel.Verbose().CreateLogger();
         }
         catch (Exception)
@@ -59,7 +56,7 @@ static class InvocationContextExtensions
    
     static CommonParams? TryGetCommonParams(InvocationContext ctx)
     {
-        string? targetCandidate = ctx.ParseResult.GetValueForOption(Program.Target) ?? "";
+        string? targetCandidate = ctx.GetOption(Program.Target) ?? "";
         if (!IPEndPoint.TryParse(targetCandidate, out IPEndPoint? target))
         {
             Console.Error.WriteLine("Invalid target specified.");
@@ -69,13 +66,13 @@ static class InvocationContextExtensions
         ILoggerFactory comLogger = GetLoggerFactory(ctx, Program.ComLogger);
         ILoggerFactory gameLogger = GetLoggerFactory(ctx, Program.GameLogger);
         ILoggerFactory testLogger = GetLoggerFactory(ctx, Program.TestLogger);
-        bool trace = ctx.ParseResult.GetValueForOption(Program.TraceState);
-        bool checksum = ctx.ParseResult.GetValueForOption(Program.Checksum);
+        bool trace = ctx.GetOption(Program.TraceState);
+        bool checksum = ctx.GetOption(Program.Checksum);
 
         return new(target, comLogger, gameLogger, testLogger, trace, checksum);
     }
 
-    public static bool IsServer(this InvocationContext ctx) => ctx.ParseResult.GetValueForOption(Program.ServerParam);
+    public static bool IsServer(this InvocationContext ctx) => ctx.GetOption(Program.ServerParam);
 
     public static ServerParams? TryGetServerParams(this InvocationContext ctx)
     {
@@ -94,8 +91,8 @@ static class InvocationContextExtensions
         if (TryGetCommonParams(ctx) is not { } commonParams)
             return null;
 
-        float delta = ctx.ParseResult.GetValueForOption(Program.DesiredDelta);
-        int sampleWindow = ctx.ParseResult.GetValueForOption(Program.SamplingWindow);
+        float delta = ctx.GetOption(Program.DesiredDelta);
+        int sampleWindow = ctx.GetOption(Program.SamplingWindow);
 
         return new(commonParams, delta, sampleWindow);
     }
