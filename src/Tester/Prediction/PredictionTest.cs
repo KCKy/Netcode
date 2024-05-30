@@ -3,7 +3,6 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
 using Kcky.GameNewt.Client;
-using DistantInputPropagation;
 
 namespace Tester.PredictionSimple;
 class PredictionTest : ITestGame
@@ -41,7 +40,7 @@ class PredictionTest : ITestGame
         
         Client<ClientInput, ServerInput, GameState> client = null!;
         ILogger logger = null!;
-        (client, logger) = TestCommon.ConstructClient<ClientInput, ServerInput, GameState, InputPropagationTest>(ctx, clientProvider: ProvideInput);
+        (client, logger) = TestCommon.ConstructClient<ClientInput, ServerInput, GameState, PredictionTest>(ctx, clientProvider: ProvideInput);
 
         client.OnNewPredictiveState += HandleNewPredict;
 

@@ -4,11 +4,9 @@ using System.CommandLine.Invocation;
 using Kcky.GameNewt.Client;
 using Kcky.GameNewt.Utility;
 using Kcky.Useful;
-using Tester;
-using Tester.InputReceive;
 using Command = System.CommandLine.Command;
 
-namespace DistantInputPropagation;
+namespace Tester.InputPropagation;
 
 class InputPropagationTest : ITestGame
 {
@@ -18,7 +16,7 @@ class InputPropagationTest : ITestGame
     static readonly Option<int> Warmup = new("--warmup", "The number of frame the client may miss");
     static readonly Option<int> TestDuration = new("--duration", "The duration of the test in frames.");
     static readonly Option<int> Count = new("--count", "The number of connected players.");
-    static readonly Command Command = new("prop", "Tests that distant client inputs are being processed in auth and predict state.")
+    static readonly Command Command = new("prop", "Tests that distant client inputs and server inputs are being processed in auth and predict state.")
     {
         Warmup,
         TestDuration,
@@ -29,8 +27,16 @@ class InputPropagationTest : ITestGame
     {
         int duration = ctx.GetOption(TestDuration);
 
-        (var server, ILogger logger) = TestCommon.ConstructServer<ClientInput, ServerInput, GameState, InputPropagationTest>(ctx);
+        (var server, ILogger logger) = TestCommon.ConstructServer<ClientInput, ServerInput, GameState, InputPropagationTest>(ctx, provider: ProvideInput);
         server.OnStateInit += state => state.TotalFrames = duration;
+
+        ServerInput ProvideInput(GameState state)
+        {
+            return new()
+            {
+                Value = (int)state.Frame + 1
+            };
+        }
 
         logger.LogInformation("Starting propagation test server for duration {Duration} ", duration);
 
@@ -59,6 +65,26 @@ class InputPropagationTest : ITestGame
 
         client.OnNewAuthoritativeState += (frame, state) =>
         {
+            {
+                if (!state.ServerInputs.IsConsecutive(out int previous, out int current))
+                {
+                    logger.LogError("Server inputs are not consecutive {Previous} < {Current}.", previous, current);
+                    ctx.FlagTestFail();
+                }
+
+                if (frame >= 0 && state.ServerInputs.Count != frame + 1)
+                {
+                    logger.LogError("Server input count does not match frame {A} == {B}.", state.ServerInputs.Count, frame + 1);
+                    ctx.FlagTestFail();
+                }
+
+                if (state.ServerInputs.Count > 0 && state.ServerInputs[0] != 0)
+                {
+                    logger.LogError("First server input is {A} instead of zero.", state.ServerInputs[0]);
+                    ctx.FlagTestFail();
+                }
+            }
+
             lock (authMutex)
             {
                 writer.Copy(state, ref lastAuth!);
@@ -107,6 +133,14 @@ class InputPropagationTest : ITestGame
                 return;
             }
 
+            {
+                if (!state.ServerInputs.IsAscendingWithoutGaps(out int previous, out int current))
+                {
+                    logger.LogError("Server inputs are not proper for predictive state {Previous} <= {Current}.", previous, current);
+                    ctx.FlagTestFail();
+                }
+            }
+
             foreach ((int id, List<int> input) in state.ClientIdToReceivedInputs)
             {
                 if (!input.SkipWhile(x => x <= warmup).IsAscendingWithoutGaps(out int previous, out int current))
@@ -128,6 +162,12 @@ class InputPropagationTest : ITestGame
                     return;
                 }
 
+                if (!lastAuth.ServerInputs.IsPrefixOf(state.ServerInputs))
+                {
+                    logger.LogError("Inputs are missing for server input.");
+                    ctx.FlagTestFail();
+                }
+
                 foreach ((int id, IEnumerable<int> inputs) in lastAuth.ClientIdToReceivedInputs)
                 {
                     if (!state.ClientIdToReceivedInputs.TryGetValue(id, out List<int>? predInputs))
@@ -141,7 +181,6 @@ class InputPropagationTest : ITestGame
                     {
                         logger.LogError("Inputs are missing for id {Id}, although they are in auth.", id);
                         ctx.FlagTestFail();
-                        return;
                     }
                 }
             }

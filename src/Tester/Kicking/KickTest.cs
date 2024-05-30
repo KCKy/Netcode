@@ -1,7 +1,6 @@
 ﻿using System.CommandLine;
 using Microsoft.Extensions.Logging;
 using System.CommandLine.Invocation;
-using DistantInputPropagation;
 
 namespace Tester.Kicking;
 
@@ -31,7 +30,7 @@ class KickTest : ITestGame
 
     static Task RunClientAsync(InvocationContext ctx)
     {
-        (var client, ILogger logger) = TestCommon.ConstructClient<ClientInput, ServerInput, GameState, InputPropagationTest>(ctx);
+        (var client, ILogger logger) = TestCommon.ConstructClient<ClientInput, ServerInput, GameState, KickTest>(ctx);
         
         logger.LogInformation("Starting kicking test client.");
 
