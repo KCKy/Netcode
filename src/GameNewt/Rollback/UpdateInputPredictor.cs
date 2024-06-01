@@ -2,6 +2,12 @@
 
 namespace Kcky.GameNewt.Client;
 
+/// <summary>
+/// Provides input predictions for a given game.
+/// </summary>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
 sealed class UpdateInputPredictor<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
     where TClientInput : class, new()
     where TServerInput : class, new()
@@ -10,6 +16,12 @@ sealed class UpdateInputPredictor<TClientInput, TServerInput, TGameState> where 
     readonly PredictServerInputDelegate<TServerInput, TGameState> predictServerInput_;
     readonly int localId_;
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="predictServerInput">Delegate which predicts server input.</param>
+    /// <param name="predictClientInput">Delegate which predicts client input.</param>
+    /// <param name="localId">The ID of the local clients.</param>
     public UpdateInputPredictor(PredictClientInputDelegate<TClientInput> predictClientInput,
         PredictServerInputDelegate<TServerInput, TGameState> predictServerInput,
         int localId)
@@ -19,6 +31,12 @@ sealed class UpdateInputPredictor<TClientInput, TServerInput, TGameState> where 
         localId_ = localId;
     }
 
+    /// <summary>
+    /// Performs input predictions on the inputs structure,
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="localInput"></param>
+    /// <param name="state"></param>
     public void Predict(ref UpdateInput<TClientInput, TServerInput> input, TClientInput localInput, TGameState state)
     {
         PredictClientInputs(input.ClientInputInfos.Span, localInput);

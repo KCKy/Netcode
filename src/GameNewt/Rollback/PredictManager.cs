@@ -6,6 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
+/// <summary>
+/// Manages the prediction state using the rollback Netcode algorithm.
+/// Keeps track of mispredictions, and when they occur, propagates a replacement prediction state.
+/// </summary>
+/// <typeparam name="TClientInput"></typeparam>
+/// <typeparam name="TServerInput"></typeparam>
+/// <typeparam name="TGameState"></typeparam>
 sealed class PredictManager<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
     where TClientInput : class, new()
     where TServerInput : class, new()
@@ -25,6 +32,16 @@ sealed class PredictManager<TClientInput, TServerInput, TGameState> where TGameS
     Replacer<TClientInput, TServerInput, TGameState>? replacer_= null;
     UpdateInputPredictor<TClientInput, TServerInput, TGameState>? predictor_ = null;
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="authState">The authoritative state holder .</param>
+    /// <param name="sender">Sender for sending inputs.</param>
+    /// <param name="loggerFactory">The logger factory to use for logging.</param>
+    /// <param name="newPredictiveStateCallback">Callback to invoke when new prediction is state has been calculated.</param>
+    /// <param name="predictServerInput">Delegate which predicts server input.</param>
+    /// <param name="predictClientInput">Delegate which predicts client input.</param>
+    /// <param name="provideClientInput">Delegate which provides local client input.</param>
     public PredictManager(StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authState,
         IClientSender sender,
         ILoggerFactory loggerFactory,
@@ -44,14 +61,22 @@ sealed class PredictManager<TClientInput, TServerInput, TGameState> where TGameS
         coordinator_ = new(loggerFactory);
     }
 
+    /// <summary>
+    /// The latest prediction frame.
+    /// </summary>
     public long Frame => predictRunner_?.Frame ?? long.MinValue;
+
+    /// <summary>
+    /// Read only reference the current prediction frame.
+    /// May be null, if not initiated.
+    /// </summary>
     public TGameState? State => predictRunner_?.State;
 
     /// <summary>
     /// Initialize the predict manager to be able to receive inputs.
     /// </summary>
     /// <remarks>
-    /// This shall be called exactly once before <see cref="InformAuthInput"/> or <see cref="Tick"/> is called.
+    /// This shall be called exactly once before <see cref="InformAuthInput"/> or <see cref="Tick"/> or <see cref="CheckPredict"/> is called.
     /// </remarks>
     /// <param name="frame">The index of the state.</param>
     /// <param name="state">The state to initialize with.</param>

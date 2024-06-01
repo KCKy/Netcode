@@ -10,6 +10,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Kcky.GameNewt.Client;
 
+/// <summary>
+/// Takes care of replacement states calculation and propagation.
+/// </summary>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
 sealed class Replacer<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
     where TClientInput : class, new()
     where TServerInput : class, new()
@@ -23,6 +29,15 @@ sealed class Replacer<TClientInput, TServerInput, TGameState> where TGameState :
     readonly UpdateInputPredictor<TClientInput, TServerInput, TGameState> predictor_;
     readonly ReplacementReceiver<TClientInput, TServerInput, TGameState> receiver_;
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="authStateHolder">The authoritative state holder .</param>
+    /// <param name="coordinator">The replacement which is to be used for replacement coordinating.</param>
+    /// <param name="clientInputs">Queue of local client inputs.</param>
+    /// <param name="predictor">Predictor to predict next frame inputs.</param>
+    /// <param name="receiver">Receiver to give finished replacements to.</param>
+    /// <param name="loggerFactory">Logger factory to use for logging.</param>
     public Replacer(StateHolder<TClientInput, TServerInput, TGameState, AuthoritativeStateType> authStateHolder,
         ReplacementCoordinator coordinator,
         IndexedQueue<TClientInput> clientInputs,
@@ -39,6 +54,14 @@ sealed class Replacer<TClientInput, TServerInput, TGameState> where TGameState :
         logger_ = loggerFactory.CreateLogger<Replacer<TClientInput, TServerInput, TGameState>>();
     }
 
+    /// <summary>
+    /// Begins a new replacement with given input used for predictions.
+    /// </summary>
+    /// <param name="frame">The current authoritative frame number.</param>
+    /// <param name="input">The input used for the latest authoritative update.</param>
+    /// <remarks>
+    /// This method is not thread safe and should be therefore synchronized.
+    /// </remarks>
     public void BeginReplacement(long frame, UpdateInput<TClientInput, TServerInput> input)
     {
         // Acquire index now, to assure correct ordering of replacements. 
