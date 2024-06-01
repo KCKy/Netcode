@@ -56,7 +56,7 @@ sealed class SynchronizedClock
     {
         logger_ = loggerFactory.CreateLogger<SynchronizedClock>();
         internalClock_ = clock;
-        internalClock_.OnTick += TickHandler;
+        internalClock_.OnTick += FirstTickHandler;
         TargetTps = 1;
     }
 
@@ -79,10 +79,12 @@ sealed class SynchronizedClock
     public float TargetDelta { get; set; } = 0;
 
     /// <summary>
-    /// Initialize the clock.
+    /// Initialize and start the clock.
     /// </summary>
     /// <param name="frame">The frame the clock should be at, i.e. the next tick would be for frame + 1.</param>
-    public void Initialize(long frame)
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task RunAsync(long frame, CancellationToken cancellationToken)
     {
         lock (mutex_)
         {
@@ -90,33 +92,15 @@ sealed class SynchronizedClock
             beginFrame_ = frame + 1;
             timingQueue_.Set(frame + 1);
         }
-    }
-
-    /// <summary>
-    /// Start the clock.
-    /// <see cref="Initialize"/> needs to be called beforehand.
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    public async Task RunAsync(CancellationToken cancellationToken)
-    {
-        lock (mutex_)
-        {
-            logger_.LogDebug("Started sync-clock.");
-            logger_.LogTrace("Processing first clock tick.");
-            long currentTime = Stopwatch.GetTimestamp();
-            OnTick?.Invoke();
-            beginTime_ = currentTime;
-            timingQueue_.Add(currentTime);
-            Debug.Assert(beginFrame_ == timingQueue_.FirstIndex);
-        }
 
         try
         {
+            logger_.LogDebug("Started sync-clock.");
             await internalClock_.RunAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
+            internalClock_.OnTick -= FirstTickHandler;
             internalClock_.OnTick -= TickHandler;
             throw;
         }
@@ -185,6 +169,26 @@ sealed class SynchronizedClock
 
             logger_.LogTrace("Normalization offset {Offset} yields normalized delay {Delay} and current worst case {Case}.", offset, normalizedDelay, currentWorstCase_);
             
+            UpdateClockSpeed();
+        }
+    }
+
+    void FirstTickHandler()
+    {
+        logger_.LogTrace("Processing first clock tick.");
+        
+        lock (mutex_)
+        {
+            long currentTime = Stopwatch.GetTimestamp();
+            OnTick?.Invoke();
+            beginTime_ = currentTime;
+            long frame = timingQueue_.Add(currentTime);
+
+            Debug.Assert(beginFrame_ == frame);
+            
+            internalClock_.OnTick -= FirstTickHandler;
+            internalClock_.OnTick += TickHandler;
+
             UpdateClockSpeed();
         }
     }

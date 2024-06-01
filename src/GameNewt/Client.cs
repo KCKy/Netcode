@@ -409,8 +409,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             PredictManager.Init(frame, predictState, id);
             OnInitialize?.Invoke(id);
 
-            syncClock_.Initialize(frame);
-            syncClock_.RunAsync(clockCancellation_.Token).AssureNoFault(logger_);
+            syncClock_.RunAsync(frame, clockCancellation_.Token).AssureNoFault(logger_);
         }
     }
 
