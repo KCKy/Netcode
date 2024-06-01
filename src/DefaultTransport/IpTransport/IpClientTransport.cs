@@ -30,7 +30,7 @@ public sealed class IpClientTransport : IClientTransport
     readonly BagMessages<Memory<byte>> udpMessages_ = new();
 
     readonly CancellationTokenSource cancellationSource_ = new();
-    ILoggerFactory loggerFactory_;
+    readonly ILoggerFactory loggerFactory_;
 
     /// <summary>
     /// Constructor.
@@ -54,7 +54,11 @@ public sealed class IpClientTransport : IClientTransport
 
     async ValueTask<(TcpClient, Socket, TcpClientTransceiver, UdpClientTransceiver)> ConnectAsync(CancellationToken cancellation)
     {
-        TcpClient tcp = new(AddressFamily.InterNetwork);
+        TcpClient tcp = new(AddressFamily.InterNetwork)
+        {
+            NoDelay = true
+        };
+
         Task connectTask = tcp.ConnectAsync(target_, cancellation).AsTask();
 
         logger_.LogInformation("Client trying to connect to {Target}.", target_);
