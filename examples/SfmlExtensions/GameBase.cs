@@ -28,7 +28,7 @@ public abstract class GameBase
     protected GameBase(string name)
     {
         Window = new(Mode, name);
-        Window.SetVerticalSyncEnabled(true);
+        Window.SetVerticalSyncEnabled(false);
         Window.Closed += (_, _) => Window.Close();
     }
 
