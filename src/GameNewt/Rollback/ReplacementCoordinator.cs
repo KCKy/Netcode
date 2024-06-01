@@ -75,10 +75,10 @@ sealed class ReplacementCoordinator
     }
 
     /// <summary>
-    /// Checks whether there is not a newer replacement than the one with <see cref="index"/>.
+    /// Checks whether there is not a newer replacement than the one with <paramref name="index"/>.
     /// </summary>
     /// <param name="index">The index of the replacement to check staleness off.</param>
-    /// <returns>Whether the replacement with <see cref="index"/> is the latest one.</returns>
+    /// <returns>Whether the replacement with <paramref name="index"/> is the latest one.</returns>
     /// <remarks>This is thread-safe and atomic.</remarks>
     public bool CheckReplacementCurrent(long index)
     {

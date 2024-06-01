@@ -45,7 +45,7 @@ sealed class PredictRunner<TClientInput, TServerInput, TGameState> where TGameSt
     /// <param name="coordinator">The replacement coordinator to provide predicted inputs to.</param>
     /// <param name="loggerFactory">Logger factory to use for logging.</param>
     /// <param name="frame">The frame runner should start at.</param>
-    /// <param name="state">The start state the <see cref="frame"/> corresponds to.</param>
+    /// <param name="state">The start state the <paramref name="frame"/> corresponds to.</param>
     public PredictRunner(ProvideClientInputDelegate<TClientInput> provideClientInput,
         HandleNewPredictiveStateDelegate<TGameState> predictiveStateCallback,
         IClientSender sender,
