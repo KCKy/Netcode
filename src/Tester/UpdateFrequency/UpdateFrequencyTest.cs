@@ -54,8 +54,9 @@ class UpdateFrequencyTest : ITestGame
         int elements = 0; 
         double deltaSum = 0;
         double deltaSquaredSum = 0;
+        ILogger logger = null!;
         
-        (var client, ILogger logger) = TestCommon.ConstructClient<ClientInput, ServerInput, GameState, UpdateFrequencyTest>(ctx, clientProvider: ProvideInput);
+        (var client, logger) = TestCommon.ConstructClient<ClientInput, ServerInput, GameState, UpdateFrequencyTest>(ctx, clientProvider: ProvideInput);
 
         ClientInput ProvideInput()
         {
@@ -79,6 +80,8 @@ class UpdateFrequencyTest : ITestGame
             elements++;
             deltaSum += delta;
             deltaSquaredSum += delta * delta;
+
+            logger.LogInformation("The delta for this frame has been {Delta}.", delta);
 
             return new();
         }
