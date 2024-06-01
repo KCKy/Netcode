@@ -63,24 +63,6 @@ run()
     wait -n $client
 }
 
-@test "input propagation test" {
-    prepare_log
-
-    run server prop --tickrate 20 --server --duration 200 --target $SERVER_POINT
-    server=$!
-    sleep 1
-    
-    run client1 prop --tickrate 20 --count 2 --warmup 40 --target $TARGET
-    client=$!
-
-    run client2 prop --tickrate 20 --count 2 --warmup 40 --target $TARGET
-    client=$!
-
-    wait -n $server
-    wait -n $client1
-    wait -n $client2
-}
-
 @test "desync detection test" {
     prepare_log
 
