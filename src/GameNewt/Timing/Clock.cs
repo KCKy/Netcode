@@ -55,6 +55,9 @@ sealed class Clock : IClock
 
         while (true)
         {
+            if (cancelToken_.IsCancellationRequested)
+                return long.MaxValue;
+
             long current = Stopwatch.GetTimestamp();
             long delta = current - last_;
             long remaining = targetPeriod_ - delta;
@@ -73,7 +76,7 @@ sealed class Clock : IClock
     /// </summary>
     /// <param name="cancelToken">Token to stop the clock from running.</param>
     /// <returns>Infinite task which may be cancelled which represents the clock lifetime.</returns>
-    public async Task RunAsync(CancellationToken cancelToken = new())
+    public async Task RunAsync(CancellationToken cancelToken)
     {
         last_ = Stopwatch.GetTimestamp();
         cancelToken_ = cancelToken;

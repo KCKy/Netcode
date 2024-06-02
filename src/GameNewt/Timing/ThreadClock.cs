@@ -58,10 +58,11 @@ sealed class ThreadClock : IClock
 
         while (true)
         {
+            long remaining = clock_.Update();
+
             if (cancelToken.IsCancellationRequested)
                 return;
 
-            long remaining = clock_.Update();
             long wait = Math.Max(remaining - clockQuantumTicks_, 0);
             Thread.Sleep((int)(wait / TicksPerMs));
         }
@@ -72,12 +73,13 @@ sealed class ThreadClock : IClock
     /// </summary>
     /// <param name="cancelToken">Token to stop the clock from running.</param>
     /// <returns>Infinite task which may be cancelled which represents the clock lifetime.</returns>
-    public Task RunAsync(CancellationToken cancelToken = new())
+    public Task RunAsync(CancellationToken cancelToken)
     {
         Task clockTask = clock_.RunAsync(cancelToken);
         Thread thread = new(TimerThread)
         {
-            Priority = ThreadPriority.Highest
+            Priority = ThreadPriority.Highest,
+            IsBackground = true
         };
         thread.Start(cancelToken);
         return clockTask;
