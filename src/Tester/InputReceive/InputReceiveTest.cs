@@ -93,7 +93,7 @@ class InputReceiveTest : ITestGame
 
         if (!lastAuthState.ClientIdToReceivedInputs.TryGetValue(validId, out List<int>? list))
         {
-            logger.LogError("Server did not register any server input.");
+            logger.LogError("Server did not register any client input.");
             ctx.FlagTestFail();
             return;
         }
