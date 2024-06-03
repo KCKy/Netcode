@@ -1,6 +1,6 @@
 prepare_log()
 {
-    logdir="$BATS_TEST_DIRNAME/${BATS_TEST_NUMBER}_${BATS_TEST_NAME}"
+    logdir="$BATS_TEST_DIRNAME/${BATS_TEST_NAME}_${BATS_TEST_NUMBER}"
     if [ -d "$logdir" ]; then rm -rf "$logdir"; fi
 }
 
@@ -18,45 +18,45 @@ run_slow()
 
 run_fast()
 {
-    run_base "$@" --tickrate 20 --delta 0.05 
+    run_base "$@" --tickrate 20 --delta 0.05
 }
 
 run_slow_1()
 {
-    run_slow "$@" --sample-window 10 --trace --checksum
+    run_slow "$@" --sample-window 100 --trace --checksum
 }
 
 run_slow_2()
 {
-    run_slow "$@" --sample-window 10 --trace
+    run_slow "$@" --sample-window 100 --trace
 }
 
 run_slow_3()
 {
-    run_slow "$@" --sample-window 10 --checksum
+    run_slow "$@" --sample-window 100 --checksum
 }
 
 run_slow_4()
 {
-    run_slow "$@" --sample-window 10
+    run_slow "$@" --sample-window 100
 }
 
 run_fast_1()
 {
-    run_fast "$@" --sample-window 20 --trace --checksum
+    run_fast "$@" --sample-window 100 --trace --checksum
 }
 
 run_fast_2()
 {
-    run_fast "$@" --sample-window 20 --trace
+    run_fast "$@" --sample-window 100 --trace
 }
 
 run_fast_3()
 {
-    run_fast "$@" --sample-window 20 --checksum
+    run_fast "$@" --sample-window 100 --checksum
 }
 
 run_fast_4()
 {
-    run_fast "$@" --sample-window 20
+    run_fast "$@" --sample-window 100
 }

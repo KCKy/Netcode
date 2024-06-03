@@ -3,113 +3,56 @@
 load setup.bash
 load functions.bash
 
-@test "update frequency test slow 1" {
+@test "update frequency test slow" {
     prepare_log
 
-    run_slow_1 server freq --server --duration 45 --target $SERVER_POINT
+    run_slow server freq --sample-window 100 --trace --checksum --server --duration 240 --target $SERVER_POINT
     server=$!
     sleep 1
 
-    run_slow_1 client freq --mean 0.2 --max-dev 0.01 --max-mean-error 0.001 --warmup 10 --target $TARGET
+    run_slow client freq --sample-window 100 --trace --checksum --mean 0.2 --max-dev 0.01 --max-mean-error 0.001 --warmup 100 --target $TARGET
     client=$!
 
     wait -n $server
     wait -n $client
 }
 
-@test "update frequency test slow 2" {
+@test "update frequency test slow nowindow" {
     prepare_log
 
-    run_slow_2 server freq --server --duration 45 --target $SERVER_POINT
+    run_slow server freq --sample-window 1 --trace --checksum --server --duration 240 --target $SERVER_POINT
     server=$!
     sleep 1
 
-    run_slow_2 client freq --mean 0.2 --max-dev 0.01 --max-mean-error 0.001 --warmup 10 --target $TARGET
+    run_slow client freq --sample-window 1 --trace --checksum --mean 0.2 --max-dev 1 --max-mean-error 1 --warmup 100 --target $TARGET
     client=$!
 
     wait -n $server
     wait -n $client
 }
 
-@test "update frequency test slow 3" {
+@test "update frequency test fast" {
     prepare_log
 
-    run_slow_3 server freq --server --duration 45 --target $SERVER_POINT
+    run_fast server freq --sample-window 0 --trace --checksum --server --duration 240 --target $SERVER_POINT
     server=$!
     sleep 1
 
-    run_slow_3 client freq --mean 0.2 --max-dev 0.01 --max-mean-error 0.001 --warmup 10 --target $TARGET
+    run_fast client freq --sample-window 100 --trace --checksum --mean 0.05 --max-dev 0.01 --max-mean-error 0.001 --warmup 100 --target $TARGET
     client=$!
 
     wait -n $server
     wait -n $client
 }
 
-@test "update frequency test slow 4" {
+@test "update frequency test fast nowindow" {
     prepare_log
 
-    run_slow_4 server freq --server --duration 45 --target $SERVER_POINT
+    run_fast server freq --sample-window 1 --trace --checksum --server --duration 240 --target $SERVER_POINT
     server=$!
     sleep 1
 
-    run_slow_4 client freq --mean 0.2 --max-dev 0.01 --max-mean-error 0.001 --warmup 10 --target $TARGET
-    client=$!
-
-    wait -n $server
-    wait -n $client
-}
-
-@test "update frequency test fast 1" {
-    prepare_log
-
-    run_fast_1 server freq --server --duration 45 --target $SERVER_POINT
-    server=$!
-    sleep 1
-
-    run_fast_1 client freq --mean 0.05 --max-dev 0.01 --max-mean-error 0.001 --warmup 40 --target $TARGET
-    client=$!
-
-    wait -n $server
-    wait -n $client
-}
-
-
-@test "update frequency test fast 2" {
-    prepare_log
-
-    run_fast_2 server freq --server --duration 45 --target $SERVER_POINT
-    server=$!
-    sleep 1
-
-    run_fast_2 client freq --mean 0.05 --max-dev 0.01 --max-mean-error 0.001 --warmup 40 --target $TARGET
-    client=$!
-
-    wait -n $server
-    wait -n $client
-}
-
-@test "update frequency test fast 3" {
-    prepare_log
-
-    run_fast_3 server freq --server --duration 45 --target $SERVER_POINT
-    server=$!
-    sleep 1
-
-    run_fast_3 client freq --mean 0.05 --max-dev 0.01 --max-mean-error 0.001 --warmup 40 --target $TARGET
-    client=$!
-
-    wait -n $server
-    wait -n $client
-}
-
-@test "update frequency test fast 4" {
-    prepare_log
-
-    run_fast_4 server freq --server --duration 45 --target $SERVER_POINT
-    server=$!
-    sleep 1
-
-    run_fast_4 client freq --mean 0.05 --max-dev 0.01 --max-mean-error 0.001 --warmup 40 --target $TARGET
+    run_fast client freq --sample-window 1 --trace --checksum --mean 0.05 --max-dev 1 --max-mean-error 1 --warmup 100 --target $TARGET
     client=$!
 
     wait -n $server

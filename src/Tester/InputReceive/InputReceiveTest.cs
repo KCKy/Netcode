@@ -105,9 +105,11 @@ class InputReceiveTest : ITestGame
             return;
         }
 
-        if (list[0] != 0 || !list.IsConsecutive(out _, out _))
+        int previous = 0;
+        int current = 0;
+        if (list[0] != 0 || !list.IsConsecutive(out previous, out current))
         {
-            logger.LogError("Collected inputs are not in sequence: [{A}].", string.Join(',', list));
+            logger.LogError("Collected inputs are not in sequence: {A} < {B}", previous, current);
             ctx.FlagTestFail();
             return;
         }

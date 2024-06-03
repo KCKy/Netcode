@@ -10,7 +10,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_1 client pred --duration 50 --warmup 10 --max-lag 0.01 --target $TARGET
+    run_slow_1 client pred --duration 250 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server
@@ -24,7 +24,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_2 client pred --duration 50 --warmup 10 --max-lag 0.01 --target $TARGET
+    run_slow_2 client pred --duration 250 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server
@@ -38,7 +38,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_3 client pred --duration 50 --warmup 10 --max-lag 0.01 --target $TARGET
+    run_slow_3 client pred --duration 250 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server
@@ -52,7 +52,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_4 client pred --duration 50 --warmup 10 --max-lag 0.01 --target $TARGET
+    run_slow_4 client pred --duration 250 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server
@@ -67,7 +67,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_1 client pred --duration 200 --warmup 30 --max-lag 0.01 --target $TARGET
+    run_fast_1 client pred --duration 900 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server
@@ -81,7 +81,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_2 client pred --duration 200 --warmup 30 --max-lag 0.01 --target $TARGET
+    run_fast_2 client pred --duration 900 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server
@@ -95,7 +95,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_3 client pred --duration 200 --warmup 30 --max-lag 0.01 --target $TARGET
+    run_fast_3 client pred --duration 900 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server
@@ -109,7 +109,7 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_4 client pred --duration 200 --warmup 30 --max-lag 0.01 --target $TARGET
+    run_fast_4 client pred --duration 900 --warmup 100 --max-lag 0.01 --target $TARGET
     client=$!
 
     wait -n $server

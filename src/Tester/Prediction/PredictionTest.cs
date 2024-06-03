@@ -100,7 +100,7 @@ class PredictionTest : ITestGame
             ctx.FlagTestFail();
         }
 
-        if (frames.IsConsecutive(out long previous, out long current))
+        if (!frames.IsAscendingWithoutGaps(out long previous, out long current))
         {
             logger.LogError("Frames are not consecutive {previous} < {current}.", previous, current);
             ctx.FlagTestFail();
