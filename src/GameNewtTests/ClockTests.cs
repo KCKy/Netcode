@@ -3,14 +3,12 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Kcky.GameNewt.Timing;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestPlatform.Utilities;
 using Xunit.Abstractions;
 
 namespace Kcky.GameNewt.Tests;
 
 /// <summary>
-/// Tests for <see cref="Clock"/>
+/// Tests for <see cref="ThreadClock"/>
 /// </summary>
 public sealed class ClockTests
 {
