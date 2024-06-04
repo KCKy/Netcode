@@ -1,18 +1,96 @@
-﻿using System.CommandLine;
+﻿using System.Buffers;
+using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Numerics;
 using Kcky.GameNewt;
+using Kcky.Useful;
 using Kcky.GameNewt.Client;
 using Kcky.GameNewt.Dispatcher.Default;
 using Kcky.GameNewt.Server;
+using Kcky.GameNewt.Transport;
 using Kcky.GameNewt.Transport.Default;
 using Microsoft.Extensions.Logging;
 using Tester.DesyncDetection;
+using Command = System.CommandLine.Command;
 
 namespace Tester;
 
 static class TestCommon
 {
+    sealed class ClientTransportLossAdaptor : IClientTransport
+    {
+        readonly object mutex_ = new();
+        readonly IClientTransport client_;
+        readonly Random random_ = new(42);
+        readonly float inputLoss_;
+        readonly float outputLoss_;
+        bool lastPacketSent_ = false;
+
+        public ClientTransportLossAdaptor(IClientTransport client, float inputLoss, float outputLoss)
+        {
+            client_ = client;
+            client_.OnUnreliableMessage += HandleUnreliableMessage;
+            inputLoss_ = inputLoss;
+            outputLoss_ = outputLoss;
+        }
+        
+        bool WasPacketReceived()
+        {
+            lock (mutex_)
+                return random_.NextSingle() > inputLoss_;
+        }
+
+        bool WasPacketSent()
+        {
+            lock (mutex_)
+            {
+                if (lastPacketSent_ && outputLoss_ >= random_.NextSingle())
+                {
+                    lastPacketSent_ = false;
+                    return false;
+                }
+
+                lastPacketSent_ = true;
+                return true;
+            }
+        }
+
+        void HandleUnreliableMessage(Memory<byte> message)
+        {
+            if (!WasPacketReceived())
+            {
+                ArrayPool<byte>.Shared.Return(message);
+                return;
+            }
+            
+            OnUnreliableMessage?.Invoke(message);
+        }
+
+        public void SendUnreliable(Memory<byte> message)
+        {
+            if (!WasPacketSent())
+            {
+                ArrayPool<byte>.Shared.Return(message);
+                return;
+            }
+
+            client_.SendUnreliable(message);
+        }
+
+        public event ClientMessageEvent? OnUnreliableMessage;
+        event ClientMessageEvent? IClientInTransport.OnReliableMessage
+        {
+            add => client_.OnReliableMessage += value;
+            remove => client_.OnReliableMessage -= value;
+        }
+        public int ReliableMessageHeader => client_.ReliableMessageHeader;
+        public void SendReliable(Memory<byte> message) => client_.SendReliable(message);
+        public int UnreliableMessageHeader => client_.UnreliableMessageHeader;
+        public int UnreliableMessageMaxLength => client_.UnreliableMessageMaxLength;
+        public void Terminate() => client_.Terminate();
+        public Task RunAsync() => client_.RunAsync();
+    }
+
     public static (Server<TClientInput, TServerInput, TGameState> server, ILogger logger) ConstructServer<TClientInput, TServerInput, TGameState, TTest>
         (InvocationContext ctx,
             PredictClientInputDelegate<TClientInput>? predictor = null,
@@ -53,6 +131,37 @@ static class TestCommon
 
         IpClientTransport transport = new(p.Common.Target, p.Common.ComLogger);
         DefaultClientDispatcher dispatcher = new(transport, p.Common.ComLogger);
+
+        Client<TClientInput, TServerInput, TGameState> client = new(dispatcher, p.Common.GameLogger)
+        {
+            SamplingWindow = p.SampleWindow,
+            TargetDelta = p.TargetDelta,
+            TraceState = p.Common.Trace,
+            UseChecksum = p.Common.Checksum,
+            ClientInputPredictor = clientPredictor,
+            ClientInputProvider = clientProvider,
+            ServerInputPredictor = serverPredictor
+        };
+
+        return (client, logger);
+    }
+
+    public static (Client<TClientInput, TServerInput, TGameState> client, ILogger logger) ConstructLossyClient<TClientInput, TServerInput, TGameState, TTest>
+    (InvocationContext ctx, float outputLoss, float inputLoss,
+        PredictClientInputDelegate<TClientInput>? clientPredictor = null,
+        PredictServerInputDelegate<TServerInput, TGameState>? serverPredictor = null,
+        ProvideClientInputDelegate<TClientInput>? clientProvider = null)
+        where TGameState : class, IGameState<TClientInput, TServerInput>, new()
+        where TServerInput : class, new()
+        where TClientInput : class, new()
+        where TTest : ITestGame
+    {
+        ClientParams p = ctx.TryGetClientParams().UnwrapOrThrow();
+        ILogger logger = p.Common.TestLogger.CreateLogger<DesyncDetectionTest>();
+
+        IpClientTransport transport = new(p.Common.Target, p.Common.ComLogger);
+        ClientTransportLossAdaptor lossTransport = new(transport, inputLoss, outputLoss);
+        DefaultClientDispatcher dispatcher = new(lossTransport, p.Common.ComLogger);
 
         Client<TClientInput, TServerInput, TGameState> client = new(dispatcher, p.Common.GameLogger)
         {

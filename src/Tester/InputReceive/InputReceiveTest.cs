@@ -12,11 +12,15 @@ class InputReceiveTest : ITestGame
     static readonly Option<int> Warmup = new("--warmup", "The warm-up time in frames.");
     static readonly Option<int> TestDuration = new("--duration", "The duration of the test in frames.");
     static readonly Option<int> GameDuration = new("--game-duration", "The duration of the game in frames. Should be longer than --duration.");
+    static readonly Option<float> OutputLoss = new("--output-loss", "The chance for the client to lose a packet which is being received.");
+    static readonly Option<float> InputLoss = new("--input-loss", "The chance for the client to lose next sent packet after the previous packet has been sent successfully.");
     static readonly Command Command = new("rec", "Tests after a warm-up time whether client inputs are being received in time.")
     {
         Warmup,
         TestDuration,
-        GameDuration
+        GameDuration,
+        InputLoss,
+        OutputLoss
     };
     
     static async Task RunServerAsync(InvocationContext ctx)
@@ -35,13 +39,15 @@ class InputReceiveTest : ITestGame
     {
         int warmup = ctx.GetOption(Warmup);
         int testDuration = ctx.GetOption(TestDuration);
+        float inputLoss = ctx.GetOption(InputLoss);
+        float outputLoss = ctx.GetOption(OutputLoss);
         
         int inputCounter = 0;
         object mutex = new();
         GameState? lastAuthState = null;
         int? id = null;
 
-        (var client, ILogger logger) = TestCommon.ConstructClient<ClientInput, ServerInput, GameState, InputReceiveTest>(ctx, clientProvider: ProvideInput);
+        (var client, ILogger logger) = TestCommon.ConstructLossyClient<ClientInput, ServerInput, GameState, InputReceiveTest>(ctx, outputLoss, inputLoss, clientProvider: ProvideInput);
 
         ClientInput ProvideInput()
         {
@@ -73,7 +79,7 @@ class InputReceiveTest : ITestGame
             }
         };
 
-        logger.LogInformation("Starting input receive test client with test duration {Duration} frames and warmup {Warmup}.", testDuration, warmup);
+        logger.LogInformation("Starting input receive test client with test duration {Duration} frames, warmup {Warmup}, input loss {InputLoss} and output loss {OutputLoss}.", testDuration, warmup, inputLoss, outputLoss);
 
         await TestCommon.RunUntilCompleteAsync(client, logger, ctx);
 
