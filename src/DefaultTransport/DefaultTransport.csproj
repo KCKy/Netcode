@@ -12,6 +12,7 @@
     <PackageProjectUrl>https://github.com/KCKy/Netcode</PackageProjectUrl>
     <RepositoryUrl>https://github.com/KCKy/Netcode</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>default_transport_readme.md</PackageReadmeFile>
     <PackageTags>transport,netcode,library,game,dispatcher</PackageTags>
     <PackageIcon>logo_128.png</PackageIcon>
     <Description>The default transport layer for GameNewt.</Description>
@@ -34,10 +35,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\misc\logo_128.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
+    <None Include="..\..\misc\logo_128.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\misc\default_transport_readme.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -13,6 +13,7 @@
     <PackageProjectUrl>https://github.com/KCKy/Netcode</PackageProjectUrl>
     <RepositoryUrl>https://github.com/KCKy/Netcode</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>gamenewt_readme.md</PackageReadmeFile>
     <PackageTags>netcode;deterministic;game;library</PackageTags>
     <PackageIcon>logo_128.png</PackageIcon>
     <PackageId>Kcky.GameNewt</PackageId>
@@ -39,10 +40,8 @@
 
     
     <ItemGroup>
-        <None Include="..\..\misc\logo_128.png">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
+        <None Include="..\..\misc\logo_128.png" Pack="true" PackagePath="\" />
+        <None Include="..\..\misc\gamenewt_readme.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
   <ItemGroup>

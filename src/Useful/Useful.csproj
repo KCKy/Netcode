@@ -13,6 +13,7 @@
     <PackageProjectUrl>https://github.com/KCKy/Netcode</PackageProjectUrl>
     <RepositoryUrl>https://github.com/KCKy/Netcode</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>useful_readme.md</PackageReadmeFile>
     <PackageTags>utility,useful,general,extensions</PackageTags>
   </PropertyGroup>
 
@@ -29,5 +30,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
   </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\..\misc\useful_readme.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
 </Project>
