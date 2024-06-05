@@ -199,8 +199,8 @@ sealed class SingleServerMockTransport : IServerTransport
     public void InvokeReliable(int id, Memory<byte> message) => OnReliableMessage?.Invoke(id, message);
     public void InvokeUnreliable(int id, Memory<byte> message) => OnUnreliableMessage?.Invoke(id, message);
 
-    public event Action<int>? OnClientJoin;
-    public event Action<int>? OnClientFinish;
+    public event Action<int>? OnClientJoin { add {} remove {} }
+    public event Action<int>? OnClientFinish { add {} remove {} }
     public int ReliableMessageHeader { get; init; } = 0;
     public void SendReliable(Memory<byte> message) => throw new InvalidOperationException();
     public void SendReliable(Memory<byte> message, int id) => throw new InvalidOperationException();

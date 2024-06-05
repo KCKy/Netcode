@@ -275,7 +275,7 @@ static class EnumerableExtensions
 
         foreach (T current in self.Skip(1))
         {
-            if (previous != current && ++previous != current)
+            if (previous != current && previous + T.One != current)
             {
                 badPrevious = previous;
                 badCurrent = current;

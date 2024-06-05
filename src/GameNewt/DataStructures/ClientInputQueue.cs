@@ -205,7 +205,7 @@ where TClientInput : class, new()
                     float difference = (float)Stopwatch.GetElapsedTime(value, lastFrameUpdate_).TotalSeconds;
                     inputAuthored_?.Invoke(id, nextFrame, difference);
 
-                    logger_.LogTrace("Input from {Id} received {Time:F5} s in advance.", id, difference);
+                    logger_.LogTrace("Input from {Id} for frame {Frame} received {Time:F5} s in advance.", id, nextFrame, difference);
                 }
                 
                 i++;
