@@ -6,3 +6,4 @@
 ./prediction.bats
 ./receive.bats
 ./update_frequency.bats
+./stress.bats

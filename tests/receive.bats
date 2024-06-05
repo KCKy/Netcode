@@ -9,19 +9,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_1 client1 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_1 client1 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_slow_1 client2 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_1 client2 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_slow_1 client3 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_1 client3 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_slow_1 client4 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_1 client4 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_slow_1 client5 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_1 client5 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
@@ -38,19 +38,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_2 client1 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_2 client1 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_slow_2 client2 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_2 client2 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_slow_2 client3 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_2 client3 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_slow_2 client4 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_2 client4 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_slow_2 client5 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_2 client5 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
@@ -67,19 +67,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_3 client1 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_3 client1 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_slow_3 client2 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_3 client2 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_slow_3 client3 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_3 client3 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_slow_3 client4 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_3 client4 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_slow_3 client5 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_3 client5 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
@@ -96,19 +96,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_slow_4 client1 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_4 client1 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_slow_4 client2 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_4 client2 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_slow_4 client3 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_4 client3 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_slow_4 client4 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_4 client4 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_slow_4 client5 rec --duration 100 --warmup 100 --target $TARGET
+    run_slow_4 client5 rec --duration 100 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
@@ -125,19 +125,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_1 client1 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_1 client1 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_fast_1 client2 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_1 client2 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_fast_1 client3 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_1 client3 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_fast_1 client4 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_1 client4 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_fast_1 client5 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_1 client5 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
@@ -154,19 +154,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_2 client1 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_2 client1 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_fast_2 client2 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_2 client2 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_fast_2 client3 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_2 client3 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_fast_2 client4 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_2 client4 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_fast_2 client5 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_2 client5 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
@@ -183,19 +183,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_3 client1 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_3 client1 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_fast_3 client2 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_3 client2 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_fast_3 client3 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_3 client3 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_fast_3 client4 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_3 client4 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_fast_3 client5 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_3 client5 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
@@ -212,19 +212,19 @@ load functions.bash
     server=$!
     sleep 1
     
-    run_fast_4 client1 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_4 client1 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client1=$!
 
-    run_fast_4 client2 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_4 client2 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client2=$!
 
-    run_fast_4 client3 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_4 client3 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client3=$!
 
-    run_fast_4 client4 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_4 client4 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client4=$!
 
-    run_fast_4 client5 rec --duration 240 --warmup 100 --target $TARGET
+    run_fast_4 client5 rec --duration 240 --warmup 100 --target $TARGET --input-loss "$RECEIVE_LOSS_CHANCE" --output-loss "$SEND_LOSS_CHANCE"
     client5=$!
 
     wait -n $server
