@@ -205,7 +205,7 @@ sealed class SingleServerMockTransport : IServerTransport
     public void SendReliable(Memory<byte> message) => throw new InvalidOperationException();
     public void SendReliable(Memory<byte> message, int id) => throw new InvalidOperationException();
     public int UnreliableMessageHeader { get; init; } = 0;
-    public int UnreliableMessageMaxLength { get; } = int.MaxValue;
+    public int UnreliableMessageMaxLength  { get; init; } = int.MaxValue;
     public void SendUnreliable(Memory<byte> message) => throw new InvalidOperationException();
     public void SendUnreliable(Memory<byte> message, int id) => throw new InvalidOperationException();
     public void Kick(int id) => throw new InvalidOperationException();

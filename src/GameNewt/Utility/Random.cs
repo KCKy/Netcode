@@ -5,6 +5,12 @@ using MemoryPack;
 
 namespace Kcky.GameNewt.Utility;
 
+/// <summary>
+/// Deterministic pseudo-random number generator.
+/// </summary>
+/// <remarks>
+/// This is based of the standard System.Random implementation from .NET 8.
+/// </remarks>
 [MemoryPackable]
 public sealed partial class Random
 {
