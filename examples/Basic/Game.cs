@@ -23,20 +23,19 @@ partial class ClientInput
 [MemoryPackable]
 partial class ServerInput;
 
-
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
     [MemoryPackInclude]
-    int[,] placedFlags_;
+    private int[,] placedFlags_;
 
     [MemoryPackInclude]
-    SortedDictionary<int, PlayerInfo> idToPlayer_;
+    private SortedDictionary<int, PlayerInfo> idToPlayer_;
+
+    public const int MapSize = 10;
 
     public SortedDictionary<int, PlayerInfo> IdToPlayer => idToPlayer_;
     public int[,] PlacedFlags => placedFlags_;
-
-    public const int MapSize = 10;
 
     public GameState()
     {
@@ -46,7 +45,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     bool TryMovePlayer(PlayerInfo info, int newX, int newY)
     {
-        if (newX < 0 || newX >= placedFlags_.GetLength(0) || newY < 0 || newY >= placedFlags_.GetLength(1))
+        if (newX is < 0 or >= MapSize || newY is < 0 or >= MapSize)
             return false;
 
         info.X = newX;
@@ -55,25 +54,21 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         return true;
     }
 
+    public static float DesiredTickRate => 5;
+
     public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
     {
         foreach (var clientInputInfo in updateInputs.ClientInputInfos.Span)
         {
             int id = clientInputInfo.Id;
             ClientInput input = clientInputInfo.Input;
-            bool terminated = clientInputInfo.Terminated;
 
-            if (terminated)
+            if (!idToPlayer_.ContainsKey(id))
             {
-                idToPlayer_.Remove(id);
-                continue;
+                idToPlayer_.Add(id, new PlayerInfo());
             }
 
-            if (!idToPlayer_.TryGetValue(id, out PlayerInfo? info))
-            {
-                info = new();
-                idToPlayer_.Add(id, info);
-            }
+            var info = idToPlayer_[id];
 
             switch (input.Direction)
             {
@@ -99,8 +94,6 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         
         return UpdateOutput.Empty;
     }
-
-    public static float DesiredTickRate => 5;
 }
 
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]

@@ -89,7 +89,7 @@ class GameClient
                         Console.Write('.');
                         break;
                     case > 0:
-                        Console.Write(value % 10);
+                        Console.Write(value == localId_ ? 'X' : '@');
                         break;
                 }
             }
@@ -99,15 +99,7 @@ class GameClient
         foreach ((int playerId, PlayerInfo info) in idToPlayer)
         {
             Console.SetCursorPosition(info.X, info.Y + 1);
-            if (playerId == localId_)
-            {
-                Console.Write('#');
-            }
-            else
-            {
-                char icon = (char)('A' + (char)((playerId - 1) % 26));
-                Console.Write(icon);
-            }
+            Console.Write(playerId == localId_ ? '#' : 'O');
         }
 
         Console.SetCursorPosition(0, 0);

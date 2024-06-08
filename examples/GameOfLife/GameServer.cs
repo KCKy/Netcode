@@ -13,7 +13,6 @@ class GameServer(int port, ILoggerFactory loggerFactory)
     static ServerInput ProvideServerInput(GameState info)
     {
         ServerInput ret = new();
-        return ret;
 
         if (info.Frame % 50 == 0)
             ret.CellRespawnEventSeed = new Random().Next() + 1;
