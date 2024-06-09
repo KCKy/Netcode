@@ -25,7 +25,7 @@ class GameClient : GameBase
     
     int localId_;
     
-    public GameClient(IPEndPoint target, ILoggerFactory loggerFactory) : base("Game of Life Demo")
+    public GameClient(IPEndPoint target, ILoggerFactory loggerFactory) : base("Top-Down Shooter Demo")
     {
         logger_ = loggerFactory.CreateLogger<GameClient>();
 
