@@ -13,7 +13,6 @@ class GameClient
     public GameClient()
     {
         IPEndPoint serverAddress = new(IPAddress.Loopback, 42000);
-
         IpClientTransport transport = new(serverAddress);
         DefaultClientDispatcher dispatcher = new(transport);
 
@@ -21,7 +20,6 @@ class GameClient
         {
             ClientInputProvider = GetInput
         };
-
         client_.OnInitialize += Init;
         client_.OnNewPredictiveState += Draw;
     }
@@ -37,9 +35,39 @@ class GameClient
 
         while (!task.IsCompleted)
             client_.Update();
-
-        task.Wait();
     }
+    
+    void Draw(long frame, GameState state)
+    {
+        Console.WriteLine($"My ID: {localId_} Frame: {frame} Players: {state.IdToPlayer.Count}");
+
+        for (int y = 0; y < GameState.MapSize; y++)
+        {
+            for (int x = 0; x < GameState.MapSize; x++)
+            {
+                int tile = state.PlacedFlags[x, y];
+                Console.Write(GetTileChar(tile));
+            }
+            Console.WriteLine();
+        }
+
+        foreach ((int playerId, PlayerInfo info) in state.IdToPlayer)
+        {
+            Console.SetCursorPosition(info.X, info.Y + 1);
+            Console.Write(GetPlayerChar(playerId));
+        }
+
+        Console.SetCursorPosition(0, 0);
+    }
+
+    char GetTileChar(int tile)
+    {
+        if (tile == 0)
+            return '.';
+        return tile == localId_ ? 'X' : '@';
+    }
+
+    char GetPlayerChar(int id) => id == localId_ ? '#' : 'O';
 
     static ClientInput GetInput()
     {
@@ -69,39 +97,5 @@ class GameClient
         }
 
         return input;
-    }
-
-    void Draw(long frame, GameState state)
-    {
-        Console.WriteLine($"My ID: {localId_} Frame: {frame} Players: {state.IdToPlayer.Count}");
-
-        var idToPlayer = state.IdToPlayer;
-        int[,] flags = state.PlacedFlags;
-
-        for (int y = 0; y < GameState.MapSize; y++)
-        {
-            for (int x = 0; x < GameState.MapSize; x++)
-            {
-                int value = flags[x, y];
-                switch (value)
-                {
-                    case 0:
-                        Console.Write('.');
-                        break;
-                    case > 0:
-                        Console.Write(value == localId_ ? 'X' : '@');
-                        break;
-                }
-            }
-            Console.WriteLine();
-        }
-
-        foreach ((int playerId, PlayerInfo info) in idToPlayer)
-        {
-            Console.SetCursorPosition(info.X, info.Y + 1);
-            Console.Write(playerId == localId_ ? '#' : 'O');
-        }
-
-        Console.SetCursorPosition(0, 0);
     }
 }

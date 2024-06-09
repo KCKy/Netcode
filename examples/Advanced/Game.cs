@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Advanced;
 
-enum Direction : byte
+enum Direction
 {
     None = 0,
     Up,
@@ -76,56 +76,39 @@ partial class EndScreen
 }
 
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
+partial class PlayerInfo
+{
+    public int X;
+    public int Y;
+}
+
+[MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
-    [MemoryPackInclude]
-    int[,] placedFlags_;
-
-    [MemoryPackInclude]
-    bool[,] isTrapped_;
-
-    [MemoryPackInclude]
-    SortedDictionary<int, PlayerInfo> idToPlayer_;
-
-    [MemoryPackInclude]
-    long latestPlayerConnectionTime_ = 0;
-
-    [MemoryPackInclude]
-    EndScreen? endScreen_ = null;
-
-    public SortedDictionary<int, PlayerInfo> IdToPlayer => idToPlayer_;
-    public int[,] PlacedFlags => placedFlags_;
-    public bool[,] IsTrapped => isTrapped_;
-    public long LatestPlayerConnectionTime => latestPlayerConnectionTime_;
-    public EndScreen? EndScreen => endScreen_;
-
+    public SortedDictionary<int, PlayerInfo> IdToPlayer;
+    public int[,] PlacedFlags;
+    public bool[,] IsTrapped;
+    public long LatestPlayerConnectionTime;
+    public EndScreen? EndScreen = null;
     public const int MapSize = 10;
 
     public GameState()
     {
-        placedFlags_ = new int[MapSize, MapSize];
-        isTrapped_ = new bool[MapSize, MapSize];
-        idToPlayer_ = new();
+        IdToPlayer = new();
+        PlacedFlags = new int[MapSize, MapSize];
+        IsTrapped = new bool[MapSize, MapSize];
     }
 
-    bool TryMovePlayer(PlayerInfo info, int newX, int newY)
-    {
-        if (newX < 0 || newX >= placedFlags_.GetLength(0) || newY < 0 || newY >= placedFlags_.GetLength(1))
-            return false;
-
-        info.X = newX;
-        info.Y = newY;
-
-        return true;
-    }
-
+    public const int TickRateWhole = 5;
+    public static float DesiredTickRate => TickRateWhole;
+    
     int CountFilledTiles()
     {
         int tiles = 0;
         for (int x = 0; x < MapSize; x++)
         for (int y = 0; y < MapSize; y++)
         {
-            if (isTrapped_[x, y] || placedFlags_[x, y] != 0)
+            if (IsTrapped[x, y] || PlacedFlags[x, y] != 0)
                 tiles++;
         }
 
@@ -134,65 +117,63 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
     public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
     {
-        if (endScreen_ is not null)
-            return endScreen_.Update();
+        if (EndScreen is not null)
+            return EndScreen.Update();
 
         ServerInput serverInput = updateInputs.ServerInput;
         if (serverInput.SetLatestConnectionTime >= 0)
-            latestPlayerConnectionTime_ = serverInput.SetLatestConnectionTime;
+            LatestPlayerConnectionTime = serverInput.SetLatestConnectionTime;
 
         List<int> toBeKickedClients = new();
 
-        foreach (var clientInputInfo in updateInputs.ClientInputInfos.Span)
+        foreach (var inputInfo in updateInputs.ClientInputInfos.Span)
         {
-            int id = clientInputInfo.Id;
-            ClientInput input = clientInputInfo.Input;
-            bool terminated = clientInputInfo.Terminated;
-
-            if (terminated)
+            int id = inputInfo.Id;
+            
+            if (inputInfo.Terminated)
             {
-                idToPlayer_.Remove(id);
+                IdToPlayer.Remove(id);
                 continue;
             }
 
-            if (!idToPlayer_.TryGetValue(id, out PlayerInfo? info))
+            if (!IdToPlayer.ContainsKey(id))
             {
-                info = new();
-                idToPlayer_.Add(id, info);
+                IdToPlayer.Add(id, new PlayerInfo());
             }
 
-            switch (input.Direction)
+            PlayerInfo playerInfo = IdToPlayer[id];
+
+            switch (inputInfo.Input.Direction)
             {
                 case Direction.Up:
-                    TryMovePlayer(info, info.X, info.Y - 1);
+                    TryMovePlayer(playerInfo, playerInfo.X, playerInfo.Y - 1);
                     break;
                 case Direction.Down:
-                    TryMovePlayer(info, info.X, info.Y + 1);
+                    TryMovePlayer(playerInfo, playerInfo.X, playerInfo.Y + 1);
                     break;
                 case Direction.Left:
-                    TryMovePlayer(info, info.X - 1, info.Y);
+                    TryMovePlayer(playerInfo, playerInfo.X - 1, playerInfo.Y);
                     break;
                 case Direction.Right:
-                    TryMovePlayer(info, info.X + 1, info.Y);
+                    TryMovePlayer(playerInfo, playerInfo.X + 1, playerInfo.Y);
                     break;
             }
 
-            if (input.PlaceFlag)
+            if (inputInfo.Input.PlaceFlag)
             {
-                if (isTrapped_[info.X, info.Y])
+                if (IsTrapped[playerInfo.X, playerInfo.Y])
                 {
                     toBeKickedClients.Add(id);
                 }
-                else
+                else if (PlacedFlags[playerInfo.X, playerInfo.Y] == 0)
                 {
-                    if (placedFlags_[info.X, info.Y] == 0)
-                        placedFlags_[info.X, info.Y] = id;
+                    PlacedFlags[playerInfo.X, playerInfo.Y] = id;
                 }
             }
         }
-
+        
         if (CountFilledTiles() == MapSize * MapSize)
-            endScreen_ = EndScreen.Create(this);
+            EndScreen = EndScreen.Create(this);
 
         UpdateOutput output = new()
         {
@@ -202,16 +183,14 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         return output;
     }
 
-    public const int TickRateWhole = 5;
-    public static float DesiredTickRate => TickRateWhole;
-}
+    bool TryMovePlayer(PlayerInfo info, int newX, int newY)
+    {
+        if (newX < 0 || newX >= MapSize || newY < 0 || newY >= MapSize)
+            return false;
 
-[MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
-partial class PlayerInfo
-{
-    [MemoryPackInclude]
-    public int X;
+        info.X = newX;
+        info.Y = newY;
 
-    [MemoryPackInclude]
-    public int Y;
+        return true;
+    }
 }

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Basic;
 
-enum Direction : byte
+enum Direction
 {
     None = 0,
     Up,
@@ -20,32 +20,72 @@ partial class ClientInput
     public bool PlaceFlag;
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
 partial class ServerInput;
+
+[MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
+partial class PlayerInfo
+{
+    public int X;
+    public int Y;
+}
 
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
 partial class GameState : IGameState<ClientInput, ServerInput>
 {
-    [MemoryPackInclude]
-    private int[,] placedFlags_;
-
-    [MemoryPackInclude]
-    private SortedDictionary<int, PlayerInfo> idToPlayer_;
-
+    public SortedDictionary<int, PlayerInfo> IdToPlayer;
+    public int[,] PlacedFlags;
     public const int MapSize = 10;
-
-    public SortedDictionary<int, PlayerInfo> IdToPlayer => idToPlayer_;
-    public int[,] PlacedFlags => placedFlags_;
 
     public GameState()
     {
-        placedFlags_ = new int[MapSize, MapSize];
-        idToPlayer_ = new();
+        IdToPlayer = new();
+        PlacedFlags = new int[MapSize, MapSize];
+    }
+
+    public static float DesiredTickRate => 5;
+    
+    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
+    {
+        foreach (var inputInfo in updateInputs.ClientInputInfos.Span)
+        {
+            int id = inputInfo.Id;
+            
+            if (!IdToPlayer.ContainsKey(id))
+            {
+                IdToPlayer.Add(id, new PlayerInfo());
+            }
+
+            PlayerInfo playerInfo = IdToPlayer[id];
+
+            switch (inputInfo.Input.Direction)
+            {
+                case Direction.Up:
+                    TryMovePlayer(playerInfo, playerInfo.X, playerInfo.Y - 1);
+                    break;
+                case Direction.Down:
+                    TryMovePlayer(playerInfo, playerInfo.X, playerInfo.Y + 1);
+                    break;
+                case Direction.Left:
+                    TryMovePlayer(playerInfo, playerInfo.X - 1, playerInfo.Y);
+                    break;
+                case Direction.Right:
+                    TryMovePlayer(playerInfo, playerInfo.X + 1, playerInfo.Y);
+                    break;
+            }
+
+            if (inputInfo.Input.PlaceFlag && PlacedFlags[playerInfo.X, playerInfo.Y] == 0)
+            {
+                PlacedFlags[playerInfo.X, playerInfo.Y] = id;
+            }
+        }
+        
+        return UpdateOutput.Empty;
     }
 
     bool TryMovePlayer(PlayerInfo info, int newX, int newY)
     {
-        if (newX is < 0 or >= MapSize || newY is < 0 or >= MapSize)
+        if (newX < 0 || newX >= MapSize || newY < 0 || newY >= MapSize)
             return false;
 
         info.X = newX;
@@ -53,55 +93,4 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
         return true;
     }
-
-    public static float DesiredTickRate => 5;
-
-    public UpdateOutput Update(UpdateInput<ClientInput, ServerInput> updateInputs, ILogger logger)
-    {
-        foreach (var clientInputInfo in updateInputs.ClientInputInfos.Span)
-        {
-            int id = clientInputInfo.Id;
-            ClientInput input = clientInputInfo.Input;
-
-            if (!idToPlayer_.ContainsKey(id))
-            {
-                idToPlayer_.Add(id, new PlayerInfo());
-            }
-
-            var info = idToPlayer_[id];
-
-            switch (input.Direction)
-            {
-                case Direction.Up:
-                    TryMovePlayer(info, info.X, info.Y - 1);
-                    break;
-                case Direction.Down:
-                    TryMovePlayer(info, info.X, info.Y + 1);
-                    break;
-                case Direction.Left:
-                    TryMovePlayer(info, info.X - 1, info.Y);
-                    break;
-                case Direction.Right:
-                    TryMovePlayer(info, info.X + 1, info.Y);
-                    break;
-            }
-
-            if (input.PlaceFlag && placedFlags_[info.X, info.Y] == 0)
-            {
-                placedFlags_[info.X, info.Y] = id;
-            }
-        }
-        
-        return UpdateOutput.Empty;
-    }
-}
-
-[MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
-partial class PlayerInfo
-{
-    [MemoryPackInclude]
-    public int X;
-
-    [MemoryPackInclude]
-    public int Y;
 }

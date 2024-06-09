@@ -4,22 +4,18 @@ using Kcky.GameNewt.Transport.Default;
 using System.Net;
 using Kcky.GameNewt.Utility;
 using Kcky.Useful;
-using System.Threading;
 
 namespace Advanced;
 
 class GameClient
 {
     readonly Client<ClientInput, ServerInput, GameState> client_;
-    GameState authoritativeState_ = new();
-    GameState predictiveState_ = new();
     int localId_;
     volatile bool updateDraw_ = false;
-
+    
     public GameClient()
     {
         IPEndPoint serverAddress = new(IPAddress.Loopback, 42000);
-
         IpClientTransport transport = new(serverAddress);
         DefaultClientDispatcher dispatcher = new(transport);
 
@@ -35,10 +31,11 @@ class GameClient
     }
 
     readonly PooledBufferWriter<byte> authoritativeStateBufferWriter_ = new();
-
     readonly object newAuthoritativeStateLock_ = new();
     bool receivedNewAuthoritativeState_= false;
     GameState newAuthoritativeState_ = new();
+    GameState authoritativeState_ = new();
+    GameState predictiveState_ = new();
 
     void HandleNewAuthoritativeState(long frame, GameState state)
     {
@@ -53,12 +50,12 @@ class GameClient
 
     void HandleNewPredictiveState(long frame, GameState state) => updateDraw_ = true;
 
+    void Init(int id) => localId_ = id;
+
     static void PredictInput(ref ClientInput input)
     {
         input.PlaceFlag = false;
     }
-
-    void Init(int id) => localId_ = id;
 
     public void Run()
     {
@@ -73,8 +70,6 @@ class GameClient
                 predictiveState_ = validState;
             Draw();
         }
-
-        task.Wait();
     }
 
     static ClientInput GetInput()
@@ -147,23 +142,12 @@ class GameClient
 
         Console.WriteLine($"My ID: {localId_} Frame: {client_.PredictFrame} Players: {predictiveState_.IdToPlayer.Count} Latest connected: {datetime}");
 
-        int[,] flags = predictiveState_.PlacedFlags;
-        bool[,] isTrapped = predictiveState_.IsTrapped;
-
         for (int y = 0; y < GameState.MapSize; y++)
         {
             for (int x = 0; x < GameState.MapSize; x++)
             {
-                int value = flags[x, y];
-                switch (value)
-                {
-                    case 0:
-                        Console.Write(isTrapped[x, y] ? '!' : '.');
-                        break;
-                    case > 0:
-                        Console.Write(value % 10);
-                        break;
-                }
+                int tile = predictiveState_.PlacedFlags[x, y];
+                Console.Write(predictiveState_.IsTrapped[x, y] ? '!' : GetTileChar(tile));
             }
             Console.WriteLine();
         }
@@ -172,10 +156,8 @@ class GameClient
         {
             if (playerId == localId_)
                 continue;
-
             Console.SetCursorPosition(info.X, info.Y + 1);
-            char icon = (char)('A' + (char)((playerId - 1) % 26));
-            Console.Write(icon);
+            Console.Write('O');
         }
 
         if (predictiveState_.IdToPlayer.TryGetValue(localId_, out PlayerInfo? localInfo))
@@ -185,5 +167,12 @@ class GameClient
         }
 
         Console.SetCursorPosition(0, 0);
+    }
+
+    char GetTileChar(int tile)
+    {
+        if (tile == 0)
+            return '.';
+        return tile == localId_ ? 'X' : '@';
     }
 }
