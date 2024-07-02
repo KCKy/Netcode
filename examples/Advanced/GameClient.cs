@@ -2,17 +2,21 @@
 using Kcky.GameNewt.Dispatcher.Default;
 using Kcky.GameNewt.Transport.Default;
 using System.Net;
-using Kcky.GameNewt.Utility;
-using Kcky.Useful;
 
 namespace Advanced;
 
 class GameClient
 {
+    
+
     readonly Client<ClientInput, ServerInput, GameState> client_;
     int localId_;
     volatile bool updateDraw_ = false;
+    GameState predictiveState_ = new();
     
+    record struct PlayerDrawInfo(int Id, int X, int Y);
+    PlayerDrawInfo[] authoritativePlayerDrawInfo_ = [];
+
     public GameClient()
     {
         IPEndPoint serverAddress = new(IPAddress.Loopback, 42000);
@@ -30,22 +34,23 @@ class GameClient
         client_.OnNewAuthoritativeState += HandleNewAuthoritativeState;
     }
 
-    readonly PooledBufferWriter<byte> authoritativeStateBufferWriter_ = new();
-    readonly object newAuthoritativeStateLock_ = new();
-    bool receivedNewAuthoritativeState_= false;
-    GameState newAuthoritativeState_ = new();
-    GameState authoritativeState_ = new();
-    GameState predictiveState_ = new();
-
     void HandleNewAuthoritativeState(long frame, GameState state)
     {
-        lock (newAuthoritativeStateLock_)
-        {
-            authoritativeStateBufferWriter_.Copy(state, ref newAuthoritativeState_!);
-            receivedNewAuthoritativeState_ = true;
-        }
-
+        PlayerDrawInfo[] drawInfo = CopyPlayerDrawInfo(state);
+        authoritativePlayerDrawInfo_ = drawInfo;
         updateDraw_ = true;
+    }
+
+    static PlayerDrawInfo[] CopyPlayerDrawInfo(GameState state)
+    {
+        var drawInfos = new PlayerDrawInfo[state.IdToPlayer.Count];
+        int i = 0;
+        foreach ((int id, PlayerInfo info) in state.IdToPlayer)
+        {
+            drawInfos[i] = new (id, info.X, info.Y);
+            i++;
+        }
+        return drawInfos;
     }
 
     void HandleNewPredictiveState(long frame, GameState state) => updateDraw_ = true;
@@ -115,17 +120,6 @@ class GameClient
 
     void Draw()
     {
-        if (Monitor.TryEnter(newAuthoritativeStateLock_))
-        {
-            if (receivedNewAuthoritativeState_)
-            {
-                receivedNewAuthoritativeState_ = false;
-                (authoritativeState_, newAuthoritativeState_) = (newAuthoritativeState_, authoritativeState_);
-            }
-
-            Monitor.Exit(newAuthoritativeStateLock_);
-        }
-
         if (!updateDraw_)
             return;
         
@@ -152,11 +146,12 @@ class GameClient
             Console.WriteLine();
         }
 
-        foreach ((int playerId, PlayerInfo info) in authoritativeState_.IdToPlayer)
+        PlayerDrawInfo[] authPlayerDrawInfo = authoritativePlayerDrawInfo_;
+        foreach ((int playerId, int x, int y) in authPlayerDrawInfo)
         {
             if (playerId == localId_)
                 continue;
-            Console.SetCursorPosition(info.X, info.Y + 1);
+            Console.SetCursorPosition(x, y + 1);
             Console.Write('O');
         }
 

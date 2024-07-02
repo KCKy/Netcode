@@ -87,7 +87,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 {
     public SortedDictionary<int, PlayerInfo> IdToPlayer;
     public int[,] PlacedFlags;
-    public bool[,] IsTrapped;
+    public bool[,] HasTrap;
     public long LatestPlayerConnectionTime;
     public EndScreen? EndScreen = null;
     public const int MapSize = 10;
@@ -96,7 +96,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
     {
         IdToPlayer = new();
         PlacedFlags = new int[MapSize, MapSize];
-        IsTrapped = new bool[MapSize, MapSize];
+        HasTrap = new bool[MapSize, MapSize];
     }
 
     public const int TickRateWhole = 5;
@@ -108,7 +108,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
         for (int x = 0; x < MapSize; x++)
         for (int y = 0; y < MapSize; y++)
         {
-            if (IsTrapped[x, y] || PlacedFlags[x, y] != 0)
+            if (HasTrap[x, y] || PlacedFlags[x, y] != 0)
                 tiles++;
         }
 
@@ -161,7 +161,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
             if (inputInfo.Input.PlaceFlag)
             {
-                if (IsTrapped[playerInfo.X, playerInfo.Y])
+                if (HasTrap[playerInfo.X, playerInfo.Y])
                 {
                     toBeKickedClients.Add(id);
                 }
