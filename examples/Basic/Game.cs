@@ -49,14 +49,12 @@ partial class GameState : IGameState<ClientInput, ServerInput>
     {
         foreach (var inputInfo in updateInputs.ClientInputInfos.Span)
         {
-            int id = inputInfo.Id;
-            
-            if (!IdToPlayer.ContainsKey(id))
+            if (!IdToPlayer.ContainsKey(inputInfo.Id))
             {
-                IdToPlayer.Add(id, new PlayerInfo());
+                IdToPlayer.Add(inputInfo.Id, new PlayerInfo());
             }
 
-            PlayerInfo playerInfo = IdToPlayer[id];
+            PlayerInfo playerInfo = IdToPlayer[inputInfo.Id];
 
             switch (inputInfo.Input.Direction)
             {
@@ -76,7 +74,7 @@ partial class GameState : IGameState<ClientInput, ServerInput>
 
             if (inputInfo.Input.PlaceFlag && PlacedFlags[playerInfo.X, playerInfo.Y] == 0)
             {
-                PlacedFlags[playerInfo.X, playerInfo.Y] = id;
+                PlacedFlags[playerInfo.X, playerInfo.Y] = inputInfo.Id;
             }
         }
         

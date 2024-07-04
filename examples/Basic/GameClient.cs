@@ -30,6 +30,7 @@ class GameClient
     {
         Console.Clear();
         Console.SetCursorPosition(0, 0);
+        Console.CursorVisible = false;
 
         Task task = client_.RunAsync();
 

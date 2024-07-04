@@ -40,7 +40,7 @@ class GameServer
 
         lock (newConnectionTimeLock_)
         {
-            input.SetLatestConnectionTime = newConnectionTime_;
+            input.NewLatestConnectionTime = newConnectionTime_;
             newConnectionTime_ = long.MinValue;
         }
 
@@ -53,7 +53,7 @@ class GameServer
 
         for (int x = 0; x < GameState.MapSize; x++)
         for (int y = 0; y < GameState.MapSize; y++)
-            state.IsTrapped[x, y] = random.NextSingle() < 0.33f;
+            state.HasTrap[x, y] = random.NextSingle() < 0.33f;
     }
 
     public async Task RunAsync()

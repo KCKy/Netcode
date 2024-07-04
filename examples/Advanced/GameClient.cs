@@ -66,6 +66,7 @@ class GameClient
     {
         Console.Clear();
         Console.SetCursorPosition(0, 0);
+        Console.CursorVisible = false;
 
         Task task = client_.RunAsync();
 
@@ -141,7 +142,7 @@ class GameClient
             for (int x = 0; x < GameState.MapSize; x++)
             {
                 int tile = predictiveState_.PlacedFlags[x, y];
-                Console.Write(predictiveState_.IsTrapped[x, y] ? '!' : GetTileChar(tile));
+                Console.Write(predictiveState_.HasTrap[x, y] ? '!' : GetTileChar(tile));
             }
             Console.WriteLine();
         }

@@ -23,7 +23,7 @@ partial class ClientInput
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
 partial class ServerInput
 {
-    public long SetLatestConnectionTime;
+    public long NewLatestConnectionTime;
 }
 
 [MemoryPackable(GenerateType.CircularReference, SerializeLayout.Sequential)]
@@ -37,18 +37,13 @@ partial class EndScreen
     {
         EndScreen screen = new();
 
-        int[,] flags = state.PlacedFlags;
-        bool[,] traps = state.IsTrapped;
-
         for (int x = 0; x < GameState.MapSize; x++)
         for (int y = 0; y < GameState.MapSize; y++)
         {
-            if (traps[x, y])
+            if (state.HasTrap[x, y])
                 screen.TrapCount++;
 
-            screen.TrapCount += traps[x, y] ? 1 : 0;
-
-            int key = flags[x, y];
+            int key = state.PlacedFlags[x, y];
             if (key <= 0)
                 continue;
 
@@ -121,8 +116,8 @@ partial class GameState : IGameState<ClientInput, ServerInput>
             return EndScreen.Update();
 
         ServerInput serverInput = updateInputs.ServerInput;
-        if (serverInput.SetLatestConnectionTime >= 0)
-            LatestPlayerConnectionTime = serverInput.SetLatestConnectionTime;
+        if (serverInput.NewLatestConnectionTime >= 0)
+            LatestPlayerConnectionTime = serverInput.NewLatestConnectionTime;
 
         List<int> toBeKickedClients = new();
 
