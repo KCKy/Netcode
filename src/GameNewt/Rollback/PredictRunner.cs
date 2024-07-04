@@ -12,9 +12,9 @@ namespace Kcky.GameNewt.Client;
 /// Continuously updates the prediction state from local inputs.
 /// Receives replacements if available.
 /// </summary>
-/// <typeparam name="TClientInput"></typeparam>
-/// <typeparam name="TServerInput"></typeparam>
-/// <typeparam name="TGameState"></typeparam>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
 sealed class PredictRunner<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
     where TClientInput : class, new()
     where TServerInput : class, new()
@@ -22,7 +22,7 @@ sealed class PredictRunner<TClientInput, TServerInput, TGameState> where TGameSt
     readonly PooledBufferWriter<byte> predictInputWriter_ = new();
     readonly StateHolder<TClientInput, TServerInput, TGameState, PredictiveStateType> predictHolder_;
     readonly ILogger logger_;
-    readonly object frameLock_ = new();
+    readonly object frameMutex_ = new();
     readonly ProvideClientInputDelegate<TClientInput> provideClientInput_;
     readonly HandleNewPredictiveStateDelegate<TGameState> predictiveStateCallback_;
     readonly IClientSender sender_;
@@ -77,12 +77,12 @@ sealed class PredictRunner<TClientInput, TServerInput, TGameState> where TGameSt
     {
         get
         {
-            lock (frameLock_)
+            lock (frameMutex_)
                 return frame_;
         }
         private set
         {
-            lock (frameLock_)
+            lock (frameMutex_)
                 frame_ = value;
         }
     }

@@ -144,7 +144,7 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
             TargetTps = TGameState.DesiredTickRate
         };
 
-        TargetDelta = 0.05f;
+        TargetDelta = DefaultTargetDelta;
 
         SetHandlers();
     }
@@ -192,6 +192,9 @@ public sealed class Client<TClientInput, TServerInput, TGameState> : IClient
 
     /// <inheritdoc/>
     public long PredictFrame => predictManager_?.Frame ?? long.MinValue;
+
+    // 50 milliseconds of margin makes a reasonable default
+    const float DefaultTargetDelta = 0.05f;
 
     /// <inheritdoc/>
     public float TargetDelta

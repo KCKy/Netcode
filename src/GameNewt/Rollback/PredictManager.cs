@@ -7,12 +7,12 @@ using Microsoft.Extensions.Logging;
 namespace Kcky.GameNewt.Client;
 
 /// <summary>
-/// Manages the prediction state using the rollback Netcode algorithm.
+/// Manages the prediction state using the rollback netcode algorithm.
 /// Keeps track of mispredictions, and when they occur, propagates a replacement prediction state.
 /// </summary>
-/// <typeparam name="TClientInput"></typeparam>
-/// <typeparam name="TServerInput"></typeparam>
-/// <typeparam name="TGameState"></typeparam>
+/// <typeparam name="TClientInput">The type of the client input.</typeparam>
+/// <typeparam name="TServerInput">The type of the server input.</typeparam>
+/// <typeparam name="TGameState">The type of the game state.</typeparam>
 sealed class PredictManager<TClientInput, TServerInput, TGameState> where TGameState : class, IGameState<TClientInput, TServerInput>, new()
     where TClientInput : class, new()
     where TServerInput : class, new()
