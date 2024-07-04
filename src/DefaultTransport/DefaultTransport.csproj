@@ -16,6 +16,7 @@
     <PackageTags>transport,netcode,library,game,dispatcher</PackageTags>
     <PackageIcon>logo_128.png</PackageIcon>
     <Description>Default transport and protocol implementation for Kcky.GameNewt.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

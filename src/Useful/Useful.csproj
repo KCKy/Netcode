@@ -9,12 +9,13 @@
     <Title>Kcky.Useful</Title>
     <PackageId>Kcky.Useful</PackageId>
     <Authors>KCKy</Authors>
-    <Description>A collection of generaly useful types.</Description>
+    <Description>A collection of generaly useful extensions for .NET.</Description>
     <PackageProjectUrl>https://github.com/KCKy/Netcode</PackageProjectUrl>
     <RepositoryUrl>https://github.com/KCKy/Netcode</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>useful_readme.md</PackageReadmeFile>
     <PackageTags>utility,useful,general,extensions</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

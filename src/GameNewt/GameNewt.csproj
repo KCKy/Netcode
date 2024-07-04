@@ -9,7 +9,7 @@
     <SignAssembly>False</SignAssembly>
     <Title>KCKy.GameNewt</Title>
     <Authors>KCKy</Authors>
-    <Description>A collection of generaly useful extensions for .NET.</Description>
+    <Description>A deterministic netcode library for small games.</Description>
     <PackageProjectUrl>https://github.com/KCKy/Netcode</PackageProjectUrl>
     <RepositoryUrl>https://github.com/KCKy/Netcode</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -17,6 +17,7 @@
     <PackageTags>netcode;deterministic;game;library</PackageTags>
     <PackageIcon>logo_128.png</PackageIcon>
     <PackageId>Kcky.GameNewt</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
