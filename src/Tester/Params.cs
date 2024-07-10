@@ -8,9 +8,9 @@ using System.Net;
 
 namespace Tester;
 
-public readonly record struct CommonParams(IPEndPoint Target, ILoggerFactory ComLogger, ILoggerFactory GameLogger, ILoggerFactory TestLogger, bool Trace, bool Checksum);
-public readonly record struct ServerParams(CommonParams Common);
-public readonly record struct ClientParams(CommonParams Common, float TargetDelta, int SampleWindow) {}
+readonly record struct CommonParams(IPEndPoint Target, ILoggerFactory ComLogger, ILoggerFactory GameLogger, ILoggerFactory TestLogger, bool Trace, bool Checksum);
+readonly record struct ServerParams(CommonParams Common);
+readonly record struct ClientParams(CommonParams Common, float TargetDelta, int SampleWindow) {}
 
 static class ParamsException
 {
